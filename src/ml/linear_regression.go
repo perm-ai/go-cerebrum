@@ -6,18 +6,14 @@ import (
 )
 
 type LinearRegression struct {
-
-	utils 	utility.Utils
-	M 		ckks.Ciphertext
-	B		ckks.Ciphertext
-
+	utils utility.Utils
+	M     ckks.Ciphertext
+	B     ckks.Ciphertext
 }
 
 type LinearRegressionGradient struct {
-
-	DM 		ckks.Ciphertext
-	DB		ckks.Ciphertext
-
+	DM ckks.Ciphertext
+	DB ckks.Ciphertext
 }
 
 func NewLinearRegression(u utility.Utils) LinearRegression {
@@ -39,7 +35,7 @@ func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int) LinearRegressionGradient{
+func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int) LinearRegressionGradient {
 
 	err := l.utils.Evaluator.SubNew(y, output)
 
@@ -56,7 +52,7 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Cipherte
 
 }
 
-func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient, learningRate float64){
+func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient, learningRate float64) {
 
 	lrCt := l.utils.Encrypt(l.utils.GenerateFilledArray(learningRate))
 	l.utils.Multiply(gradient.DM, lrCt, &gradient.DM)
@@ -64,5 +60,17 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient, lea
 
 	l.utils.Sub(l.M, gradient.DM, &l.M)
 	l.utils.Sub(l.B, gradient.DB, &l.B)
+
+}
+
+func (model *LinearRegression) train(x *ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
+
+	for i := 0; i < epoch; i++ {
+
+		fwd := model.Forward(x)
+		grad := model.Backward(x, &fwd, y, size)
+		model.UpdateGradient(grad, learningRate)
+
+	}
 
 }
