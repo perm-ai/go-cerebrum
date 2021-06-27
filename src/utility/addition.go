@@ -9,10 +9,12 @@ func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 
 }
 
-func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) {
+func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
 
 	ct := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), a.Scale())
 	utils.Add(*a, *b, ct)
+
+	return *ct
 
 }
 
@@ -23,10 +25,12 @@ func (utils Utils) Sub(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 
 }
 
-func (utils Utils) SubNew(a *ckks.Ciphertext, b *ckks.Ciphertext) {
+func (utils Utils) SubNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
 
 	ct := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), a.Scale())
 	utils.Sub(*a, *b, ct)
+
+	return *ct
 
 }
 
@@ -46,15 +50,12 @@ func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 		}
 
 		rescaleBy := constant.Scale() / requiredMult.Scale()
-		rescaler := make([]float64, utils.Params.Slots())
+		rescaler := utils.Float64ToComplex128(utils.GenerateFilledArray(1))
 
-		for i := range rescaler {
-			rescaler[i] = 1
-		}
+		encodedRescaler := ckks.NewPlaintext(&utils.Params, requiredMult.Level(), rescaleBy)
+		utils.Encoder.EncodeNTT(encodedRescaler, rescaler, utils.Params.LogSlots())
 
-		encodedRescaler := utils.EncodeToScale(rescaler, rescaleBy)
-
-		utils.Evaluator.MulRelin(&requiredMult, &encodedRescaler, &utils.RelinKey, &requiredMult)
+		utils.Evaluator.MulRelin(&requiredMult, encodedRescaler, &utils.RelinKey, &requiredMult)
 
 	}
 

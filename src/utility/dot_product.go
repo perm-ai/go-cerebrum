@@ -29,9 +29,9 @@ func (u Utils) SumElementsNew(ct ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (u Utils) DotProduct(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext) {
+func (u Utils) DotProduct(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
-	u.MultiplyRescale(*a, *b, destination)
+	u.MultiplyRescale(a, b, destination)
 	u.SumElementsInPlace(destination)
 
 }
