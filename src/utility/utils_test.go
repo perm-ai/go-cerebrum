@@ -338,26 +338,21 @@ func TestDotProduct(t *testing.T) {
 
 	testCases := GenerateTestCases(utils)
 
-	for i := range testCases {
+	ct1 := testCases[0].data1
+	ct2 := testCases[0].data2
 
-		log.Log("Testing dot product (" + strconv.Itoa(i+1) + "/4)")
-		ct1 := testCases[i].data1
-		ct2 := testCases[i].data2
+	dotNew := utils.DotProductNew(&ct1, &ct2)
+	dotNewD := utils.Decrypt(&dotNew)
 
-		dotNew := utils.DotProductNew(&ct1, &ct2)
-		dotNewD := utils.Decrypt(&dotNew)
+	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, 1) {
+		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
+	}
 
-		if !EvalCorrectness(dotNewD, testCases[i].dotExpected, true, 1) {
-			t.Error("Dot product wasn't correctly calculated (DotProductNew)")
-		}
+	utils.DotProduct(ct1, ct2, &ct1)
+	dotD := utils.Decrypt(&ct1)
 
-		utils.DotProduct(ct1, ct2, &ct1)
-		dotD := utils.Decrypt(&ct1)
-
-		if !EvalCorrectness(dotD, testCases[i].dotExpected, true, 2) {
-			t.Error("Dot product wasn't correctly calculated (DotProduct)")
-		}
-
+	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, 2) {
+		t.Error("Dot product wasn't correctly calculated (DotProduct)")
 	}
 
 }
