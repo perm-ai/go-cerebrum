@@ -23,7 +23,7 @@ type Utils struct {
 	log logger.Logger
 }
 
-func NewUtils(logEnabled bool) Utils {
+func NewUtils(bootstrapEnabled bool, logEnabled bool) Utils {
 
 	log := logger.NewLogger(logEnabled)
 
@@ -44,34 +44,52 @@ func NewUtils(logEnabled bool) Utils {
 	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
-	log.Log("Util Initialization: Generating bootstrapping key")
-	var bootstrappingKey *ckks.BootstrappingKey
-	bootstrappingKey = keyGenerator.GenBootstrappingKey(Params.LogSlots(), bootstrappingParams, secretKey)
+	if bootstrapEnabled {
+		log.Log("Util Initialization: Generating bootstrapping key")
+		var bootstrappingKey *ckks.BootstrappingKey
+		bootstrappingKey = keyGenerator.GenBootstrappingKey(Params.LogSlots(), bootstrappingParams, secretKey)
 
-	var err error
-	var bootstrapper *ckks.Bootstrapper
+		var err error
+		var bootstrapper *ckks.Bootstrapper
 
-	log.Log("Util Initialization: Generating bootstrapper")
-	bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
+		log.Log("Util Initialization: Generating bootstrapper")
+		bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
 
-	if err != nil {
-		panic("BOOTSTRAPPER GENERATION ERROR")
-	}
+		if err != nil {
+			panic("BOOTSTRAPPER GENERATION ERROR")
+		}
 
-	return Utils{
-		*bootstrappingParams,
-		*Params,
-		*secretKey,
-		*publicKey,
-		*relinKey,
-		*bootstrappingKey,
-		*galoisKey,
-		bootstrapper,
-		Encoder,
-		Evaluator,
-		Encryptor,
-		Decryptor,
-		log,
+		return Utils{
+			*bootstrappingParams,
+			*Params,
+			*secretKey,
+			*publicKey,
+			*relinKey,
+			*bootstrappingKey,
+			*galoisKey,
+			bootstrapper,
+			Encoder,
+			Evaluator,
+			Encryptor,
+			Decryptor,
+			log,
+		}
+	} else {
+		return Utils{
+			*bootstrappingParams,
+			*Params,
+			*secretKey,
+			*publicKey,
+			*relinKey,
+			ckks.BootstrappingKey{},
+			*galoisKey,
+			&ckks.Bootstrapper{},
+			Encoder,
+			Evaluator,
+			Encryptor,
+			Decryptor,
+			log,
+		}
 	}
 
 }
@@ -98,7 +116,7 @@ func (u Utils) Complex128ToFloat64(value []complex128) []float64 {
 
 func (u Utils) GenerateFilledArray(value float64) []float64 {
 
-	arr := make([]float64, u.Params.LogSlots())
+	arr := make([]float64, u.Params.Slots())
 	for i := range arr {
 		arr[i] = value
 	}
@@ -111,8 +129,8 @@ func (u Utils) GenerateFilledArray(value float64) []float64 {
 func (u Utils) Encode(value []float64) ckks.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(&u.Params, u.Params.MaxLevel(), u.Params.Scale())
-	u.Encoder.Encode(plaintext, u.Float64ToComplex128(value), u.Params.LogSlots())
+	// plaintext := ckks.NewPlaintext(&u.Params, u.Params.MaxLevel(), u.Params.Scale())
+	plaintext := u.Encoder.EncodeNew(u.Float64ToComplex128(value), u.Params.LogSlots())
 
 	return *plaintext
 

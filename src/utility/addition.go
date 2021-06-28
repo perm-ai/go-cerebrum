@@ -9,10 +9,10 @@ func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 
 }
 
-func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
+func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext {
 
-	ct := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), a.Scale())
-	utils.Add(*a, *b, ct)
+	utils.EqualizeScale(&a, &b)
+	ct := utils.Evaluator.AddNew(a, b)
 
 	return *ct
 
@@ -25,10 +25,10 @@ func (utils Utils) Sub(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 
 }
 
-func (utils Utils) SubNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
+func (utils Utils) SubNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext {
 
-	ct := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), a.Scale())
-	utils.Sub(*a, *b, ct)
+	utils.EqualizeScale(&a, &b)
+	ct := utils.Evaluator.SubNew(a, b)
 
 	return *ct
 
