@@ -28,7 +28,7 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
-	result := l.utils.MultiplyNew(input, &l.M)
+	result := l.utils.MultiplyNew(*input, l.M)
 	l.utils.Add(result, l.B, &result)
 
 	return result
@@ -41,7 +41,7 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Cipherte
 
 	averager := l.utils.Encrypt(l.utils.GenerateFilledArray(-2 / float64(size)))
 
-	dM := l.utils.MultiplyNew(input, err)
+	dM := l.utils.MultiplyNew(*input, *err)
 	l.utils.SumElementsInPlace(&dM)
 	l.utils.Multiply(dM, averager, &dM)
 
@@ -63,7 +63,7 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient, lea
 
 }
 
-func (model *LinearRegression) train(x *ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
+func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
 
 	for i := 0; i < epoch; i++ {
 
