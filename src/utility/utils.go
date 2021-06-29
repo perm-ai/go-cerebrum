@@ -1,6 +1,8 @@
 package utility
 
 import (
+	"math"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
@@ -29,6 +31,8 @@ func NewUtils(bootstrapEnabled bool, logEnabled bool) Utils {
 
 	Params := ckks.DefaultBootstrapSchemeParams[0]
 	bootstrappingParams := ckks.DefaultBootstrapParams[0]
+
+	Params.SetScale(math.Pow(2, 30))
 
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
