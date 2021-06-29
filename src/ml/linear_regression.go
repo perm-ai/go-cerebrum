@@ -65,8 +65,10 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	l.utils.Sub(l.M, gradient.DM, &l.M)
 	l.utils.Sub(l.B, gradient.DB, &l.B)
-	l.utils.BootstrapIfNecessary(&l.M)
-	l.utils.BootstrapIfNecessary(&l.B)
+	mbtp := l.utils.BootstrapIfNecessary(&l.M)
+	if mbtp {
+		l.utils.BootstrapInPlace(&l.B)
+	}
 
 }
 
