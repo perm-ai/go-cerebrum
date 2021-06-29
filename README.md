@@ -27,6 +27,7 @@ import (
   "math/rand"
   "github.com/perm-ai/GO-HEML-prototype/src/utility"
   "fmt"
+  "time"
 )
 
 func main(){
@@ -47,15 +48,18 @@ func main(){
   // Encrypt float arrays
   randomCiphertext := utils.Encrypt(randoms)
   twosCiphertext := utils.Encrypt(twos)
+
+  // Encode Pi
+  encodedPi := utils.Encode(pis)
   
   // Add (ciphertext)
-  sum := utils.AddNew(randomCiphertext, twosCiphertext)
+  result := utils.AddNew(randomCiphertext, twosCiphertext)
   
   // Multiply and save result to sum (ciphertext with plaintext)
-  product := utils.MultiplyPlainRescale(sum, pis, &sum)
+  utils.MultiplyPlainRescale(&result, &encodedPi, &result)
   
   // Decryption
-  decrypted := utils.Decrypt(product)
+  decrypted := utils.Decrypt(&result)
   
   // Print out answer
   fmt.Println(decrypted)
