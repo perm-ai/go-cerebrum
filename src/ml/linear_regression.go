@@ -33,7 +33,7 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 	result := l.utils.MultiplyRescaleNew(input, &l.M)
-	
+
 	sample1 := l.utils.Decrypt(&result)
 	fmt.Printf("M*X(FWD): %f\n", sample1[0])
 
@@ -41,7 +41,6 @@ func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 	sample2 := l.utils.Decrypt(&result)
 	fmt.Printf("Sum(FWD): %f\n", sample2[0])
-
 
 	return result
 
@@ -53,10 +52,10 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Cipherte
 
 	dM := l.utils.MultiplyRescaleNew(input, err)
 	l.utils.SumElementsInPlace(&dM)
-	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), &dM)
+	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM)
 
 	dB := l.utils.SumElementsNew(*err)
-	l.utils.MultiplyConstRescale(&dB, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), &dB)
+	l.utils.MultiplyConstRescale(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB)
 
 	return LinearRegressionGradient{dM, dB}
 
@@ -87,7 +86,7 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		model.UpdateGradient(grad)
 		m := model.utils.Decrypt(&model.M)
 		b := model.utils.Decrypt(&model.B)
-		fmt.Printf("Result M: %f B: %f\n", m[0], b[0])
+		fmt.Printf("Result M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
 
 	}
 
