@@ -46,8 +46,6 @@ func GenerateTestCases(u Utils) [4]TestCase {
 		randomDot[0] += randomMul[i]
 	}
 
-	fmt.Println(random1[0], random2[0])
-
 	// Normal ct (same scale, same level)
 	t1 := TestCase{u.Encrypt(random1), u.Encrypt(random2), random1, random2, randomAdd, randomSub, randomMul, randomDot}
 
@@ -57,7 +55,6 @@ func GenerateTestCases(u Utils) [4]TestCase {
 	t2d1enct := u.Encryptor.EncryptFastNew(&t2d1encd)
 	t2d2enct := u.Encryptor.EncryptFastNew(&t2d2encd)
 	t2 := TestCase{*t2d1enct, *t2d2enct, random1, random2, randomAdd, randomSub, randomMul, randomDot}
-	fmt.Printf("t2d2encd: %f, t2d2enct: %f\n", u.Decode(&t2d2encd)[0], u.Decrypt(t2d2enct)[0])
 
 	// Ct with different level, same scale
 	t3d1enct := u.Encrypt(random1)
@@ -96,8 +93,12 @@ func EvalCorrectness(evalData []float64, expected []float64, isDot bool, decimal
 		}
 
 	} else {
-		if math.Abs(evalData[0]-expected[0]) > precision {
-			return false
+
+		for i := range evalData {
+			if math.Abs(evalData[i]-expected[0]) > precision {
+				log.Log("Incorrect evaluation (Expected: " + fmt.Sprintf("%f", expected[i]) + " Got: " + fmt.Sprintf("%f", evalData[i]) + " Index: " + strconv.Itoa(i) + ")")
+				return false
+			}
 		}
 	}
 

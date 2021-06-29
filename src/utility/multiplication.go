@@ -42,6 +42,36 @@ func (u Utils) MultiplyRescaleNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.C
 
 }
 
+func (u Utils) MultiplyPlainRescale(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext){
+
+	u.ReEncodeAsNTT(b);
+	u.Evaluator.MulRelin(a, b, &u.RelinKey, destination)
+	u.BootstrapIfNecessary(destination)
+	u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
+
+}
+
+func (u Utils) MultiplyPlainRescaleNew(a *ckks.Ciphertext, b *ckks.Plaintext) ckks.Ciphertext {
+
+	u.ReEncodeAsNTT(b);
+	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
+	u.BootstrapIfNecessary(result)
+	u.Evaluator.Rescale(result, math.Pow(2.0, 40.0), result)
+
+	return *result
+
+}
+
+func (u Utils) MultiplyConstRescale(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext){
+
+	cmplx := u.Float64ToComplex128(b)
+	encoded := u.Encoder.EncodeNTTAtLvlNew(u.Params.MaxLevel(), cmplx, u.Params.LogSlots())
+	u.Evaluator.MulRelin(a, encoded, &u.RelinKey, destination)
+	u.BootstrapIfNecessary(destination)
+	u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
+
+}
+
 func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 
 	if a.Level() != b.Level() {
@@ -58,6 +88,18 @@ func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 		}
 
 		u.Evaluator.DropLevel(requireSwitch, requireSwitch.Level()-constant.Level())
+
+	}
+
+}
+
+func (u Utils) ReEncodeAsNTT(a *ckks.Plaintext) {
+
+	if !a.IsNTT() {
+
+		// Reencode as ntt
+		data := u.Encoder.Decode(a, u.Params.LogSlots())
+		u.Encoder.EncodeNTT(a, data, u.Params.LogSlots())
 
 	}
 
