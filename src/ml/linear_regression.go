@@ -1,7 +1,7 @@
 package ml
 
 import (
-	
+	"fmt"
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -39,29 +39,27 @@ func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int) LinearRegressionGradient {
+func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
 
 	err := l.utils.Evaluator.SubNew(y, output)
 
 	dM := l.utils.MultiplyRescaleNew(input, err)
 	l.utils.SumElementsInPlace(&dM)
-	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray(-2 / float64(size)), &dM)
+	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), &dM)
 
 	dB := l.utils.SumElementsNew(*err)
-	l.utils.MultiplyConstRescale(&dB, l.utils.GenerateFilledArray(-2 / float64(size)), &dB)
+	l.utils.MultiplyConstRescale(&dB, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), &dB)
 
 	return LinearRegressionGradient{dM, dB}
 
 }
 
-func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient, learningRate float64) {
-
-	lrCt := l.utils.Encrypt(l.utils.GenerateFilledArray(learningRate))
-	l.utils.Multiply(gradient.DM, lrCt, &gradient.DM)
-	l.utils.Multiply(gradient.DB, lrCt, &gradient.DB)
+func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	l.utils.Sub(l.M, gradient.DM, &l.M)
 	l.utils.Sub(l.B, gradient.DB, &l.B)
+	l.utils.BootstrapIfNecessary(&l.M)
+	l.utils.BootstrapIfNecessary(&l.B)
 
 }
 
@@ -73,12 +71,15 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 	for i := 0; i < epoch; i++ {
 
-		log.Log("Forward propagating " + strconv.Itoa(i+1)  + "/" + strconv.Itoa(epoch))
+		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(x)
-		log.Log("Backward propagating " + strconv.Itoa(i+1)  + "/" + strconv.Itoa(epoch))
-		grad := model.Backward(x, &fwd, y, size)
-		log.Log("Updating gradient " + strconv.Itoa(i+1)  + "/" + strconv.Itoa(epoch))
-		model.UpdateGradient(grad, learningRate)
+		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		grad := model.Backward(x, &fwd, y, size, learningRate)
+		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		model.UpdateGradient(grad)
+		m := model.utils.Decrypt(&model.M)
+		b := model.utils.Decrypt(&model.B)
+		fmt.Printf("Result M: %f B: %f\n", m[0], b[0])
 
 	}
 
