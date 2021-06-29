@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(false, true)
+var utils = NewUtils(true, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -354,6 +354,22 @@ func TestDotProduct(t *testing.T) {
 
 	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, 2) {
 		t.Error("Dot product wasn't correctly calculated (DotProduct)")
+	}
+
+}
+
+func TestBootstrapping(t *testing.T) {
+
+	pt := ckks.NewPlaintext(&utils.Params, 1, math.Pow(2, 40))
+	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.12)), utils.Params.LogSlots())
+	ct := utils.Encryptor.EncryptFastNew(pt)
+	preBootstrap := ct.Level()
+
+	utils.BootstrapIfNecessary(ct)
+
+	decrypted := utils.Decrypt(ct)
+	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
+		t.Error("Wasn't bootstrapped correctly")
 	}
 
 }
