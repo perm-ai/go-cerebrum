@@ -33,7 +33,15 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 	result := l.utils.MultiplyRescaleNew(input, &l.M)
+	
+	sample1 := l.utils.Decrypt(&result)
+	fmt.Printf("M*X(FWD): %f\n", sample1[0])
+
 	l.utils.Add(result, l.B, &result)
+
+	sample2 := l.utils.Decrypt(&result)
+	fmt.Printf("Sum(FWD): %f\n", sample2[0])
+
 
 	return result
 

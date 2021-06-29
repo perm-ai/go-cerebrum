@@ -368,8 +368,19 @@ func TestBootstrapping(t *testing.T) {
 	utils.BootstrapIfNecessary(ct)
 
 	decrypted := utils.Decrypt(ct)
+
+	// Test if bootstrap increase level and correctly decrypt
 	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
 		t.Error("Wasn't bootstrapped correctly")
+	}
+
+	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
+	utils.MultiplyRescale(encTwos, *ct, ct)
+
+	decrypted = utils.Decrypt(ct)
+
+	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
+		t.Error("Wasn't evaluated correctly after bootstrap")
 	}
 
 }
