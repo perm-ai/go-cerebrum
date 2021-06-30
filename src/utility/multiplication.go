@@ -65,7 +65,7 @@ func (u Utils) MultiplyPlainRescaleNew(a *ckks.Ciphertext, b *ckks.Plaintext) ck
 func (u Utils) MultiplyConstRescale(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext){
 
 	cmplx := u.Float64ToComplex128(b)
-	encoded := u.Encoder.EncodeNTTAtLvlNew(u.Params.MaxLevel(), cmplx, u.Params.LogSlots())
+	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
 	u.Evaluator.MulRelin(a, encoded, &u.RelinKey, destination)
 	u.BootstrapIfNecessary(destination)
 	u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)

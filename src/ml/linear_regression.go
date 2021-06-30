@@ -32,6 +32,7 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
+	fmt.Printf("(M * X) M level: %d, X level: %d\n", l.M.Level(), input.Level())
 	result := l.utils.MultiplyRescaleNew(input, &l.M)
 
 	sample1 := l.utils.Decrypt(&result)
@@ -50,11 +51,14 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Cipherte
 
 	err := l.utils.Evaluator.SubNew(y, output)
 
+	fmt.Printf("(X * E) X level: %d, E level: %d\n", input.Level(), err.Level())
 	dM := l.utils.MultiplyRescaleNew(input, err)
 	l.utils.SumElementsInPlace(&dM)
+	fmt.Printf("(dM * Avg) dM level: %d\n", dM.Level())
 	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM)
 
 	dB := l.utils.SumElementsNew(*err)
+	fmt.Printf("(dB * Avg) dM level: %d\n", dM.Level())
 	l.utils.MultiplyConstRescale(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB)
 
 	return LinearRegressionGradient{dM, dB}

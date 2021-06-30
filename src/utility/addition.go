@@ -6,8 +6,6 @@ func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 
 	// Add two ciphertext together and save result to destination given
 
-	// Equalize scale if the scale aren't equal
-	utils.EqualizeScale(&a, &b)
 	utils.Evaluator.Add(a, b, destination)
 
 }
@@ -16,8 +14,6 @@ func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 
 	// Add two ciphertext together and return result as a new ciphertext
 
-	// Equalize scale if the scale aren't equal
-	utils.EqualizeScale(&a, &b)
 	ct := utils.Evaluator.AddNew(a, b)
 
 	return *ct
@@ -28,8 +24,6 @@ func (utils Utils) Sub(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 
 	// Subtract two ciphertext together and save result to destination given
 
-	// Equalize scale if the scale aren't equal
-	utils.EqualizeScale(&a, &b)
 	utils.Evaluator.Sub(a, b, destination)
 
 }
@@ -38,8 +32,6 @@ func (utils Utils) SubNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 
 	// Subtract two ciphertext together and return result as a new ciphertext
 
-	// Equalize scale if the scale aren't equal
-	utils.EqualizeScale(&a, &b)
 	ct := utils.Evaluator.SubNew(a, b)
 
 	return *ct
