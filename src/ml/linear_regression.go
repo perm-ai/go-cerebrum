@@ -30,10 +30,10 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 
 }
 
-func (l LinearRegression) Forward(input ckks.Ciphertext) ckks.Ciphertext {
+func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 	fmt.Printf("(M * X) M level: %d, X level: %d\n", l.M.Level(), input.Level())
-	result := l.utils.MultiplyRescaleNew(&input, &l.M)
+	result := l.utils.MultiplyRescaleNew(input, &l.M)
 
 	sample1 := l.utils.Decrypt(&result)
 	fmt.Printf("M*X(FWD): %f\n", sample1[0])
@@ -47,12 +47,12 @@ func (l LinearRegression) Forward(input ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (l LinearRegression) Backward(input ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
+func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
 
 	err := l.utils.Evaluator.SubNew(y, output)
 
 	fmt.Printf("(X * E) X level: %d, E level: %d\n", input.Level(), err.Level())
-	dM := l.utils.MultiplyRescaleNew(&input, err)
+	dM := l.utils.MultiplyRescaleNew(input, err)
 	l.utils.SumElementsInPlace(&dM)
 	fmt.Printf("(dM * Avg) dM level: %d\n", dM.Level())
 	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM)
@@ -85,9 +85,9 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 	for i := 0; i < epoch; i++ {
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		fwd := model.Forward(*x)
+		fwd := model.Forward(x.CopyNew().Ciphertext())
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		grad := model.Backward(*x, fwd, y, size, learningRate)
+		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		model.UpdateGradient(grad)
 		m := model.utils.Decrypt(&model.M)
