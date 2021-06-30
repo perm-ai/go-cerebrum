@@ -90,7 +90,7 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		b := model.utils.Decrypt(&model.B)
 		fmt.Printf("Result M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
 
-		if model.M.Level() < 4 || model.B.Level() < 4 {
+		if model.M.Level() <= 4 || model.B.Level() <= 4 {
 			fmt.Println("Bootstrapping gradient")
 			model.utils.BootstrapInPlace(&model.M)
 			model.utils.BootstrapInPlace(&model.B)
