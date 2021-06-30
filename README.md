@@ -56,7 +56,7 @@ func main(){
   result := utils.AddNew(randomCiphertext, twosCiphertext)
   
   // Multiply and save result to sum (ciphertext with plaintext)
-  utils.MultiplyPlainRescale(&result, &encodedPi, &result)
+  utils.MultiplyPlain(&result, &encodedPi, &result, true, true)
   
   // Decryption
   decrypted := utils.Decrypt(&result)
