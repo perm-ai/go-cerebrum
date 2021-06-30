@@ -16,6 +16,6 @@ func main() {
 
 	x := utils.Encrypt(lrData.Temp[0:32768])
 	y := utils.Encrypt(lrData.Sal[0:32768])
-	linearRegression.Train(&x, &y, 0.01, len(lrData.Temp), 100)
+	linearRegression.Train(&x, &y, 0.05, len(lrData.Temp), 20)
 
 }
