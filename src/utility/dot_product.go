@@ -29,16 +29,16 @@ func (u Utils) SumElementsNew(ct ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (u Utils) DotProduct(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
+func (u Utils) DotProduct(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, bootstrap bool) {
 
-	u.MultiplyRescale(a, b, destination)
+	u.Multiply(a, b, destination, true, bootstrap)
 	u.SumElementsInPlace(destination)
 
 }
 
-func (u Utils) DotProductNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
+func (u Utils) DotProductNew(a ckks.Ciphertext, b ckks.Ciphertext, bootstrap bool) ckks.Ciphertext {
 
-	result := u.MultiplyRescaleNew(a, b)
+	result := u.MultiplyNew(a, b, true, bootstrap)
 	u.SumElementsInPlace(&result)
 
 	return result

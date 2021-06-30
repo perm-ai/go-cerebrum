@@ -33,7 +33,7 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 	fmt.Printf("(M * X) M level: %d, X level: %d\n", l.M.Level(), input.Level())
-	result := l.utils.MultiplyRescaleNew(input, &l.M)
+	result := l.utils.MultiplyNew(*input, l.M, true, false)
 
 	sample1 := l.utils.Decrypt(&result)
 	fmt.Printf("M*X(FWD): %f\n", sample1[0])
@@ -52,14 +52,14 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertex
 	err := l.utils.Evaluator.SubNew(y, output)
 
 	fmt.Printf("(X * E) X level: %d, E level: %d\n", input.Level(), err.Level())
-	dM := l.utils.MultiplyRescaleNew(input, err)
+	dM := l.utils.MultiplyNew(*input, *err, true, false)
 	l.utils.SumElementsInPlace(&dM)
 	fmt.Printf("(dM * Avg) dM level: %d\n", dM.Level())
-	l.utils.MultiplyConstRescale(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM)
+	l.utils.MultiplyConst(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM, true, false)
 
 	dB := l.utils.SumElementsNew(*err)
 	fmt.Printf("(dB * Avg) dM level: %d\n", dM.Level())
-	l.utils.MultiplyConstRescale(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB)
+	l.utils.MultiplyConst(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB, true, false)
 
 	return LinearRegressionGradient{dM, dB}
 
@@ -69,10 +69,6 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	l.utils.Sub(l.M, gradient.DM, &l.M)
 	l.utils.Sub(l.B, gradient.DB, &l.B)
-	mbtp := l.utils.BootstrapIfNecessary(&l.M)
-	if mbtp {
-		l.utils.BootstrapInPlace(&l.B)
-	}
 
 }
 
@@ -93,6 +89,12 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		m := model.utils.Decrypt(&model.M)
 		b := model.utils.Decrypt(&model.B)
 		fmt.Printf("Result M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
+
+		if model.M.Level() <= 4 || model.B.Level() <= 4 {
+			fmt.Println("Bootstrapping gradient")
+			model.utils.BootstrapInPlace(&model.M)
+			model.utils.BootstrapInPlace(&model.B)
+		}
 
 	}
 

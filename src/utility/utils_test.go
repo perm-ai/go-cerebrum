@@ -301,7 +301,7 @@ func TestMultiplication(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		mulNew := utils.MultiplyNew(ct1, ct2)
+		mulNew := utils.MultiplyNew(ct1, ct2, false, true)
 		mulNewD := utils.Decrypt(&mulNew)
 
 		if !EvalCorrectness(mulNewD, testCases[i].mulExpected, false, 1) {
@@ -309,14 +309,14 @@ func TestMultiplication(t *testing.T) {
 		}
 
 		newCiphertext1 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
-		utils.Multiply(ct1, ct2, newCiphertext1)
+		utils.Multiply(ct1, ct2, newCiphertext1, false, true)
 		mulD := utils.Decrypt(newCiphertext1)
 
 		if !EvalCorrectness(mulD, testCases[i].mulExpected, false, 1) {
 			t.Error("Data wasn't correctly multiplied (Multiply)")
 		}
 
-		mulNewRes := utils.MultiplyRescaleNew(&ct1, &ct2)
+		mulNewRes := utils.MultiplyNew(ct1, ct2, true, true)
 		mulNewResD := utils.Decrypt(&mulNewRes)
 
 		if !EvalCorrectness(mulNewResD, testCases[i].mulExpected, false, 1) && mulNewRes.Scale() != ct1.Scale()*ct2.Scale() {
@@ -324,7 +324,7 @@ func TestMultiplication(t *testing.T) {
 		}
 
 		newCiphertext2 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
-		utils.MultiplyRescale(ct1, ct2, newCiphertext2)
+		utils.Multiply(ct1, ct2, newCiphertext2,  true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 
 		if !EvalCorrectness(mulResD, testCases[i].mulExpected, false, 1) && newCiphertext2.Scale() != ct1.Scale()*ct2.Scale() {
@@ -342,14 +342,14 @@ func TestDotProduct(t *testing.T) {
 	ct1 := testCases[0].data1
 	ct2 := testCases[0].data2
 
-	dotNew := utils.DotProductNew(&ct1, &ct2)
+	dotNew := utils.DotProductNew(ct1, ct2, true)
 	dotNewD := utils.Decrypt(&dotNew)
 
 	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, 1) {
 		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
 	}
 
-	utils.DotProduct(ct1, ct2, &ct1)
+	utils.DotProduct(ct1, ct2, &ct1, true)
 	dotD := utils.Decrypt(&ct1)
 
 	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, 2) {
@@ -375,7 +375,7 @@ func TestBootstrapping(t *testing.T) {
 	}
 
 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
-	utils.MultiplyRescale(encTwos, *ct, ct)
+	utils.Multiply(encTwos, *ct, ct, true, true)
 
 	decrypted = utils.Decrypt(ct)
 
