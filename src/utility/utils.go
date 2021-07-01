@@ -22,7 +22,7 @@ type Utils struct {
 	Encryptor    		ckks.Encryptor
 	Decryptor    		ckks.Decryptor
 
-	filters		 		[]ckks.Plaintext
+	Filters		 		[]ckks.Plaintext
 	log 		 		logger.Logger
 }
 

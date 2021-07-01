@@ -2,7 +2,7 @@ package utility
 
 import "github.com/ldsec/lattigo/v2/ckks"
 
-func (utils Utils) Add(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext) {
+func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
 	// Add two ciphertext together and save result to destination given
 
@@ -10,7 +10,7 @@ func (utils Utils) Add(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks
 
 }
 
-func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
+func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext {
 
 	// Add two ciphertext together and return result as a new ciphertext
 
@@ -20,7 +20,7 @@ func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertex
 
 }
 
-func (utils Utils) Sub(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext) {
+func (utils Utils) Sub(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
 	// Subtract two ciphertext together and save result to destination given
 
@@ -28,7 +28,7 @@ func (utils Utils) Sub(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks
 
 }
 
-func (utils Utils) SubNew(a *ckks.Ciphertext, b *ckks.Ciphertext) ckks.Ciphertext {
+func (utils Utils) SubNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext {
 
 	// Subtract two ciphertext together and return result as a new ciphertext
 
