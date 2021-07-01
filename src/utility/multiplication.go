@@ -21,7 +21,7 @@ func (u Utils) Multiply(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckk
 
 }
 
-func (u Utils) MultiplyNew(a *ckks.Ciphertext, b *ckks.Ciphertext, rescale bool, bootstrap bool) ckks.Ciphertext {
+func (u Utils) MultiplyNew(a *ckks.Ciphertext, b *ckks.Ciphertext, rescale bool, bootstrap bool) *ckks.Ciphertext {
 
 	u.SwitchToSameModCoeff(a, b)
 	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
@@ -34,7 +34,7 @@ func (u Utils) MultiplyNew(a *ckks.Ciphertext, b *ckks.Ciphertext, rescale bool,
 		u.Evaluator.Rescale(result, math.Pow(2.0, 30.0), result)
 	}
 
-	return *result
+	return result
 
 }
 
@@ -53,7 +53,7 @@ func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination 
 
 }
 
-func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, bootstrap bool) ckks.Ciphertext {
+func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, bootstrap bool) *ckks.Ciphertext {
 
 	u.ReEncodeAsNTT(b);
 	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
@@ -66,7 +66,7 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 		u.Evaluator.Rescale(result, math.Pow(2.0, 30.0), result)
 	}
 
-	return *result
+	return result
 
 }
 

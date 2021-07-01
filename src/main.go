@@ -12,7 +12,7 @@ import (
 func main() {
 
 	lrData := importer.GetSeaData("./test-data/sea_data.json")
-	utils := utility.NewUtils(math.Pow(2, 30), true, true)
+	utils := utility.NewUtils(math.Pow(2, 30), 0, true, true)
 	linearRegression := ml.NewLinearRegression(utils)
 
 	x := utils.Encrypt(lrData.Temp[0:32768])

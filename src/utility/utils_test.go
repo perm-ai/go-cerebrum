@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(math.Pow(2,35), true, true)
+var utils = NewUtils(math.Pow(2,35), 0, true, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -280,7 +280,7 @@ func TestMultiplication(t *testing.T) {
 		ct2 := testCases[i].data2
 
 		mulNew := utils.MultiplyNew(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), false, true)
-		mulNewD := utils.Decrypt(&mulNew)
+		mulNewD := utils.Decrypt(mulNew)
 
 		if !EvalCorrectness(mulNewD, testCases[i].mulExpected, false, 1) {
 			t.Error("Data wasn't correctly multiplied (MultiplyNew)")
@@ -295,7 +295,7 @@ func TestMultiplication(t *testing.T) {
 		}
 
 		mulNewRes := utils.MultiplyNew(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), true, true)
-		mulNewResD := utils.Decrypt(&mulNewRes)
+		mulNewResD := utils.Decrypt(mulNewRes)
 
 		if !EvalCorrectness(mulNewResD, testCases[i].mulExpected, false, 1) && mulNewRes.Scale() != ct1.Scale()*ct2.Scale() {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescaleNew)")
@@ -321,7 +321,7 @@ func TestDotProduct(t *testing.T) {
 	ct2 := testCases[0].data2
 
 	dotNew := utils.DotProductNew(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), true)
-	dotNewD := utils.Decrypt(&dotNew)
+	dotNewD := utils.Decrypt(dotNew)
 
 	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, 1) {
 		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
@@ -338,9 +338,12 @@ func TestDotProduct(t *testing.T) {
 
 func TestBootstrapping(t *testing.T) {
 
-	pt := ckks.NewPlaintext(&utils.Params, 1, math.Pow(2, 40))
-	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.12)), utils.Params.LogSlots())
+	pt := ckks.NewPlaintext(&utils.Params, 2, math.Pow(2, 40))
+	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.14)), utils.Params.LogSlots())
 	ct := utils.Encryptor.EncryptFastNew(pt)
+
+	utils.MultiplyConstArray(ct, utils.GenerateFilledArray(2), ct, true, false)
+
 	preBootstrap := ct.Level()
 
 	utils.BootstrapIfNecessary(ct)
@@ -357,7 +360,7 @@ func TestBootstrapping(t *testing.T) {
 
 	decrypted = utils.Decrypt(ct)
 
-	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
+	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 4), false, 1)){
 		t.Error("Wasn't evaluated correctly after bootstrap")
 	}
 

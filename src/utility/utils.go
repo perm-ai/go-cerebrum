@@ -16,16 +16,17 @@ type Utils struct {
 	BootstrapingKey     ckks.BootstrappingKey
 	GaloisKey           ckks.RotationKeys
 
-	Bootstrapper *ckks.Bootstrapper
-	Encoder      ckks.Encoder
-	Evaluator    ckks.Evaluator
-	Encryptor    ckks.Encryptor
-	Decryptor    ckks.Decryptor
+	Bootstrapper 		*ckks.Bootstrapper
+	Encoder      		ckks.Encoder
+	Evaluator    		ckks.Evaluator
+	Encryptor    		ckks.Encryptor
+	Decryptor    		ckks.Decryptor
 
-	log logger.Logger
+	filters		 		[]ckks.Plaintext
+	log 		 		logger.Logger
 }
 
-func NewUtils(scale float64, bootstrapEnabled bool, logEnabled bool) Utils {
+func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 
 	log := logger.NewLogger(logEnabled)
 
@@ -47,6 +48,19 @@ func NewUtils(scale float64, bootstrapEnabled bool, logEnabled bool) Utils {
 	Evaluator := ckks.NewEvaluator(Params)
 	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
+
+	filters := make([]ckks.Plaintext, filtersAmount)
+	emptyFilter := make([]complex128, filtersAmount)
+
+	for i := range emptyFilter {
+		emptyFilter[i] = complex(0, 0)
+	}
+
+	for i := range filters {
+		filter := emptyFilter
+		filter[i] = complex(1, 0)
+		filters[i] = *Encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
+	}
 
 	if bootstrapEnabled {
 		log.Log("Util Initialization: Generating bootstrapping key")
@@ -76,6 +90,7 @@ func NewUtils(scale float64, bootstrapEnabled bool, logEnabled bool) Utils {
 			Evaluator,
 			Encryptor,
 			Decryptor,
+			filters,
 			log,
 		}
 	} else {
@@ -92,6 +107,7 @@ func NewUtils(scale float64, bootstrapEnabled bool, logEnabled bool) Utils {
 			Evaluator,
 			Encryptor,
 			Decryptor,
+			filters,
 			log,
 		}
 	}

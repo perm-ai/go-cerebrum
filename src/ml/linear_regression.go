@@ -16,8 +16,8 @@ type LinearRegression struct {
 }
 
 type LinearRegressionGradient struct {
-	DM ckks.Ciphertext
-	DB ckks.Ciphertext
+	DM *ckks.Ciphertext
+	DB *ckks.Ciphertext
 }
 
 func NewLinearRegression(u utility.Utils) LinearRegression {
@@ -30,10 +30,10 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 
 }
 
-func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
+func (l LinearRegression) Forward(input *ckks.Ciphertext) *ckks.Ciphertext {
 
 	result := l.utils.MultiplyNew(input, &l.M, true, false)
-	l.utils.Add(&result, &l.B, &result)
+	l.utils.Add(result, &l.B, result)
 
 	return result
 
@@ -48,11 +48,11 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Cipherte
 	err := l.utils.Evaluator.SubNew(y, output)
 
 	dM := l.utils.MultiplyNew(input, err, true, false)
-	l.utils.SumElementsInPlace(&dM)
-	l.utils.MultiplyConstArray(&dM, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), &dM, true, false)
+	l.utils.SumElementsInPlace(dM)
+	l.utils.MultiplyConstArray(dM, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), dM, true, false)
 
 	dB := l.utils.SumElementsNew(*err)
-	l.utils.MultiplyConstArray(&dB, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), &dM, true, false)
+	l.utils.MultiplyConstArray(dB, l.utils.GenerateFilledArray((-2/float64(size)) * learningRate), dM, true, false)
 
 	return LinearRegressionGradient{dM, dB}
 
@@ -60,8 +60,8 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Cipherte
 
 func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
-	l.utils.Sub(&l.M, &gradient.DM, &l.M)
-	l.utils.Sub(&l.B, &gradient.DB, &l.B)
+	l.utils.Sub(&l.M, gradient.DM, &l.M)
+	l.utils.Sub(&l.B, gradient.DB, &l.B)
 
 }
 
@@ -77,7 +77,7 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		fwd := model.Forward(x.CopyNew().Ciphertext())
 
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		grad := model.Backward(x.CopyNew().Ciphertext(), &fwd, y, size, learningRate)
+		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		model.UpdateGradient(grad)
