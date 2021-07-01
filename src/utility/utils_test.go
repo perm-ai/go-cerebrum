@@ -223,14 +223,14 @@ func TestAddition(t *testing.T) {
 		fmt.Println(utils.Decrypt(&testCases[i].data1)[0], utils.Decrypt(&testCases[i].data2)[0], testCases[i].data1.Scale(), testCases[i].data2.Scale())
 		fmt.Println(testCases[i].rawData1[0], testCases[i].rawData2[0])
 
-		sum := utils.AddNew(ct1, ct2)
+		sum := utils.AddNew(&ct1, &ct2)
 		addNewD := utils.Decrypt(&sum)
 
 		if !EvalCorrectness(addNewD, testCases[i].addExpected, false, 1) {
 			t.Error("Data wasn't correctly added (AddNew)")
 		}
 
-		utils.Add(ct1, ct2, &sum)
+		utils.Add(&ct1, &ct2, &sum)
 		addD := utils.Decrypt(&sum)
 
 		if !EvalCorrectness(addD, testCases[i].addExpected, false, 1) {
@@ -251,42 +251,20 @@ func TestSubtraction(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		subNew := utils.SubNew(ct1, ct2)
+		subNew := utils.SubNew(&ct1, &ct2)
 		subNewD := utils.Decrypt(&subNew)
 
 		if !EvalCorrectness(subNewD, testCases[i].subExpected, false, 1) {
 			t.Error("Data wasn't correctly subtracted (SubNew)")
 		}
 
-		utils.Sub(ct1, ct2, &ct1)
+		utils.Sub(&ct1, &ct2, &ct1)
 		subD := utils.Decrypt(&ct1)
 
 		if !EvalCorrectness(subD, testCases[i].subExpected, false, 1) {
 			t.Error("Data wasn't correctly subtracted (Sub)")
 		}
 
-	}
-
-}
-
-func TestEqualizeScale(t *testing.T) {
-
-	testCases := GenerateTestCases(utils)
-
-	encrypted1 := testCases[1].data1
-	encrypted2 := testCases[1].data2
-
-	utils.EqualizeScale(&encrypted1, &encrypted2)
-
-	if encrypted1.Scale() != encrypted2.Scale() {
-		t.Error("Ciphertext scale weren't properly equalized")
-	}
-
-	decrypted1 := utils.Decrypt(&encrypted1)
-	decrypted2 := utils.Decrypt(&encrypted2)
-
-	if !(EvalCorrectness(decrypted1, testCases[1].rawData1, false, 1) && !EvalCorrectness(decrypted2, testCases[1].rawData2, false, 1)) {
-		t.Error("Ciphertext scale weren't properly equalized")
 	}
 
 }
@@ -301,7 +279,7 @@ func TestMultiplication(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		mulNew := utils.MultiplyNew(ct1, ct2, false, true)
+		mulNew := utils.MultiplyNew(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), false, true)
 		mulNewD := utils.Decrypt(&mulNew)
 
 		if !EvalCorrectness(mulNewD, testCases[i].mulExpected, false, 1) {
@@ -309,14 +287,14 @@ func TestMultiplication(t *testing.T) {
 		}
 
 		newCiphertext1 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
-		utils.Multiply(ct1, ct2, newCiphertext1, false, true)
+		utils.Multiply(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), newCiphertext1, false, true)
 		mulD := utils.Decrypt(newCiphertext1)
 
 		if !EvalCorrectness(mulD, testCases[i].mulExpected, false, 1) {
 			t.Error("Data wasn't correctly multiplied (Multiply)")
 		}
 
-		mulNewRes := utils.MultiplyNew(ct1, ct2, true, true)
+		mulNewRes := utils.MultiplyNew(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), true, true)
 		mulNewResD := utils.Decrypt(&mulNewRes)
 
 		if !EvalCorrectness(mulNewResD, testCases[i].mulExpected, false, 1) && mulNewRes.Scale() != ct1.Scale()*ct2.Scale() {
@@ -324,7 +302,7 @@ func TestMultiplication(t *testing.T) {
 		}
 
 		newCiphertext2 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
-		utils.Multiply(ct1, ct2, newCiphertext2,  true, true)
+		utils.Multiply(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), newCiphertext2,  true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 
 		if !EvalCorrectness(mulResD, testCases[i].mulExpected, false, 1) && newCiphertext2.Scale() != ct1.Scale()*ct2.Scale() {
@@ -342,14 +320,14 @@ func TestDotProduct(t *testing.T) {
 	ct1 := testCases[0].data1
 	ct2 := testCases[0].data2
 
-	dotNew := utils.DotProductNew(ct1, ct2, true)
+	dotNew := utils.DotProductNew(ct1.CopyNew().Ciphertext(), ct2.CopyNew().Ciphertext(), true)
 	dotNewD := utils.Decrypt(&dotNew)
 
 	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, 1) {
 		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
 	}
 
-	utils.DotProduct(ct1, ct2, &ct1, true)
+	utils.DotProduct(&ct1, ct2.CopyNew().Ciphertext(), &ct1, true)
 	dotD := utils.Decrypt(&ct1)
 
 	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, 2) {
@@ -375,7 +353,7 @@ func TestBootstrapping(t *testing.T) {
 	}
 
 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
-	utils.Multiply(encTwos, *ct, ct, true, true)
+	utils.Multiply(&encTwos, ct, ct, true, true)
 
 	decrypted = utils.Decrypt(ct)
 

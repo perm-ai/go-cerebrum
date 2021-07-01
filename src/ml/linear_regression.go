@@ -32,34 +32,27 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
-	fmt.Printf("(M * X) M level: %d, X level: %d\n", l.M.Level(), input.Level())
-	result := l.utils.MultiplyNew(*input, l.M, true, false)
-
-	sample1 := l.utils.Decrypt(&result)
-	fmt.Printf("M*X(FWD): %f\n", sample1[0])
-
-	l.utils.Add(result, l.B, &result)
-
-	sample2 := l.utils.Decrypt(&result)
-	fmt.Printf("Sum(FWD): %f\n", sample2[0])
+	result := l.utils.MultiplyNew(input, &l.M, true, false)
+	l.utils.Add(&result, &l.B, &result)
 
 	return result
 
 }
 
-func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
+func (l LinearRegression) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
+
+	// Calculate backward gradient using the following equation
+	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
+	// dB = (-2/n) * sum(label - prediction) * learning_rate
 
 	err := l.utils.Evaluator.SubNew(y, output)
 
-	fmt.Printf("(X * E) X level: %d, E level: %d\n", input.Level(), err.Level())
-	dM := l.utils.MultiplyNew(*input, *err, true, false)
+	dM := l.utils.MultiplyNew(input, err, true, false)
 	l.utils.SumElementsInPlace(&dM)
-	fmt.Printf("(dM * Avg) dM level: %d\n", dM.Level())
-	l.utils.MultiplyConst(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM, true, false)
+	l.utils.Evaluator.MultByConst(&dM, (-2/float64(size)) * learningRate, &dM)
 
 	dB := l.utils.SumElementsNew(*err)
-	fmt.Printf("(dB * Avg) dM level: %d\n", dM.Level())
-	l.utils.MultiplyConst(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB, true, false)
+	l.utils.Evaluator.MultByConst(&dB, (-2/float64(size)) * learningRate, &dM)
 
 	return LinearRegressionGradient{dM, dB}
 
@@ -67,8 +60,8 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertex
 
 func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
-	l.utils.Sub(l.M, gradient.DM, &l.M)
-	l.utils.Sub(l.B, gradient.DB, &l.B)
+	l.utils.Sub(&l.M, &gradient.DM, &l.M)
+	l.utils.Sub(&l.B, &gradient.DB, &l.B)
 
 }
 
@@ -82,13 +75,15 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(x.CopyNew().Ciphertext())
+
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
+		grad := model.Backward(x.CopyNew().Ciphertext(), &fwd, y, size, learningRate)
+
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		model.UpdateGradient(grad)
 
-		if model.M.Level() < 4 || model.B.Level() < 4 {
-			fmt.Println("Bootstrapping gradient")
+		if model.M.Level() < 3 || model.B.Level() < 3 {
+			log.Log("Bootstrapping gradient")
 			if(model.B.Level() != 1){
 				model.utils.Evaluator.DropLevel(&model.B, model.B.Level() - 1)
 			}

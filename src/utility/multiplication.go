@@ -6,9 +6,9 @@ import (
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
-func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
+func (u Utils) Multiply(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
-	u.SwitchToSameModCoeff(&a, &b)
+	u.SwitchToSameModCoeff(a, b)
 	u.Evaluator.MulRelin(a, b, &u.RelinKey, destination)
 	
 	if bootstrap {
@@ -21,9 +21,9 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 
 }
 
-func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, bootstrap bool) ckks.Ciphertext {
+func (u Utils) MultiplyNew(a *ckks.Ciphertext, b *ckks.Ciphertext, rescale bool, bootstrap bool) ckks.Ciphertext {
 
-	u.SwitchToSameModCoeff(&a, &b)
+	u.SwitchToSameModCoeff(a, b)
 	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
 
 	if bootstrap {
@@ -70,7 +70,7 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 
 }
 
-func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool){
+func (u Utils) MultiplyConstArray(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool){
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
