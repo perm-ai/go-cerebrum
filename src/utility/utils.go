@@ -50,14 +50,9 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
 	filters := make([]ckks.Plaintext, filtersAmount)
-	emptyFilter := make([]complex128, filtersAmount)
-
-	for i := range emptyFilter {
-		emptyFilter[i] = complex(0, 0)
-	}
 
 	for i := range filters {
-		filter := emptyFilter
+		filter := make([]complex128, filtersAmount)
 		filter[i] = complex(1, 0)
 		filters[i] = *Encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
 	}

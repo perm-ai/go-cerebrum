@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(math.Pow(2,35), 0, true, true)
+var utils = NewUtils(math.Pow(2,35), 100, false, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -74,7 +74,7 @@ func GenerateTestCases(u Utils) [4]TestCase {
 
 }
 
-func EvalCorrectness(evalData []float64, expected []float64, isDot bool, decimalPrecision int) bool {
+func EvalCorrectness(evalData []float64, expected []float64, isDot bool, decimalPrecision float64) bool {
 
 	precision := math.Pow(10, float64(-1*decimalPrecision))
 
@@ -323,42 +323,128 @@ func TestDotProduct(t *testing.T) {
 	dotNew := utils.DotProductNew(ct1, ct2, true)
 	dotNewD := utils.Decrypt(&dotNew)
 
-	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, 1) {
+	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, -0.69) {
 		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
 	}
 
 	utils.DotProduct(ct1, ct2, &ct1, true)
 	dotD := utils.Decrypt(&ct1)
 
-	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, 2) {
+	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, -0.69) {
 		t.Error("Dot product wasn't correctly calculated (DotProduct)")
 	}
 
 }
 
-func TestBootstrapping(t *testing.T) {
+// func TestBootstrapping(t *testing.T) {
 
-	pt := ckks.NewPlaintext(&utils.Params, 1, math.Pow(2, 40))
-	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.12)), utils.Params.LogSlots())
-	ct := utils.Encryptor.EncryptFastNew(pt)
-	preBootstrap := ct.Level()
+// 	pt := ckks.NewPlaintext(&utils.Params, 1, math.Pow(2, 40))
+// 	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.12)), utils.Params.LogSlots())
+// 	ct := utils.Encryptor.EncryptFastNew(pt)
+// 	preBootstrap := ct.Level()
 
-	utils.BootstrapIfNecessary(ct)
+// 	utils.BootstrapIfNecessary(ct)
 
-	decrypted := utils.Decrypt(ct)
+// 	decrypted := utils.Decrypt(ct)
 
-	// Test if bootstrap increase level and correctly decrypt
-	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
-		t.Error("Wasn't bootstrapped correctly")
+// 	// Test if bootstrap increase level and correctly decrypt
+// 	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
+// 		t.Error("Wasn't bootstrapped correctly")
+// 	}
+
+// 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
+// 	utils.Multiply(encTwos, *ct, ct, true, true)
+
+// 	decrypted = utils.Decrypt(ct)
+
+// 	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
+// 		t.Error("Wasn't evaluated correctly after bootstrap")
+// 	}
+
+// }
+
+func TestTranspose(t *testing.T){
+
+	// Test case:										Expected result:
+	// [[01, 02, 03, 04, 05, 06, 07, 08, 09, 10],		[[01, 11, 21],
+	//  [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],		 [02, 12, 22], ...
+	//  [21, 22, 23, 24, 25, 26, 27, 28, 29, 30]]		 [10, 20, 30]]
+
+	testCase := make([]ckks.Ciphertext, 3)
+	
+	// Generate test case
+	for i := range testCase{
+
+		data := make([]float64, utils.Params.Slots());
+		for j := 1; j <= 10; j++ {
+			data[j-1] = float64((10 * i) + j); 
+		}
+
+		testCase[i] = utils.Encrypt(data);
+
 	}
 
-	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
-	utils.Multiply(encTwos, *ct, ct, true, true)
+	// Generate expected array to check correctness of the function
+	expected := make([][]float64, 10)
 
-	decrypted = utils.Decrypt(ct)
+	for i := range expected{
+		row := make([]float64, utils.Params.Slots())
+		for j := 0; j < 3; j++ {
+			row[j] = float64(i + 1 + (10 * j))
+		}
+		expected[i] = row
+	}
 
-	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
-		t.Error("Wasn't evaluated correctly after bootstrap")
+	// Compute transposed array
+	transposedCt := utils.Transpose(testCase, 10)
+
+	for i := range transposedCt{
+		decryptedResult := utils.Decrypt(&transposedCt[i])
+
+		if !EvalCorrectness(decryptedResult, expected[i], false, 1){
+
+			t.Error("Data was incorrectly transposed")
+
+		}
+	}
+
+}
+
+func TestOuterProduct(t *testing.T){
+
+	// Test the correctness of outer product evaluation betweem two ciphertexts
+	// Test case:			Expected:
+	// A = E(3, 4)			[ E(6, 9, 15, 18),
+	// B = E(2, 3, 5, 6)	  E(8, 12, 20, 24)]
+
+	testCaseA := utils.Encrypt([]float64{3, 4})
+	testCaseB := utils.Encrypt([]float64{2, 3, 5, 6})
+
+	outerProduct := utils.Outer(&testCaseA, &testCaseB, 2, 4)
+	
+	for i := range outerProduct {
+
+		decryptedProduct := utils.Decrypt(&outerProduct[i])
+		expectedResult := make([]float64, utils.Params.Slots())
+		
+		if i == 0 {
+			expectedResult[0] = 6
+			expectedResult[1] = 9
+			expectedResult[2] = 15
+			expectedResult[3] = 18
+		} else {
+			expectedResult[0] = 8
+			expectedResult[1] = 12
+			expectedResult[2] = 20
+			expectedResult[3] = 24
+		}
+
+		if !EvalCorrectness(decryptedProduct, expectedResult, false, 1){
+
+			t.Error("Outer was incorrectly calculated")
+
+		}
+
 	}
 
 }
