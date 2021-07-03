@@ -16,7 +16,7 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, math.Pow(2.0, 30.0), destination)
+		u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
 	}
 
 }
@@ -31,7 +31,7 @@ func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, b
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, math.Pow(2.0, 30.0), result)
+		u.Evaluator.Rescale(result, math.Pow(2.0, 40.0), result)
 	}
 
 	return *result
@@ -48,7 +48,7 @@ func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination 
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, math.Pow(2.0, 30.0), destination)
+		u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
 	}
 
 }
@@ -63,7 +63,7 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, math.Pow(2.0, 30.0), result)
+		u.Evaluator.Rescale(result, math.Pow(2.0, 40.0), result)
 	}
 
 	return *result
@@ -81,7 +81,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, math.Pow(2.0, 30.0), destination)
+		u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
 	}
 
 }
