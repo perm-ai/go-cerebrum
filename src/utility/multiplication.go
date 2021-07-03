@@ -6,6 +6,8 @@ import (
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
+var RESCALE_THRESHOLD = math.Pow(2.0, 60.0)
+
 func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
 	u.SwitchToSameModCoeff(&a, &b)
@@ -16,7 +18,7 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
+		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
 	}
 
 }
@@ -31,7 +33,7 @@ func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, b
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, math.Pow(2.0, 40.0), result)
+		u.Evaluator.Rescale(result, RESCALE_THRESHOLD, result)
 	}
 
 	return *result
@@ -48,7 +50,7 @@ func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination 
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
+		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
 	}
 
 }
@@ -63,7 +65,7 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, math.Pow(2.0, 40.0), result)
+		u.Evaluator.Rescale(result, RESCALE_THRESHOLD, result)
 	}
 
 	return *result
@@ -81,7 +83,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, math.Pow(2.0, 40.0), destination)
+		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
 	}
 
 }

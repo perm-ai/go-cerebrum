@@ -87,9 +87,9 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		// DEBUG: SHOULD BE REMOVED BEFORE MERGE WITH MAIN
 		decryptedDM := model.utils.Decrypt(&grad.DM)
 		decryptedDB := model.utils.Decrypt(&grad.DB)
-		fmt.Printf("Backward result - DM: %f, DB: %f\n", decryptedDM[0:5], decryptedDB[0:5])
+		fmt.Printf("Backward result - DM: %f, DB: %f\n", decryptedDM[0], decryptedDB[0])
 
-		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
 
 		if model.M.Level() < 4 || model.B.Level() < 4 {
