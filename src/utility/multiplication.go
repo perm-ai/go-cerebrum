@@ -6,7 +6,7 @@ import (
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
-var RESCALE_THRESHOLD = math.Pow(2.0, 60.0)
+var RESCALE_THRESHOLD = math.Pow(2.0, 40.0)
 
 func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
