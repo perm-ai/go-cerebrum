@@ -76,9 +76,18 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(x.CopyNew().Ciphertext())
+		
+		// DEBUG: SHOULD BE REMOVED BEFORE MERGE WITH MAIN
+		decryptedFwd := model.utils.Decrypt(&fwd)
+		fmt.Printf("Forward result: %f\n", decryptedFwd[0:5])
 
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
+
+		// DEBUG: SHOULD BE REMOVED BEFORE MERGE WITH MAIN
+		decryptedDM := model.utils.Decrypt(&grad.DM)
+		decryptedDB := model.utils.Decrypt(&grad.DB)
+		fmt.Printf("Backward result - DM: %f, DB: %f\n", decryptedDM[0:5], decryptedDB[0:5])
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		model.UpdateGradient(grad)
@@ -92,6 +101,7 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 			model.utils.BootstrapInPlace(&model.B)
 		}
 
+		// DEBUG: SHOULD BE REMOVED BEFORE MERGE WITH MAIN
 		m := model.utils.Decrypt(&model.M)
 		b := model.utils.Decrypt(&model.B)
 		fmt.Printf("Result Epoch %d – M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", i, m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
