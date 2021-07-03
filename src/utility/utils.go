@@ -3,6 +3,8 @@ package utility
 import (
 	// "math"
 
+	"math/rand"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
@@ -137,6 +139,18 @@ func (u Utils) GenerateFilledArray(value float64) []float64 {
 	}
 
 	return arr
+
+}
+
+func (u Utils) GenerateRandomNormalArray(length int) []float64 {
+
+	randomArr := make([]float64, u.Params.Slots())
+
+	for i := 0; i < length; i++ {
+		randomArr[i] = rand.NormFloat64()
+	}
+
+	return randomArr
 
 }
 

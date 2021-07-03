@@ -96,3 +96,22 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 	return outerProduct
 
 }
+
+func (u Utils) PackVector(ciphertexts []ckks.Ciphertext) ckks.Ciphertext {
+
+	result := ckks.NewCiphertext(&u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
+
+	for i := range ciphertexts{
+
+		if i == 0 {
+			u.MultiplyPlain(&ciphertexts[i], &u.Filters[i], result, true, false)
+		} else {
+			filtered := u.MultiplyPlainNew(&ciphertexts[i], &u.Filters[i], true, false)
+			u.Add(filtered, *result, result)
+		}
+
+	}
+
+	return *result
+
+}
