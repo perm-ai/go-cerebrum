@@ -90,6 +90,10 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 			}
 			model.utils.BootstrapInPlace(&model.M)
 			model.utils.BootstrapInPlace(&model.B)
+
+			m := model.utils.Decrypt(&model.M)
+			b := model.utils.Decrypt(&model.B)
+			fmt.Printf("Result Epoch %d – M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", i, m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
 		}
 
 	}
