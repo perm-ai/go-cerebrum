@@ -46,13 +46,13 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertex
 	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
 	// dB = (-2/n) * sum(label - prediction) * learning_rate
 
-	err := l.utils.Evaluator.SubNew(y, output)
+	err := l.utils.SubNew(*y, output)
 
-	dM := l.utils.MultiplyNew(*input, *err, true, false)
+	dM := l.utils.MultiplyNew(*input, *err.CopyNew().Ciphertext(), true, false)
 	l.utils.SumElementsInPlace(&dM)
 	l.utils.MultiplyConst(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM, true, false)
 
-	dB := l.utils.SumElementsNew(*err)
+	dB := l.utils.SumElementsNew(err)
 	l.utils.MultiplyConst(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB, true, false)
 
 	return LinearRegressionGradient{dM, dB}
