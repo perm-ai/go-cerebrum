@@ -18,14 +18,14 @@ type Utils struct {
 	BootstrapingKey     ckks.BootstrappingKey
 	GaloisKey           ckks.RotationKeys
 
-	Bootstrapper 		*ckks.Bootstrapper
-	Encoder      		ckks.Encoder
-	Evaluator    		ckks.Evaluator
-	Encryptor    		ckks.Encryptor
-	Decryptor    		ckks.Decryptor
+	Bootstrapper *ckks.Bootstrapper
+	Encoder      ckks.Encoder
+	Evaluator    ckks.Evaluator
+	Encryptor    ckks.Encryptor
+	Decryptor    ckks.Decryptor
 
-	Filters		 		[]ckks.Plaintext
-	log 		 		logger.Logger
+	Filters []ckks.Plaintext
+	log     logger.Logger
 }
 
 func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
@@ -135,6 +135,17 @@ func (u Utils) GenerateFilledArray(value float64) []float64 {
 
 	arr := make([]float64, u.Params.Slots())
 	for i := range arr {
+		arr[i] = value
+	}
+
+	return arr
+
+}
+
+func (u Utils) GenerateFilledArraySize(value float64, size int) []float64 {
+
+	arr := make([]float64, u.Params.Slots())
+	for i := 0; i < size; i++ {
 		arr[i] = value
 	}
 
