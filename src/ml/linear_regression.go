@@ -74,17 +74,13 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 	for i := 0; i < epoch; i++ {
 
-		fmt.Println("Training (" + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + ")")
+		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(x.CopyNew().Ciphertext())
-
-		fmt.Printf("forward %.6f\n", model.utils.Decrypt(&fwd)[0:5])
 		
-		// log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
 
-		fmt.Printf("backward dM: %.6f, dB: %.6f\n", model.utils.Decrypt(&grad.DM)[0], model.utils.Decrypt(&grad.DB)[0])
-
-		// log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
+		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
 
 		m := model.utils.Decrypt(&model.M)
