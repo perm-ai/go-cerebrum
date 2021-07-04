@@ -74,14 +74,22 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 	for i := 0; i < epoch; i++ {
 
-		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		fmt.Println("Training (" + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + ")")
 		fwd := model.Forward(x.CopyNew().Ciphertext())
 
-		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		fmt.Printf("forward %.6f\n", model.utils.Decrypt(&fwd)[0:5])
+		
+		// log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
 
-		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
+		fmt.Printf("backward dM: %.6f, dB: %.6f\n", model.utils.Decrypt(&grad.DM)[0], model.utils.Decrypt(&grad.DB)[0])
+
+		// log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
+
+		m := model.utils.Decrypt(&model.M)
+		b := model.utils.Decrypt(&model.B)
+		fmt.Printf("Updated M: %f Updated B: %f\n\n", m[0], b[0])
 
 		if model.M.Level() < 4 || model.B.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
