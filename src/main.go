@@ -19,6 +19,6 @@ func main() {
 	x := utils.Encrypt(lrData.Income)
 	y := utils.Encrypt(lrData.Value)
 
-	linearRegression.Train(&x, &y, 0.5, len(lrData.Income), 100)
+	linearRegression.Train(&x, &y, 0.7, len(lrData.Income), 65)
 
 }
