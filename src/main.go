@@ -29,5 +29,5 @@ func main() {
 
 	fmt.Println(ml.Predict(logisticRegression, x, y))
 
-
+	ml.Coefficients_Sgd(lrData, logisticRegression, 20, 20)
 }
