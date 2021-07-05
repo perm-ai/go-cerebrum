@@ -3,9 +3,9 @@ package main
 import (
 
 	// "math"
-	// "fmt"
+	//"fmt"
 
-	"math"
+	//"math"
 
 	"github.com/perm-ai/GO-HEML-prototype/src/importer"
 	"github.com/perm-ai/GO-HEML-prototype/src/ml"
@@ -24,15 +24,13 @@ func main() {
 
 	// linearRegression.Train(&x, &y, 0.7, len(lrData.Income), 65)
 	lrData := importer.GetHeartData("./test-data/heart.json")
-	ml.Normalize_Data(x)
-	DataNumber := len(lrData.Age)
-	DataforTrain := (int)(math.Floor((float64)(DataNumber) * 0.9))
-	var xtrain []float64 = lrData.Age[0:DataforTrain]
+	x := lrData.Age
 	y := lrData.Sex
 	target := lrData.Target
+	ml.Normalize_Data(x)
+	
 
 	logisticRegression := ml.NewLogisticRegression()
-	//fmt.Println(ml.Predict(logisticRegression, x, y))
-	ml.Coefficients_Sgd(x, y, target, logisticRegression, 0.5, 20)
+	ml.Train(logisticRegression,x, y, target,0.5, 65)
 
 }
