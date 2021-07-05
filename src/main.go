@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+
 	// "math"
 
 	"github.com/perm-ai/GO-HEML-prototype/src/importer"
@@ -23,11 +23,11 @@ func main() {
 	lrData := importer.GetHeartData("./test-data/heart.json")
 	x := lrData.Age
 	y := lrData.Sex
-	// target := lrData.Target
+	target := lrData.Target
 
 	logisticRegression := ml.NewLogisticRegression()
 
-	fmt.Println(ml.Predict(logisticRegression, x, y))
+	//fmt.Println(ml.Predict(logisticRegression, x, y))
 
-	ml.Coefficients_Sgd(lrData, logisticRegression, 20, 20)
+	ml.Coefficients_Sgd(x, y, target, logisticRegression, 0.5, 20)
 }
