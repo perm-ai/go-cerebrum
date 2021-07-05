@@ -32,7 +32,7 @@ func Coefficients_Sgd(x []float64, y []float64, target []float64, model Logistic
 	for i := 0; i < epoch; i++ {
 		for j := 0; j < len(x); j++ {
 			yhat := Predict(model, x, y, j)
-			fmt.Printf("y hat = %f", yhat)
+			fmt.Printf("y hat = %f \n", yhat)
 			error := target[j] - yhat
 			model.b0 += l * error * yhat * (1 - yhat)
 			model.b1 += l * error * yhat * (1 - yhat) * x[j]
@@ -52,4 +52,26 @@ func SigmoidNew(input float64) float64 {
 
 	return 1.0 / (1.0 + math.Exp(-input))
 
+}
+
+func FindMinMax(input []float64) [2]float64 {
+	max := math.Pow(2, -15)
+	min := math.Pow(2, 15)
+	for _, value := range input {
+		if value < min {
+			min = value
+		}
+		if value > max {
+			max = value
+		}
+	}
+	minmax := [2]float64{min, max}
+	return minmax
+}
+
+func Normalize_Data(input []float64) {
+	MinMax := FindMinMax(input)
+	for i := 0; i < len(input); i++ {
+		input[i] = (input[i] - MinMax[0]) / (MinMax[1] - MinMax[0])
+	}
 }
