@@ -19,6 +19,15 @@ func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 	return *ct
 
 }
+func (utils Utils) AddConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext) {
+	utils.Evaluator.AddConst(a, b, destination)
+
+}
+
+func (utils Utils) AddConstNew(a *ckks.Ciphertext, b []float64) *ckks.Ciphertext {
+	ct := utils.Evaluator.AddConstNew(a, b)
+	return ct
+}
 
 func (utils Utils) Sub(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
