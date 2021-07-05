@@ -165,6 +165,23 @@ func (u Utils) GenerateRandomNormalArray(length int) []float64 {
 
 }
 
+func (u Utils) GenerateRandomArray(lowerBound float64, upperBound float64, length int) []float64 {
+
+	if lowerBound >= upperBound {
+		panic("Lower bound must be higher than upper bound")
+	}
+	
+	randomArr := make([]float64, u.Params.Slots())
+
+	for i := 0; i < length; i++ {
+		randomArr[i] = (rand.Float64() * (upperBound - lowerBound)) + lowerBound
+	}
+
+	return randomArr
+
+}
+
+
 // Encode into complex value
 func (u Utils) Encode(value []float64) ckks.Plaintext {
 
