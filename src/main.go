@@ -2,7 +2,7 @@ package main
 
 import (
 
-	// "math"
+	//"math"
 	//"fmt"
 
 	//"math"
@@ -28,9 +28,7 @@ func main() {
 	y := lrData.Sex
 	target := lrData.Target
 	ml.Normalize_Data(x)
-	
-
 	logisticRegression := ml.NewLogisticRegression()
-	ml.Train(logisticRegression,x, y, target,0.5, 65)
+	ml.Train(logisticRegression,x, y, target,0.1, 60)
 
 }

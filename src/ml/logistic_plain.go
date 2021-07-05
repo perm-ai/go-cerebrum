@@ -3,6 +3,7 @@ package ml
 import (
 	"fmt"
 	"math"
+	"math/rand"
 )
 
 type LogisticRegression struct {
@@ -13,7 +14,7 @@ type LogisticRegression struct {
 }
 
 func NewLogisticRegression() LogisticRegression {
-	return LogisticRegression{1, 1, 1}
+	return LogisticRegression{0, 0, 0}
 }
 
 func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 {
@@ -22,7 +23,7 @@ func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 
 	// return sigmoid(yhat)
 
 	yhat := model.b0 + model.b1*(x[j]) + model.b2*(y[j])
-	
+
 	return SigmoidNew(yhat)
 
 
@@ -35,9 +36,9 @@ func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target
 			yhat := Predict(model, x, y, j)
 			fmt.Printf("yhat: %f \n", yhat)
 			error := target[j] - yhat
-			model.b0 += l * error * yhat * (1 - yhat)
-			model.b1 += l * error * yhat * (1 - yhat) * x[j]
-			model.b2 += l * error * yhat * (1 - yhat) * y[j]
+			model.b0 = model.b0 + (l * error * yhat * (1 - yhat))
+			model.b1 = model.b1+ (l * error * yhat * (1 - yhat) * x[j])
+			model.b2 = model.b2+ (l * error * yhat * (1 - yhat) * y[j])
 		}
 	}
 	fmt.Printf("Trained -> b0: %f b1: %f, b2: %f \n", model.b0, model.b1, model.b2)
@@ -49,19 +50,37 @@ func SigmoidNew(input float64) float64 {
 	// In real case, evaluate sigmoid by taylor estimation
 	// 0.5 + 0.197x + 0.004x^3
 
-	return 1.0 / (1.0 + math.Exp(-input))
+	return 1.0 / (1.0 + math.Exp(-1*input))
 
 }
+func SigmoidApprox(x float64) float64 {
+	// In real case, evaluate sigmoid by taylor estimation
+	// 0.5 + 0.197x + 0.004x^3
+	y := 0.5 + 0.197*x + 0.004*math.Pow(x,3.0)
+	return y
+
+}
+
 func Train(model LogisticRegression, x []float64, y []float64, target []float64,l float64, epoch int){
-	DataNumber := len(x)
-	NumberOfDataforTrain := (int)(math.Floor((float64)(DataNumber) * 0.9))
-	var xtrain []float64 = x[0:NumberOfDataforTrain]
-	var ytrain []float64 = y[0:NumberOfDataforTrain]
-	var targettrain []float64 = target[0:NumberOfDataforTrain]
-	var xtest []float64 = x[NumberOfDataforTrain:len(x)+1]
-	var ytest []float64 = y[NumberOfDataforTrain:len(x)+1]
-	var targettest []float64 = target[NumberOfDataforTrain:len(x)+1]
-	model = Coefficients_Sgd(model,xtrain,ytrain,targettrain,l,epoch)
+	var NumberOfData float64	
+	NumberOfData = float64(len(x))
+	NumberOfTestData := (int)(math.Floor(NumberOfData * 0.1))
+	fmt.Printf("Amount of test data : %o \n",NumberOfTestData)
+	xtest := make([]float64,NumberOfTestData)
+	ytest := make([]float64,NumberOfTestData)
+	targettest := make([]float64,NumberOfTestData)
+	for i := 0; i<NumberOfTestData;i++{
+		OrderRemoved := (int)(math.Floor(((rand.Float64() * NumberOfData))))
+		fmt.Printf("Remove : %o \n",OrderRemoved)
+		xtest[i] = x[OrderRemoved]
+		ytest[i] = y[OrderRemoved]
+		targettest[i] = target[OrderRemoved]
+		remove(x,OrderRemoved)
+		remove(y,OrderRemoved)
+		remove(target,OrderRemoved)
+	}
+	fmt.Println("Training time")
+	model = Coefficients_Sgd(model,x,y,target,l,epoch)
 	fmt.Printf("Accuracy : %f ",Test(model,xtest,ytest,targettest))
 
 }
@@ -69,13 +88,8 @@ func Test(model LogisticRegression,xtest []float64, ytest []float64, targettest 
 	CorrectPrediction := 0
 	for i:= 0; i<len(xtest);i++{
 		PredictedTarget := Predict(model,xtest,ytest,i)
-		if PredictedTarget > 0.5{
-			PredictedTarget = 1
-		}else{
-			PredictedTarget = 0
-		}
-		
-		if PredictedTarget == targettest[i] {
+		fmt.Printf("Data : %f Predicted = %f \n",targettest[i],PredictedTarget)
+		if math.Round(PredictedTarget) == targettest[i] {
 		CorrectPrediction++
 		}
 	}
@@ -102,4 +116,8 @@ func Normalize_Data(input []float64) {
 	for i := 0; i < len(input); i++ {
 		input[i] = (input[i] - MinMax[0]) / (MinMax[1] - MinMax[0])
 	}
+}
+
+func remove(s []float64, index int) []float64 {
+    return append(s[:index], s[index+1:]...)
 }
