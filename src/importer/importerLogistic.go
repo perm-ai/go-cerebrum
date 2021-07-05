@@ -16,7 +16,7 @@ type HeartData struct {
 
 	Age []float64
 	Sex  []float64
-	Target []uint8
+	Target []float64
 
 }
 

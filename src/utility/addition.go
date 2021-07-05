@@ -20,11 +20,17 @@ func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 
 }
 func (utils Utils) AddConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext) {
+
+	// Add overwrite ciphertext and constant
+
 	utils.Evaluator.AddConst(a, b, destination)
 
 }
 
 func (utils Utils) AddConstNew(a *ckks.Ciphertext, b []float64) *ckks.Ciphertext {
+
+	// Add and create a new ciphertext
+
 	ct := utils.Evaluator.AddConstNew(a, b)
 	return ct
 }
