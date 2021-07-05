@@ -62,7 +62,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	var ytest []float64 = y[NumberOfDataforTrain:len(x)+1]
 	var targettest []float64 = target[NumberOfDataforTrain:len(x)+1]
 	model = Coefficients_Sgd(model,xtrain,ytrain,targettrain,l,epoch)
-	fmt.Printf("Accuracy : %f %",Test(model,xtest,ytest,targettest))
+	fmt.Printf("Accuracy : %f ",Test(model,xtest,ytest,targettest))
 
 }
 func Test(model LogisticRegression,xtest []float64, ytest []float64, targettest []float64) float64{
