@@ -8,6 +8,8 @@ import (
 	//"math"
 
 	// "github.com/perm-ai/GO-HEML-prototype/src/importer"
+	"fmt"
+
 	"github.com/perm-ai/GO-HEML-prototype/src/ml"
 	"github.com/perm-ai/GO-HEML-prototype/src/utility"
 )
@@ -31,16 +33,12 @@ func main() {
 	// ml.Normalize_Data(y)
 	// logisticRegression := ml.NewLogisticRegression()
 	// ml.Train(logisticRegression, x, y, target, 0.1, 20)
-	x, y, target := utility.GenerateLinearData(300)
-	logisticRegression := ml.NewLogisticRegression()
-	ml.Train(logisticRegression, x, y, target, 0.1, 20)
-
-	x, y, target = utility.GenerateLinearData(300)
-	logisticRegression = ml.NewLogisticRegression()
-	ml.Train(logisticRegression, x, y, target, 0.1, 20)
-
-	x, y, target = utility.GenerateLinearData(300)
-	logisticRegression = ml.NewLogisticRegression()
-	ml.Train(logisticRegression, x, y, target, 0.1, 20)
+	Acc := 0.0
+	for i := 0; i < 10; i++ {
+		x, y, target := utility.GenerateLinearData(300)
+		logisticRegression := ml.NewLogisticRegression()
+		Acc += ml.Train(logisticRegression, x, y, target, 0.1, 20)
+	}
+	fmt.Printf("Average Accuracy : %f", Acc/10)
 
 }

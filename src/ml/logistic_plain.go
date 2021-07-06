@@ -30,7 +30,7 @@ func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 
 }
 
 func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) LogisticRegression {
-	fmt.Printf("l: %f Epoch: %o \n", l, epoch)
+	//fmt.Printf("l: %f Epoch: %o \n", l, epoch)
 	for i := 0; i < epoch; i++ {
 		for j := 0; j < len(x); j++ {
 			yhat := Predict(model, x, y, j)
@@ -42,7 +42,7 @@ func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target
 			model.b2 = model.b2 + (l * error * (1 - yhat) * yhat * y[j])
 		}
 	}
-	fmt.Printf("Trained -> b0: %f b1: %f, b2: %f \n", model.b0, model.b1, model.b2)
+	//fmt.Printf("Trained -> b0: %f b1: %f, b2: %f \n", model.b0, model.b1, model.b2)
 	return model
 }
 
@@ -61,13 +61,13 @@ func SigmoidApprox(x float64) float64 {
 
 }
 
-func Train(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) {
+func Train(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) float64 {
 	rand.Seed(time.Now().UnixNano())
 	// fmt.Println(x)
 	// fmt.Println(y)
 	// fmt.Printf("Amount of data : %o \n", len(x))
 	// fmt.Printf("Amount of data : %o \n", len(y))
-	NumberOfTestData := 17
+	NumberOfTestData := 20
 	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
 	xtest := make([]float64, NumberOfTestData)
 	ytest := make([]float64, NumberOfTestData)
@@ -85,7 +85,9 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	}
 	fmt.Println("Training time")
 	model = Coefficients_Sgd(model, x, y, target, l, epoch)
-	fmt.Printf("Accuracy : %f \n", Test(model, x, y, target))
+	acc := Test(model, x, y, target) * 100
+	fmt.Printf("Accuracy : %f \n", acc)
+	return acc
 
 }
 func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest []float64) float64 {

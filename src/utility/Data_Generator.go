@@ -20,7 +20,9 @@ func GenerateLinearData(NumberOfData int) ([]float64, []float64, []float64) {
 		x := x[i]
 		y[i] = rand.Float64()
 		y := y[i]
-		if y >= m*(x)+c || Error1%75 == 0 {
+		//Plot the point(x,y) and if its above the line then target = 1
+		//The code sometimes add a little noise in the data(eg. once every 75 data)
+		if y >= m*(x)+c && Error1%75 != 0 {
 			target[i] = 1
 			Error1++
 		} else if y < m*(x)+c || Error0%75 == 0 {
@@ -28,9 +30,10 @@ func GenerateLinearData(NumberOfData int) ([]float64, []float64, []float64) {
 			Error0++
 		} else {
 			target[i] = 1
+			Error1++
 		}
 	}
 	fmt.Printf("y = %fx + %f \n", m, c)
-	// fmt.Printf("1:%o 0:%o \n", Error1, Error0)
+	fmt.Printf(" DATA -> 1:%o 0:%o \n", Error1, Error0)
 	return x, y, target
 }
