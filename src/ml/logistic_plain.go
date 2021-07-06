@@ -48,9 +48,12 @@ func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target
 			// fmt.Printf("yhat: %f \n", yhat)
 			error := target[j] - yhat
 			// fmt.Printf("error: %f \n", error)
+
+			// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
+
 			model.b0 = model.b0 + (l * error * (1 - yhat) * yhat)
-			model.b1 = model.b1 + (l * error * yhat * (1 - yhat) * x[j])
-			model.b2 = model.b2 + (l * error * (1 - yhat) * yhat * y[j])
+			model.b1 = model.b1 + (l * (error - yhat) * x[j])
+			model.b2 = model.b2 + (l * (error - yhat) * y[j])
 		}
 	}
 	//fmt.Printf("Trained -> b0: %f b1: %f, b2: %f \n", model.b0, model.b1, model.b2)
@@ -78,7 +81,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	// choose number of test data
 
 	rand.Seed(time.Now().UnixNano())
-	NumberOfTestData := 20
+	NumberOfTestData := 200
 	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
 	xtest := make([]float64, NumberOfTestData)
 	ytest := make([]float64, NumberOfTestData)
@@ -89,10 +92,10 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 		xtest[i] = x[OrderRemoved]
 		ytest[i] = y[OrderRemoved]
 		targettest[i] = target[OrderRemoved]
-		remove(x, OrderRemoved)
-		remove(y, OrderRemoved)
-		remove(target, OrderRemoved)
-		NumberOfTestData--
+		// remove(x, OrderRemoved)
+		// remove(y, OrderRemoved)
+		// remove(target, OrderRemoved)
+		// NumberOfTestData--
 	}
 
 	fmt.Println("Starting training process")
