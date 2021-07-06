@@ -12,7 +12,7 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 
 	u.SwitchToSameModCoeff(&a, &b)
 	u.Evaluator.MulRelin(a, b, &u.RelinKey, destination)
-	
+
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
 	}
@@ -40,11 +40,11 @@ func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, b
 
 }
 
-func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext, rescale bool, bootstrap bool){
+func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
-	u.ReEncodeAsNTT(b);
+	u.ReEncodeAsNTT(b)
 	u.Evaluator.MulRelin(a, b, &u.RelinKey, destination)
-	
+
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
 	}
@@ -57,7 +57,7 @@ func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination 
 
 func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, bootstrap bool) ckks.Ciphertext {
 
-	u.ReEncodeAsNTT(b);
+	u.ReEncodeAsNTT(b)
 	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
 
 	if bootstrap {
@@ -72,12 +72,12 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 
 }
 
-func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool){
+func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
 	u.Evaluator.MulRelin(a, encoded, &u.RelinKey, destination)
-	
+
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
 	}
@@ -87,7 +87,21 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 	}
 
 }
+func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b []float64, rescale bool, bootstrap bool) ckks.Ciphertext {
 
+	cmplx := u.Float64ToComplex128(b)
+	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
+	result := u.Evaluator.MulRelinNew(a, encoded, &u.RelinKey)
+
+	if bootstrap {
+		u.BootstrapIfNecessary(result)
+	}
+
+	if rescale {
+		u.Evaluator.Rescale(result, RESCALE_THRESHOLD, result)
+	}
+	return *result
+}
 func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 
 	if a.Level() != b.Level() {
