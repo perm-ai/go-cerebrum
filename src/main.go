@@ -28,7 +28,8 @@ func main() {
 	y := lrData.Sex
 	target := lrData.Target
 	ml.Normalize_Data(x)
+	ml.Normalize_Data(y)
 	logisticRegression := ml.NewLogisticRegression()
-	ml.Train(logisticRegression,x, y, target,0.1, 60)
+	ml.Train(logisticRegression, x, y, target, 0.1, 60)
 
 }

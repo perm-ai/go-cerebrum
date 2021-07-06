@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"time"
 )
 
 type LogisticRegression struct {
@@ -14,7 +15,7 @@ type LogisticRegression struct {
 }
 
 func NewLogisticRegression() LogisticRegression {
-	return LogisticRegression{0, 0, 0}
+	return LogisticRegression{0.5, 0.5, 0.5}
 }
 
 func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 {
@@ -26,10 +27,9 @@ func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 
 
 	return SigmoidNew(yhat)
 
-
 }
 
-func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target []float64,  l float64, epoch int) LogisticRegression {
+func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) LogisticRegression {
 	fmt.Printf("l: %f Epoch: %o \n", l, epoch)
 	for i := 0; i < epoch; i++ {
 		for j := 0; j < len(x); j++ {
@@ -37,14 +37,13 @@ func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target
 			fmt.Printf("yhat: %f \n", yhat)
 			error := target[j] - yhat
 			model.b0 = model.b0 + (l * error * yhat * (1 - yhat))
-			model.b1 = model.b1+ (l * error * yhat * (1 - yhat) * x[j])
-			model.b2 = model.b2+ (l * error * yhat * (1 - yhat) * y[j])
+			model.b1 = model.b1 + (l * error * yhat * (1 - yhat) * x[j])
+			model.b2 = model.b2 + (l * error * yhat * (1 - yhat) * y[j])
 		}
 	}
 	fmt.Printf("Trained -> b0: %f b1: %f, b2: %f \n", model.b0, model.b1, model.b2)
 	return model
 }
-
 
 func SigmoidNew(input float64) float64 {
 	// In real case, evaluate sigmoid by taylor estimation
@@ -56,44 +55,45 @@ func SigmoidNew(input float64) float64 {
 func SigmoidApprox(x float64) float64 {
 	// In real case, evaluate sigmoid by taylor estimation
 	// 0.5 + 0.197x + 0.004x^3
-	y := 0.5 + 0.197*x + 0.004*math.Pow(x,3.0)
+	y := 0.5 + 0.197*x + 0.004*math.Pow(x, 3.0)
 	return y
 
 }
 
-func Train(model LogisticRegression, x []float64, y []float64, target []float64,l float64, epoch int){
-	var NumberOfData float64	
+func Train(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) {
+	rand.Seed(time.Now().UnixNano())
+	var NumberOfData float64
 	NumberOfData = float64(len(x))
 	NumberOfTestData := (int)(math.Floor(NumberOfData * 0.1))
-	fmt.Printf("Amount of test data : %o \n",NumberOfTestData)
-	xtest := make([]float64,NumberOfTestData)
-	ytest := make([]float64,NumberOfTestData)
-	targettest := make([]float64,NumberOfTestData)
-	for i := 0; i<NumberOfTestData;i++{
-		OrderRemoved := (int)(math.Floor(((rand.Float64() * NumberOfData))))
-		fmt.Printf("Remove : %o \n",OrderRemoved)
+	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
+	xtest := make([]float64, NumberOfTestData)
+	ytest := make([]float64, NumberOfTestData)
+	targettest := make([]float64, NumberOfTestData)
+	for i := 0; i < NumberOfTestData; i++ {
+		OrderRemoved := (int)(math.Floor((rand.Float64() * NumberOfData)))
+		fmt.Printf("Remove : %o \n", OrderRemoved)
 		xtest[i] = x[OrderRemoved]
 		ytest[i] = y[OrderRemoved]
 		targettest[i] = target[OrderRemoved]
-		remove(x,OrderRemoved)
-		remove(y,OrderRemoved)
-		remove(target,OrderRemoved)
+		remove(x, OrderRemoved)
+		remove(y, OrderRemoved)
+		remove(target, OrderRemoved)
 	}
 	fmt.Println("Training time")
-	model = Coefficients_Sgd(model,x,y,target,l,epoch)
-	fmt.Printf("Accuracy : %f ",Test(model,xtest,ytest,targettest))
+	model = Coefficients_Sgd(model, x, y, target, l, epoch)
+	fmt.Printf("Accuracy : %f ", Test(model, xtest, ytest, targettest))
 
 }
-func Test(model LogisticRegression,xtest []float64, ytest []float64, targettest []float64) float64{
+func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest []float64) float64 {
 	CorrectPrediction := 0
-	for i:= 0; i<len(xtest);i++{
-		PredictedTarget := Predict(model,xtest,ytest,i)
-		fmt.Printf("Data : %f Predicted = %f \n",targettest[i],PredictedTarget)
+	for i := 0; i < len(xtest); i++ {
+		PredictedTarget := Predict(model, xtest, ytest, i)
+		fmt.Printf("Data : %f Predicted = %f \n", targettest[i], PredictedTarget)
 		if math.Round(PredictedTarget) == targettest[i] {
-		CorrectPrediction++
+			CorrectPrediction++
 		}
 	}
-	return (float64)(CorrectPrediction)/(float64)(len(xtest))
+	return (float64)(CorrectPrediction) / (float64)(len(xtest))
 
 }
 func FindMinMax(input []float64) [2]float64 {
@@ -119,5 +119,5 @@ func Normalize_Data(input []float64) {
 }
 
 func remove(s []float64, index int) []float64 {
-    return append(s[:index], s[index+1:]...)
+	return append(s[:index], s[index+1:]...)
 }
