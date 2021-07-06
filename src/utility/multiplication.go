@@ -87,7 +87,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 	}
 
 }
-func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b []float64, rescale bool, bootstrap bool) ckks.Ciphertext {
+func (u Utils) MultiplyConstNew(a ckks.Ciphertext, b []float64, rescale bool, bootstrap bool) ckks.Ciphertext {
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())

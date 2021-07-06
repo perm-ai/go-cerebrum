@@ -7,18 +7,18 @@ import (
 	"time"
 )
 
-type LogisticRegression struct {
+type LogisticRegressionPlain struct {
 	b0 float64 //intercept
 	b1 float64 //data-point 1
 	b2 float64 //data-point 2
 
 }
 
-func NewLogisticRegression() LogisticRegression {
-	return LogisticRegression{0.5, 0.5, 0.5}
+func NewLogisticRegressionPlain() LogisticRegressionPlain {
+	return LogisticRegressionPlain{0.5, 0.5, 0.5}
 }
 
-func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 {
+func Predict(model LogisticRegressionPlain, x []float64, y []float64, j int) float64 {
 
 	// Predict whether it is class 0 or 1
 
@@ -31,7 +31,7 @@ func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 
 
 }
 
-func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) LogisticRegression {
+func Coefficients_Sgd(model LogisticRegressionPlain, x []float64, y []float64, target []float64, l float64, epoch int) LogisticRegressionPlain {
 
 	// Perform stochastic gradient descent according to equation:
 	// b = b + learning_rate * (y - yhat) * yhat * (1 - yhat) * x
@@ -71,7 +71,7 @@ func SigmoidApprox(x float64) float64 {
 
 }
 
-func Train(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) float64 {
+func Train(model LogisticRegressionPlain, x []float64, y []float64, target []float64, l float64, epoch int) float64 {
 
 
 	// Partition a test set and a training set
@@ -104,7 +104,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	return acc
 
 }
-func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest []float64) float64 {
+func Test(model LogisticRegressionPlain, xtest []float64, ytest []float64, targettest []float64) float64 {
 
 	// This function outputs accuracy of the model
 
