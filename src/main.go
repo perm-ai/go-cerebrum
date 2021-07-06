@@ -31,7 +31,7 @@ func main() {
 	// ml.Normalize_Data(y)
 	// logisticRegression := ml.NewLogisticRegression()
 	// ml.Train(logisticRegression, x, y, target, 0.1, 20)
-	x, y, target := utility.GenerateLinearData(100)
+	x, y, target := utility.GenerateLinearData(300)
 	for i := 0; i < 100; i++ {
 		fmt.Printf("x : %f y : %f target : %o \n", x[i], y[i], target[i])
 	}
