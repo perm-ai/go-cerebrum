@@ -3,13 +3,13 @@ package main
 import (
 
 	//"math"
-	//"fmt"
+	"fmt"
 
 	//"math"
 
-	"github.com/perm-ai/GO-HEML-prototype/src/importer"
-	"github.com/perm-ai/GO-HEML-prototype/src/ml"
-	// "github.com/perm-ai/GO-HEML-prototype/src/utility"
+	// "github.com/perm-ai/GO-HEML-prototype/src/importer"
+	// "github.com/perm-ai/GO-HEML-prototype/src/ml"
+	"github.com/perm-ai/GO-HEML-prototype/src/utility"
 )
 
 func main() {
@@ -23,13 +23,16 @@ func main() {
 	// y := utils.Encrypt(lrData.Value)
 
 	// linearRegression.Train(&x, &y, 0.7, len(lrData.Income), 65)
-	lrData := importer.GetHeartData("./test-data/heart_data_test2.json")
-	x := lrData.Age
-	y := lrData.Trestbps
-	target := lrData.Target
-	ml.Normalize_Data(x)
-	ml.Normalize_Data(y)
-	logisticRegression := ml.NewLogisticRegression()
-	ml.Train(logisticRegression, x, y, target, 0.1, 150)
-
+	// lrData := importer.GetHeartData("./test-data/heart_data_test2.json")
+	// x := lrData.Age
+	// y := lrData.Trestbps
+	// target := lrData.Target
+	// ml.Normalize_Data(x)
+	// ml.Normalize_Data(y)
+	// logisticRegression := ml.NewLogisticRegression()
+	// ml.Train(logisticRegression, x, y, target, 0.1, 20)
+	x, y, target := utility.GenerateLinearData(100)
+	for i := 0; i < 100; i++ {
+		fmt.Printf("x : %f y : %f target : %o \n", x[i], y[i], target[i])
+	}
 }
