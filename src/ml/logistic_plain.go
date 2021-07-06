@@ -65,6 +65,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	var NumberOfData float64
 	NumberOfData = float64(len(x))
 	fmt.Printf("Amount of data : %f \n", NumberOfData)
+	fmt.Printf("Amount of data : %o \n", len(y))
 	NumberOfTestData := (int)(math.Floor(NumberOfData * 0.05))
 	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
 	xtest := make([]float64, NumberOfTestData)
@@ -79,6 +80,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 		remove(x, OrderRemoved)
 		remove(y, OrderRemoved)
 		remove(target, OrderRemoved)
+		NumberOfData--
 	}
 	fmt.Println("Training time")
 	model = Coefficients_Sgd(model, x, y, target, l, epoch)
@@ -89,7 +91,7 @@ func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest
 	CorrectPrediction := 0
 	for i := 0; i < len(xtest); i++ {
 		PredictedTarget := Predict(model, xtest, ytest, i)
-		fmt.Printf("Data : %f Predicted = %f \n", targettest[i], PredictedTarget)
+		fmt.Printf("Data : %f Predicted = %f \n", targettest[i], math.Round(PredictedTarget))
 		if math.Round(PredictedTarget) == targettest[i] {
 			CorrectPrediction++
 		}

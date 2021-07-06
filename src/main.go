@@ -25,11 +25,11 @@ func main() {
 	// linearRegression.Train(&x, &y, 0.7, len(lrData.Income), 65)
 	lrData := importer.GetHeartData("./test-data/heart_data_test2.json")
 	x := lrData.Age
-	y := lrData.HeartRate
+	y := lrData.Trestbps
 	target := lrData.Target
 	ml.Normalize_Data(x)
 	ml.Normalize_Data(y)
 	logisticRegression := ml.NewLogisticRegression()
-	ml.Train(logisticRegression, x, y, target, 0.1, 60)
+	ml.Train(logisticRegression, x, y, target, 0.1, 150)
 
 }
