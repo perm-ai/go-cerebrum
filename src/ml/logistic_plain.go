@@ -20,6 +20,8 @@ func NewLogisticRegression() LogisticRegression {
 
 func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 {
 
+	// Predict whether it is class 0 or 1
+
 	// yhat = b0 + b1*x + b2*y
 	// return sigmoid(yhat)
 	var yhat float64
@@ -30,6 +32,15 @@ func Predict(model LogisticRegression, x []float64, y []float64, j int) float64 
 }
 
 func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) LogisticRegression {
+
+	// Perform stochastic gradient descent according to equation:
+	// b = b + learning_rate * (y - yhat) * yhat * (1 - yhat) * x
+
+	// Where b is the coefficient or weight being optimized, learning_rate is a learning
+	// rate that you must configure (e.g. 0.01), (y – yhat) is the prediction error for the
+	// model on the training data attributed to the weight, yhat is the prediction made by the
+	// coefficients and x is the input value
+
 	//fmt.Printf("l: %f Epoch: %o \n", l, epoch)
 	for i := 0; i < epoch; i++ {
 		for j := 0; j < len(x); j++ {
@@ -54,19 +65,19 @@ func SigmoidNew(input float64) float64 {
 
 }
 func SigmoidApprox(x float64) float64 {
-	// In real case, evaluate sigmoid by taylor estimation
-	// 0.5 + 0.197x + 0.004x^3
+
 	y := 0.5 + 0.197*x + 0.004*math.Pow(x, 3.0)
 	return y
 
 }
 
 func Train(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) float64 {
+
+
+	// Partition a test set and a training set
+	// choose number of test data
+
 	rand.Seed(time.Now().UnixNano())
-	// fmt.Println(x)
-	// fmt.Println(y)
-	// fmt.Printf("Amount of data : %o \n", len(x))
-	// fmt.Printf("Amount of data : %o \n", len(y))
 	NumberOfTestData := 20
 	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
 	xtest := make([]float64, NumberOfTestData)
@@ -78,19 +89,25 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 		xtest[i] = x[OrderRemoved]
 		ytest[i] = y[OrderRemoved]
 		targettest[i] = target[OrderRemoved]
-		// remove(x, OrderRemoved)
-		// remove(y, OrderRemoved)
-		// remove(target, OrderRemoved)
-		// NumberOfData--
+		remove(x, OrderRemoved)
+		remove(y, OrderRemoved)
+		remove(target, OrderRemoved)
+		NumberOfTestData--
 	}
-	fmt.Println("Training time")
-	model = Coefficients_Sgd(model, x, y, target, l, epoch)
-	acc := Test(model, x, y, target) * 100
+
+	fmt.Println("Starting training process")
+
+	model = Coefficients_Sgd(model, x, y, target, l, epoch) // train datasets
+
+	acc := Test(model, xtest, ytest, targettest) * 100 //testing accuracy from testing data set
 	fmt.Printf("Accuracy : %f \n", acc)
 	return acc
 
 }
 func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest []float64) float64 {
+
+	// This function outputs accuracy of the model
+
 	CorrectPrediction := 0
 	for i := 0; i < len(xtest); i++ {
 		PredictedTarget := Predict(model, xtest, ytest, i)
@@ -103,6 +120,9 @@ func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest
 
 }
 func FindMinMax(input []float64) [2]float64 {
+
+	// find minmax in format {min, max}
+
 	max := math.Pow(2, -15)
 	min := math.Pow(2, 15)
 	for _, value := range input {
@@ -118,6 +138,9 @@ func FindMinMax(input []float64) [2]float64 {
 }
 
 func Normalize_Data(input []float64) {
+
+	// normalize dataset into (0,1)
+
 	MinMax := FindMinMax(input)
 	for i := 0; i < len(input); i++ {
 		input[i] = (input[i] - MinMax[0]) / (MinMax[1] - MinMax[0])
@@ -125,5 +148,8 @@ func Normalize_Data(input []float64) {
 }
 
 func remove(s []float64, index int) []float64 {
+
+	// remove and shift left
+
 	return append(s[:index], s[index+1:]...)
 }
