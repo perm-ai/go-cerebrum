@@ -7,6 +7,8 @@ import (
 )
 
 func GenerateLinearData(NumberOfData int) ([]float64, []float64, []float64) {
+	//This function will create (x,y) and a binary as an output
+	//The binary depends on (x,y)
 	rand.Seed(time.Now().UnixNano())
 	m := 1 - (rand.Float64() * 0.5)
 	c := rand.Float64() * 0.3
@@ -22,15 +24,12 @@ func GenerateLinearData(NumberOfData int) ([]float64, []float64, []float64) {
 		y := y[i]
 		//Plot the point(x,y) and if its above the line then target = 1
 		//The code sometimes add a little noise in the data(eg. once every 75 data)
-		if y >= m*(x)+c && Error1%75 != 0 {
+		if (y >= m*(x)+c || Error1%20 == 0) && Error0%20 != 0 {
 			target[i] = 1
 			Error1++
-		} else if y < m*(x)+c || Error0%75 == 0 {
+		} else {
 			target[i] = 0
 			Error0++
-		} else {
-			target[i] = 1
-			Error1++
 		}
 	}
 	fmt.Printf("y = %fx + %f \n", m, c)
