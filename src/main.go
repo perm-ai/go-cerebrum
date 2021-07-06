@@ -3,12 +3,12 @@ package main
 import (
 
 	//"math"
-	"fmt"
+	// "fmt"
 
 	//"math"
 
 	// "github.com/perm-ai/GO-HEML-prototype/src/importer"
-	// "github.com/perm-ai/GO-HEML-prototype/src/ml"
+	"github.com/perm-ai/GO-HEML-prototype/src/ml"
 	"github.com/perm-ai/GO-HEML-prototype/src/utility"
 )
 
@@ -32,7 +32,15 @@ func main() {
 	// logisticRegression := ml.NewLogisticRegression()
 	// ml.Train(logisticRegression, x, y, target, 0.1, 20)
 	x, y, target := utility.GenerateLinearData(300)
-	for i := 0; i < 100; i++ {
-		fmt.Printf("x : %f y : %f target : %o \n", x[i], y[i], target[i])
-	}
+	logisticRegression := ml.NewLogisticRegression()
+	ml.Train(logisticRegression, x, y, target, 0.1, 20)
+
+	x, y, target = utility.GenerateLinearData(300)
+	logisticRegression = ml.NewLogisticRegression()
+	ml.Train(logisticRegression, x, y, target, 0.1, 20)
+
+	x, y, target = utility.GenerateLinearData(300)
+	logisticRegression = ml.NewLogisticRegression()
+	ml.Train(logisticRegression, x, y, target, 0.1, 20)
+
 }

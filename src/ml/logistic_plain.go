@@ -34,9 +34,9 @@ func Coefficients_Sgd(model LogisticRegression, x []float64, y []float64, target
 	for i := 0; i < epoch; i++ {
 		for j := 0; j < len(x); j++ {
 			yhat := Predict(model, x, y, j)
-			//fmt.Printf("yhat: %f \n", yhat)
+			// fmt.Printf("yhat: %f \n", yhat)
 			error := target[j] - yhat
-			fmt.Printf("error: %f \n", error)
+			// fmt.Printf("error: %f \n", error)
 			model.b0 = model.b0 + (l * error * (1 - yhat) * yhat)
 			model.b1 = model.b1 + (l * error * yhat * (1 - yhat) * x[j])
 			model.b2 = model.b2 + (l * error * (1 - yhat) * yhat * y[j])
@@ -63,10 +63,10 @@ func SigmoidApprox(x float64) float64 {
 
 func Train(model LogisticRegression, x []float64, y []float64, target []float64, l float64, epoch int) {
 	rand.Seed(time.Now().UnixNano())
-	fmt.Println(x)
-	fmt.Println(y)
-	fmt.Printf("Amount of data : %o \n", len(x))
-	fmt.Printf("Amount of data : %o \n", len(y))
+	// fmt.Println(x)
+	// fmt.Println(y)
+	// fmt.Printf("Amount of data : %o \n", len(x))
+	// fmt.Printf("Amount of data : %o \n", len(y))
 	NumberOfTestData := 17
 	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
 	xtest := make([]float64, NumberOfTestData)
@@ -74,7 +74,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	targettest := make([]float64, NumberOfTestData)
 	for i := 0; i < NumberOfTestData; i++ {
 		OrderRemoved := (int)(math.Floor((rand.Float64() * (float64)(len(x)))))
-		fmt.Printf("Remove : %o \n", OrderRemoved)
+		// fmt.Printf("Remove : %o \n", OrderRemoved)
 		xtest[i] = x[OrderRemoved]
 		ytest[i] = y[OrderRemoved]
 		targettest[i] = target[OrderRemoved]
@@ -85,7 +85,7 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	}
 	fmt.Println("Training time")
 	model = Coefficients_Sgd(model, x, y, target, l, epoch)
-	fmt.Printf("Accuracy : %f ", Test(model, x, y, target))
+	fmt.Printf("Accuracy : %f \n", Test(model, x, y, target))
 
 }
 func Test(model LogisticRegression, xtest []float64, ytest []float64, targettest []float64) float64 {

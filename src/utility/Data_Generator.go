@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func GenerateLinearData(NumberOfData int) ([]float64, []float64, []int) {
+func GenerateLinearData(NumberOfData int) ([]float64, []float64, []float64) {
 	rand.Seed(time.Now().UnixNano())
 	m := 1 - (rand.Float64() * 0.5)
 	c := rand.Float64() * 0.3
@@ -14,7 +14,7 @@ func GenerateLinearData(NumberOfData int) ([]float64, []float64, []int) {
 	Error0 := 0
 	var x = make([]float64, NumberOfData)
 	var y = make([]float64, NumberOfData)
-	var target = make([]int, NumberOfData)
+	var target = make([]float64, NumberOfData)
 	for i := 0; i < NumberOfData; i++ {
 		x[i] = rand.Float64()
 		x := x[i]
@@ -31,6 +31,6 @@ func GenerateLinearData(NumberOfData int) ([]float64, []float64, []int) {
 		}
 	}
 	fmt.Printf("y = %fx + %f \n", m, c)
-	fmt.Printf("1:%o 0:%o \n", Error1, Error0)
+	// fmt.Printf("1:%o 0:%o \n", Error1, Error0)
 	return x, y, target
 }
