@@ -23,9 +23,9 @@ func main() {
 	// y := utils.Encrypt(lrData.Value)
 
 	// linearRegression.Train(&x, &y, 0.7, len(lrData.Income), 65)
-	lrData := importer.GetHeartData("./test-data/heart.json")
+	lrData := importer.GetHeartData("./test-data/heart_data_test2.json")
 	x := lrData.Age
-	y := lrData.Sex
+	y := lrData.HeartRate
 	target := lrData.Target
 	ml.Normalize_Data(x)
 	ml.Normalize_Data(y)

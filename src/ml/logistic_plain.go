@@ -64,7 +64,8 @@ func Train(model LogisticRegression, x []float64, y []float64, target []float64,
 	rand.Seed(time.Now().UnixNano())
 	var NumberOfData float64
 	NumberOfData = float64(len(x))
-	NumberOfTestData := (int)(math.Floor(NumberOfData * 0.1))
+	fmt.Printf("Amount of data : %f \n", NumberOfData)
+	NumberOfTestData := (int)(math.Floor(NumberOfData * 0.05))
 	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
 	xtest := make([]float64, NumberOfTestData)
 	ytest := make([]float64, NumberOfTestData)

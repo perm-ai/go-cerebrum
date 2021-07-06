@@ -14,10 +14,9 @@ type HeartData struct {
 	// into Sigmoid which will turn the output into a probability (0,1) in which outputs >0.5 will
 	// result in class A and <0.5 in class B (classification between A and B)
 
-	Age []float64
-	Sex  []float64
-	Target []float64
-
+	Age       []float64
+	HeartRate []float64
+	Target    []float64
 }
 
 func GetHeartData(filepath string) HeartData {
