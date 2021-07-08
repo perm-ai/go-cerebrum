@@ -2,34 +2,30 @@ package utility
 
 import "github.com/ldsec/lattigo/v2/ckks"
 
-// func (u Utils) rotateAndAdd(ct *ckks.Ciphertext, size float64) ckks.Ciphertext {
+func (u Utils) rotateAndAdd(ct *ckks.Ciphertext, size float64) ckks.Ciphertext {
 
-// 	midpoint := size / 2
+	midpoint := size / 2
 
-// 	rotated := u.Evaluator.RotateNew(ct, uint64(midpoint))
-// 	u.Add(*ct, *rotated, ct)
+	rotated := u.Evaluator.RotateNew(ct, int(midpoint))
+	u.Add(*ct, *rotated, ct)
 
-// 	if midpoint == 1 {
-// 		return *ct
-// 	} else {
-// 		return u.rotateAndAdd(ct, midpoint)
-// 	}
+	if midpoint == 1 {
+		return *ct
+	} else {
+		return u.rotateAndAdd(ct, midpoint)
+	}
 
-// }
+}
 
 func (u Utils) SumElementsInPlace(ct *ckks.Ciphertext) {
 
-	// u.rotateAndAdd(ct, float64(u.Params.Slots()))
-	u.Evaluator.InnerSum(ct, 1, u.Params.Slots(), ct)
+	u.rotateAndAdd(ct, float64(u.Params.Slots()))
 
 }
 
 func (u Utils) SumElementsNew(ct ckks.Ciphertext) ckks.Ciphertext {
 
-	destination := ckks.NewCiphertext(u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
-	u.Evaluator.InnerSum(&ct, 1, u.Params.Slots(), destination)
-
-	return *destination
+	return u.rotateAndAdd(&ct, float64(u.Params.Slots()))
 
 }
 

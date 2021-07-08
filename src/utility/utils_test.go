@@ -336,32 +336,35 @@ func TestDotProduct(t *testing.T) {
 
 }
 
-// func TestBootstrapping(t *testing.T) {
+func TestBootstrapping(t *testing.T) {
 
-// 	pt := ckks.NewPlaintext(&utils.Params, 1, math.Pow(2, 40))
-// 	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.12)), utils.Params.LogSlots())
-// 	ct := utils.Encryptor.EncryptFastNew(pt)
-// 	preBootstrap := ct.Level()
+	ct := utils.Encrypt(utils.GenerateFilledArray(3.12))
+	maxLevel := ct.Level()
+	
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 1)
+	preBootstrap := ct.Level()
 
-// 	utils.BootstrapIfNecessary(ct)
+	utils.BootstrapIfNecessary(&ct)
 
-// 	decrypted := utils.Decrypt(ct)
+	decrypted := utils.Decrypt(&ct)
 
-// 	// Test if bootstrap increase level and correctly decrypt
-// 	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
-// 		t.Error("Wasn't bootstrapped correctly")
-// 	}
+	log.Log(fmt.Sprintf("Max Level: %d, Post Bootstrapping level: %d", maxLevel, ct.Level()))
 
-// 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
-// 	utils.Multiply(encTwos, *ct, ct, true, true)
+	// Test if bootstrap increase level and correctly decrypt
+	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
+		t.Error("Wasn't bootstrapped correctly")
+	}
 
-// 	decrypted = utils.Decrypt(ct)
+	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
+	utils.Multiply(encTwos, ct, &ct, true, true)
 
-// 	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
-// 		t.Error("Wasn't evaluated correctly after bootstrap")
-// 	}
+	decrypted = utils.Decrypt(&ct)
 
-// }
+	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
+		t.Error("Wasn't evaluated correctly after bootstrap")
+	}
+
+}
 
 func TestTranspose(t *testing.T){
 
