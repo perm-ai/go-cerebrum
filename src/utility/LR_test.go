@@ -55,7 +55,7 @@ func TestSigApprox(t *testing.T) {
 	testCase := make([]ckks.Ciphertext, 2)
 	data1 := make([]float64, utils.Params.Slots())
 	for i := 0; i < int(utils.Params.Slots()); i++ {
-		data1[i] = float64(1)
+		data1[i] = float64(2)
 	}
 
 	testCase[0] = utils.Encrypt(data1)
@@ -74,7 +74,7 @@ func TestSigApprox(t *testing.T) {
 
 	ans := utils.Decrypt(&output)
 
-	if EvalCorrectness(ans, utils.GenerateFilledArray(0.701), false, 2) {
+	if EvalCorrectness(ans, utils.GenerateFilledArray(0.926), false, 10) {
 		fmt.Println("The data was correctly evaluated")
 	} else {
 		fmt.Println("The data was not correctly evaluated")
