@@ -43,8 +43,8 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
 	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
 
-	rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
-	rotationKeys := keyGenerator.GenRotationKeysForRotations(rotations, true, secretKey)
+	galEls := []uint64{Params.GaloisElementForRowRotation()}
+	galoisKey := keyGenerator.GenRotationKeys(galEls, secretKey)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
@@ -62,6 +62,9 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 
 	if bootstrapEnabled {
 		log.Log("Util Initialization: Generating bootstrapping key")
+
+		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
+		rotationKeys := keyGenerator.GenRotationKeysForRotations(rotations, true, secretKey)
 
 		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: rotationKeys}
 
@@ -82,7 +85,7 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			*publicKey,
 			*relinKey,
 			bootstrappingKey,
-			*rotationKeys,
+			*galoisKey,
 			bootstrapper,
 			Encoder,
 			Evaluator,
@@ -99,7 +102,7 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			*publicKey,
 			*relinKey,
 			ckks.BootstrappingKey{},
-			*rotationKeys,
+			*galoisKey,
 			&ckks.Bootstrapper{},
 			Encoder,
 			Evaluator,
