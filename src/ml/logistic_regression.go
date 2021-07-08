@@ -42,7 +42,7 @@ func (lr LogisticRegression) Sigmoid(x ckks.Ciphertext) ckks.Ciphertext {
 
 	output := lr.utils.MultiplyNew(lr.utils.MultiplyNew(x, lr.utils.MultiplyConstNew(x, lr.utils.GenerateFilledArray(0.004), true, false), true, false), lr.utils.MultiplyNew(x, x, true, false), true, false) // output = x * x
 	// output = utils.MultiplyNew(x, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
-	output = lr.utils.AddNew(output, lr.utils.MultiplyConstNew(x, lr.utils.GenerateFilledArray(0.197), true, false)) // output = output + 0.197 * x
+	output = lr.utils.SubNew(lr.utils.MultiplyConstNew(x, lr.utils.GenerateFilledArray(0.197), true, false), output) // output = output + 0.197 * x
 
 	SigCont := lr.utils.GenerateFilledArray(0.5)
 	encoded := lr.utils.EncodeToScale(SigCont, math.Pow(2.0, 20.0))
