@@ -18,7 +18,6 @@ type Utils struct {
 	RelinKey            rlwe.RelinearizationKey
 	BootstrapingKey     ckks.BootstrappingKey
 	GaloisKey           rlwe.RotationKeySet
-	InnerSumKey			rlwe.RotationKeySet
 
 	Bootstrapper *ckks.Bootstrapper
 	Encoder      ckks.Encoder
@@ -44,15 +43,13 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
 	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
 
-	ks := make([]int, Params.Slots() * 2)
+	ks := make([]int, Params.Slots())
 
 	for i := range ks {
-		ks[i] = i - Params.Slots()
+		ks[i] = i
 	}
 
-	galoisKey := keyGenerator.GenRotationKeysForRotations(ks, false, secretKey)
-
-	innerSumKey := keyGenerator.GenRotationKeysForInnerSum(secretKey)
+	galoisKey := keyGenerator.GenRotationKeysForRotations(ks, true, secretKey)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
@@ -93,7 +90,6 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			*relinKey,
 			bootstrappingKey,
 			*galoisKey,
-			*innerSumKey,
 			bootstrapper,
 			Encoder,
 			Evaluator,
@@ -111,7 +107,6 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			*relinKey,
 			ckks.BootstrappingKey{},
 			*galoisKey,
-			*innerSumKey,
 			&ckks.Bootstrapper{},
 			Encoder,
 			Evaluator,
