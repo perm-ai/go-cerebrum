@@ -25,7 +25,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 		if i == 0 {
 			rotated[i] = ciphertexts[i]
 		} else {
-			rotated[i] = *u.Evaluator.RotateNew(&ciphertexts[i], uint64(int(u.Params.Slots())-i), &u.GaloisKey)
+			rotated[i] = *u.Evaluator.RotateNew(&ciphertexts[i], -i)
 		}
 	}
 
@@ -33,7 +33,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 	for c := 0; c < column; c++ {
 
-		newRow := ckks.NewCiphertext(&u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale())
+		newRow := ckks.NewCiphertext(u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale())
 
 		// Zero out non-target slot and add
 		// [ E(x11,  0 ,  0 ,  0 ),
@@ -54,7 +54,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 		// Rotate ciphertext to align back to original position
 		// Eg. E(x24, x34, x44, x14) => E(x14, x24, x34, x44)
-		transposed[c] = *u.Evaluator.RotateNew(newRow, uint64(c), &u.GaloisKey)
+		transposed[c] = *u.Evaluator.RotateNew(newRow, c)
 
 	}
 
@@ -77,12 +77,12 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 			if i != 0 {
 				// Rotate data of interest to slot 0
-				u.Evaluator.Rotate(&filtered, uint64(i), &u.GaloisKey, &filtered)
+				u.Evaluator.Rotate(&filtered, i, &filtered)
 			}
 
 			for j := 1; j < bSize; j *= 2 {
 				// Rotate and add to double the amount of data each iteration
-				rotated := u.Evaluator.RotateNew(&filtered, uint64(int(u.Params.Slots())-j), &u.GaloisKey)
+				rotated := u.Evaluator.RotateNew(&filtered, -j)
 				u.Add(filtered, *rotated, &filtered)
 			}
 
@@ -99,7 +99,7 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 func (u Utils) PackVector(ciphertexts []ckks.Ciphertext) ckks.Ciphertext {
 
-	result := ckks.NewCiphertext(&u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
+	result := ckks.NewCiphertext(u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
 
 	for i := range ciphertexts{
 

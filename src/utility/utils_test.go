@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(math.Pow(2,35), 100, false, true)
+var utils = NewUtils(100, true, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -286,7 +286,7 @@ func TestMultiplication(t *testing.T) {
 			t.Error("Data wasn't correctly multiplied (MultiplyNew)")
 		}
 
-		newCiphertext1 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
+		newCiphertext1 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
 		utils.Multiply(ct1, ct2, newCiphertext1, false, true)
 		mulD := utils.Decrypt(newCiphertext1)
 
@@ -301,7 +301,7 @@ func TestMultiplication(t *testing.T) {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescaleNew)")
 		}
 
-		newCiphertext2 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
+		newCiphertext2 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
 		utils.Multiply(ct1, ct2, newCiphertext2,  true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 

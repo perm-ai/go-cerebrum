@@ -11,7 +11,7 @@ var RESCALE_THRESHOLD = math.Pow(2.0, 40.0)
 func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
 	u.SwitchToSameModCoeff(&a, &b)
-	u.Evaluator.MulRelin(a, b, &u.RelinKey, destination)
+	u.Evaluator.MulRelin(a, b, destination)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
@@ -26,7 +26,7 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, bootstrap bool) ckks.Ciphertext {
 
 	u.SwitchToSameModCoeff(&a, &b)
-	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
+	result := u.Evaluator.MulRelinNew(a, b)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(result)
@@ -43,7 +43,7 @@ func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, b
 func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
 	u.ReEncodeAsNTT(b)
-	u.Evaluator.MulRelin(a, b, &u.RelinKey, destination)
+	u.Evaluator.MulRelin(a, b, destination)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
@@ -58,7 +58,7 @@ func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination 
 func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, bootstrap bool) ckks.Ciphertext {
 
 	u.ReEncodeAsNTT(b)
-	result := u.Evaluator.MulRelinNew(a, b, &u.RelinKey)
+	result := u.Evaluator.MulRelinNew(a, b)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(result)
@@ -76,7 +76,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
-	u.Evaluator.MulRelin(a, encoded, &u.RelinKey, destination)
+	u.Evaluator.MulRelin(a, encoded, destination)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
@@ -91,7 +91,7 @@ func (u Utils) MultiplyConstNew(a ckks.Ciphertext, b []float64, rescale bool, bo
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
-	result := u.Evaluator.MulRelinNew(a, encoded, &u.RelinKey)
+	result := u.Evaluator.MulRelinNew(a, encoded)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(result)

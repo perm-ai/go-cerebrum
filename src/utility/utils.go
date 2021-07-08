@@ -6,17 +6,19 @@ import (
 	"math/rand"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/ldsec/lattigo/v2/rlwe"
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
 type Utils struct {
 	BootstrappingParams ckks.BootstrappingParameters
 	Params              ckks.Parameters
-	secretKey           ckks.SecretKey
-	PublicKey           ckks.PublicKey
-	RelinKey            ckks.EvaluationKey
+	secretKey           rlwe.SecretKey
+	PublicKey           rlwe.PublicKey
+	RelinKey            rlwe.RelinearizationKey
 	BootstrapingKey     ckks.BootstrappingKey
-	GaloisKey           ckks.RotationKeys
+	GaloisKey           rlwe.RotationKeySet
+	InnerSumKey			rlwe.RotationKeySet
 
 	Bootstrapper *ckks.Bootstrapper
 	Encoder      ckks.Encoder
@@ -28,26 +30,33 @@ type Utils struct {
 	log     logger.Logger
 }
 
-func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
+func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 
 	log := logger.NewLogger(logEnabled)
 
-	Params := ckks.DefaultBootstrapSchemeParams[0]
-	bootstrappingParams := ckks.DefaultBootstrapParams[0]
-
-	Params.SetScale(scale)
+	bootstrappingParams := ckks.DefaultBootstrapParams[2]
+	Params, _ := bootstrappingParams.Params()
 
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
 	log.Log("Util Initialization: Generating keys")
 	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
-	relinKey := keyGenerator.GenRelinKey(secretKey)
-	galoisKey := keyGenerator.GenRotationKeysPow2(secretKey)
+	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
+
+	ks := make([]int, Params.Slots() * 2)
+
+	for i := range ks {
+		ks[i] = i - Params.Slots()
+	}
+
+	galoisKey := keyGenerator.GenRotationKeysForRotations(ks, false, secretKey)
+
+	innerSumKey := keyGenerator.GenRotationKeysForInnerSum(secretKey)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
-	Evaluator := ckks.NewEvaluator(Params)
+	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
 	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
@@ -61,8 +70,10 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 
 	if bootstrapEnabled {
 		log.Log("Util Initialization: Generating bootstrapping key")
-		// var bootstrappingKey *ckks.BootstrappingKey
-		bootstrappingKey := keyGenerator.GenBootstrappingKey(Params.LogSlots(), bootstrappingParams, secretKey)
+
+		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
+		rotkeys := keyGenerator.GenRotationKeysForRotations(rotations, true, secretKey)
+		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: rotkeys}
 
 		var err error
 		var bootstrapper *ckks.Bootstrapper
@@ -76,12 +87,13 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 
 		return Utils{
 			*bootstrappingParams,
-			*Params,
+			Params,
 			*secretKey,
 			*publicKey,
 			*relinKey,
-			*bootstrappingKey,
+			bootstrappingKey,
 			*galoisKey,
+			*innerSumKey,
 			bootstrapper,
 			Encoder,
 			Evaluator,
@@ -93,12 +105,13 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 	} else {
 		return Utils{
 			*bootstrappingParams,
-			*Params,
+			Params,
 			*secretKey,
 			*publicKey,
 			*relinKey,
 			ckks.BootstrappingKey{},
 			*galoisKey,
+			*innerSumKey,
 			&ckks.Bootstrapper{},
 			Encoder,
 			Evaluator,
@@ -180,7 +193,7 @@ func (u Utils) Encode(value []float64) ckks.Plaintext {
 func (u Utils) EncodeToScale(value []float64, scale float64) ckks.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(&u.Params, u.Params.MaxLevel(), scale)
+	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
 	u.Encoder.Encode(plaintext, u.Float64ToComplex128(value), u.Params.LogSlots())
 
 	return *plaintext
@@ -191,7 +204,7 @@ func (u Utils) EncodeToScale(value []float64, scale float64) ckks.Plaintext {
 func (u Utils) EncodeCoeffs(value []float64) ckks.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(&u.Params, u.Params.MaxLevel(), u.Params.Scale())
+	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), u.Params.Scale())
 	u.Encoder.EncodeCoeffs(value, plaintext)
 
 	return *plaintext
@@ -209,7 +222,7 @@ func (u Utils) Decode(value *ckks.Plaintext) []float64 {
 func (u Utils) EncodeCoeffsToScale(value []float64, scale float64) ckks.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(&u.Params, u.Params.MaxLevel(), scale)
+	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
 	u.Encoder.EncodeCoeffs(value, plaintext)
 
 	return *plaintext
