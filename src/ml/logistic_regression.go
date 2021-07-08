@@ -11,9 +11,9 @@ import (
 
 type LogisticRegression struct {
 	utils utility.Utils
-	b0     ckks.Ciphertext
-	b1     ckks.Ciphertext
-	b2     ckks.Ciphertext
+	b0    ckks.Ciphertext
+	b1    ckks.Ciphertext
+	b2    ckks.Ciphertext
 }
 
 type LogisticRegressionGradient struct {
@@ -33,25 +33,18 @@ func NewLogisticRegression(u utility.Utils) LogisticRegression {
 
 }
 
-// func Evaluate(b0 ckks.Ciphertext, b1 ckks.Ciphertext, b2 ckks.Ciphertext, ) {
+func (lr LogisticRegression) Sigmoid(x ckks.Ciphertext) ckks.Ciphertext {
 
-// }
+	output := lr.utils.MultiplyNew(x, x, true, false)                                                                // output = x * x
+	output = lr.utils.AddNew(output, lr.utils.MultiplyConstNew(x, lr.utils.GenerateFilledArray(0.004), true, false)) // output = output + (x * 0.004)
+	output = lr.utils.AddNew(output, lr.utils.MultiplyConstNew(x, lr.utils.GenerateFilledArray(0.197), true, false)) // output = output + 0.197 * x
+	lr.utils.AddConst(&output, lr.utils.GenerateFilledArray(0.5), &output)                                           // output = output + 0.5
+	lr.utils.Decrypt(&output)
 
-func Sigmoid(x ckks.Ciphertext) ckks.Ciphertext {
-
-
-	// 0.5 + 0.197x + 0.004x^3 (0.004 * x) * (x * X)
-
-
-	ans := utils.AddNew(utils.MultiplyNew(x, x, true, false), (utils.MultiplyConstNew(x, utils.GenerateFilledArraySize(0.004, 32768),true ,false))) // ((x * x) * (x * 0.004))
-	Add(MultiplyConst(&x, l.utils.GenerateFilledArraySize(0.197, size), &x, true, false), &ans, &ans) // + (x * 0.197)
-	AddConst(&ans, 0.5, &ans) // + 0.5
-
-	return ans
+	return output
 
 }
 
 func (model *LogisticRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, target int, learningRate float64, size int, epoch int) {
 
 }
-

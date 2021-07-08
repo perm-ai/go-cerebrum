@@ -24,8 +24,7 @@ func Predict(model LogisticRegressionPlain, x []float64, y []float64, j int) flo
 
 	// yhat = b0 + b1*x + b2*y
 	// return sigmoid(yhat)
-	var yhat float64
-	yhat = model.b0 + model.b1*(x[j]) + model.b2*(y[j])
+	yhat := model.b0 + model.b1*(x[j]) + model.b2*(y[j])
 
 	return SigmoidNew(yhat)
 
@@ -72,7 +71,6 @@ func SigmoidApprox(x float64) float64 {
 }
 
 func Train(model LogisticRegressionPlain, x []float64, y []float64, target []float64, l float64, epoch int) float64 {
-
 
 	// Partition a test set and a training set
 	// choose number of test data

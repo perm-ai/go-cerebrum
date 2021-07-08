@@ -61,8 +61,8 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 
 	if bootstrapEnabled {
 		log.Log("Util Initialization: Generating bootstrapping key")
-		var bootstrappingKey *ckks.BootstrappingKey
-		bootstrappingKey = keyGenerator.GenBootstrappingKey(Params.LogSlots(), bootstrappingParams, secretKey)
+		// var bootstrappingKey *ckks.BootstrappingKey
+		bootstrappingKey := keyGenerator.GenBootstrappingKey(Params.LogSlots(), bootstrappingParams, secretKey)
 
 		var err error
 		var bootstrapper *ckks.Bootstrapper
