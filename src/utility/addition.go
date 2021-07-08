@@ -19,6 +19,24 @@ func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 	return *ct
 
 }
+
+func (u Utils) AddPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
+
+	u.ReEncodeAsNTT(b)
+	u.Evaluator.Add(a, b, destination)
+
+}
+
+func (utils Utils) AddPlainNew(a ckks.Ciphertext, b ckks.Plaintext) ckks.Ciphertext {
+
+	// Add two ciphertext together and return result as a new ciphertext
+
+	ct := utils.Evaluator.AddNew(a, b)
+
+	return *ct
+
+}
+
 func (utils Utils) AddConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext) {
 
 	// Add overwrite ciphertext and constant
