@@ -1,4 +1,4 @@
-package ml
+package utility
 
 import (
 	"image/color"

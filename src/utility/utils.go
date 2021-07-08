@@ -1,9 +1,10 @@
 package utility
 
 import (
-	// "math"
-
+	
+	"math"
 	"math/rand"
+	"sort"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/ldsec/lattigo/v2/rlwe"
@@ -39,12 +40,16 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
-	log.Log("Util Initialization: Generating keys")
+	log.Log("Util Initialization: Generating private / public key pair")
 	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
+
+	log.Log("Util Initialization: Generating relin key")
 	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
 
-	galEls := []uint64{Params.GaloisElementForRowRotation()}
-	galoisKey := keyGenerator.GenRotationKeys(galEls, secretKey)
+	log.Log("Util Initialization: Generating galois keys")
+
+	log.Log("Util Initialization: Generating sum elements keys")
+	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
@@ -112,6 +117,28 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			log,
 		}
 	}
+
+}
+
+func getSumElementsKs(logSlots int) []int {
+
+	ks := []int{}
+
+	for i := 0; i <= logSlots; i++{
+		positive := int(math.Pow(2, float64(i)))
+		ks = append(ks, positive)
+		ks = append(ks, (-1 * positive))
+	}
+
+	sort.Ints(ks[:])
+
+	return ks
+
+}
+
+func (u Utils) Get2PowRotationEvaluator() ckks.Evaluator {
+
+	return u.Evaluator.WithKey(rlwe.EvaluationKey{Rlk: &u.RelinKey, Rtks: &u.GaloisKey})
 
 }
 

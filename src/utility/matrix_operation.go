@@ -1,7 +1,6 @@
 package utility
 
 import (
-	// "math"
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
@@ -25,7 +24,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 		if i == 0 {
 			rotated[i] = ciphertexts[i]
 		} else {
-			rotated[i] = *u.Evaluator.RotateNew(&ciphertexts[i], -i)
+			rotated[i] = u.RotateNew(&ciphertexts[i], -i)
 		}
 	}
 
@@ -54,7 +53,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 		// Rotate ciphertext to align back to original position
 		// Eg. E(x24, x34, x44, x14) => E(x14, x24, x34, x44)
-		transposed[c] = *u.Evaluator.RotateNew(newRow, c)
+		transposed[c] = u.RotateNew(newRow, c)
 
 	}
 
@@ -63,6 +62,9 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 }
 
 func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int) []ckks.Ciphertext {
+
+	// Need to cover rotation in range [0, aSize)
+	pow2rotationEvaluator := u.Get2PowRotationEvaluator()
 
 	outerProduct := make([]ckks.Ciphertext, aSize)
 
@@ -77,12 +79,12 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 			if i != 0 {
 				// Rotate data of interest to slot 0
-				u.Evaluator.Rotate(&filtered, i, &filtered)
+				u.Rotate(&filtered, i)
 			}
 
 			for j := 1; j < bSize; j *= 2 {
 				// Rotate and add to double the amount of data each iteration
-				rotated := u.Evaluator.RotateNew(&filtered, -j)
+				rotated := pow2rotationEvaluator.RotateNew(&filtered, -j)
 				u.Add(filtered, *rotated, &filtered)
 			}
 
