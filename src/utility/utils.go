@@ -1,7 +1,7 @@
 package utility
 
 import (
-	
+
 	"math"
 	"math/rand"
 	"sort"
@@ -47,8 +47,15 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
 
 	log.Log("Util Initialization: Generating galois keys")
+	// galEls := []uint64{Params.GaloisElementForRowRotation())}
 
-	log.Log("Util Initialization: Generating sum elements keys")
+	// for i := 1; i <= Params.Slots(); i++{
+	// 	galEls = append(galEls, Params.GaloisElementForColumnRotationBy(i))
+	// }
+
+	// galoisKey := keyGenerator.GenRotationKeys(galEls, secretKey)
+
+	// log.Log("Util Initialization: Generating sum elements keys")
 	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")

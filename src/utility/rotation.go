@@ -1,13 +1,13 @@
 package utility
 
 import (
+	
 	"math"
 	"sort"
-
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
-func (u Utils) Rotate (ct *ckks.Ciphertext, k int){
+func (u Utils) Rotate (ct *ckks.Ciphertext, k int, destination *ckks.Ciphertext){
 
 	evaluator := u.Get2PowRotationEvaluator()
 
@@ -23,14 +23,16 @@ func (u Utils) Rotate (ct *ckks.Ciphertext, k int){
 
 	steps := findStep(k, 0, []int{}, availableSteps)
 
-	evaluator.RotateHoisted(ct, steps)
+	for _, step := range steps{
+		evaluator.Rotate(ct, step, destination)
+	}
 
 }
 
 func (u Utils) RotateNew (ct *ckks.Ciphertext, k int) ckks.Ciphertext {
 
 	newCt := ct.CopyNew()
-	u.Rotate(newCt, k)
+	u.Rotate(newCt, k, newCt)
 
 	return *newCt
 
@@ -43,17 +45,18 @@ func findStep(target int, stepSum int, steps []int, availableSteps []int) []int 
 	distanceToDif := make([]int, len(availableSteps))
 
 	for i, n := range availableSteps{
-
 		distanceToDif[i] = int(math.Abs(float64(n - dif)))
 
 		if i != 0{
+
 			if distanceToDif[i] > distanceToDif[i - 1]{
-				steps = append(steps, distanceToDif[i - 1])
+				steps = append(steps, availableSteps[i - 1])
 				break
-			} else if distanceToDif[i] == distanceToDif[i - 1] {
-				steps = append(steps, distanceToDif[i])
+			} else if distanceToDif[i] == 0 || distanceToDif[i] == distanceToDif[i - 1] || i == len(availableSteps) - 1{
+				steps = append(steps, n)
 				break
 			}
+
 		}
 
 	}

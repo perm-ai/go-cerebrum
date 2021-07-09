@@ -79,7 +79,7 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 			if i != 0 {
 				// Rotate data of interest to slot 0
-				u.Rotate(&filtered, i)
+				u.Rotate(&filtered, i, &filtered)
 			}
 
 			for j := 1; j < bSize; j *= 2 {
