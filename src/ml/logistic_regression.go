@@ -81,11 +81,11 @@ func (lr LogisticRegression) Sgd(x ckks.Ciphertext, y ckks.Ciphertext, target ck
 	yhat := lr.PredictCipher(x, y)       // get yhat
 	err := lr.utils.SubNew(target, yhat) // find error of yhat and target
 
-	Db2 := lr.utils.MultiplyNew(y, *err.CopyNew().Ciphertext(), true, false)
+	Db2 := lr.utils.MultiplyNew(y, *err.CopyNew(), true, false)
 	lr.utils.SumElementsInPlace(&Db2)
 	lr.utils.MultiplyConst(&Db2, lr.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &Db2, true, false)
 
-	Db1 := lr.utils.MultiplyNew(x, *err.CopyNew().Ciphertext(), true, false)
+	Db1 := lr.utils.MultiplyNew(x, *err.CopyNew(), true, false)
 	lr.utils.SumElementsInPlace(&Db1)
 	lr.utils.MultiplyConst(&Db1, lr.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &Db1, true, false)
 
