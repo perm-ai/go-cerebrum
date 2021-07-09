@@ -62,15 +62,15 @@ func TestSigApprox(t *testing.T) {
 
 	x := testCase[0]
 
-	output := utils.MultiplyNew(utils.MultiplyNew(x, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false), utils.MultiplyNew(x, x, true, false), true, false) // output = x * x
-	// output = utils.MultiplyNew(x, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
+	output := utils.MultiplyNew(utils.MultiplyNew(x, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false), utils.MultiplyNew(x, x, true, false), true, false) // output = 0.004 * x^3
+	// output = utils.MultiplyNew(output, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
 	output = utils.SubNew(utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.197), true, false), output) // output = output + 0.197 * x
 
 	SigCont := utils.GenerateFilledArray(0.5)
 	encoded := utils.EncodeToScale(SigCont, math.Pow(2.0, 20.0))
 	utils.ReEncodeAsNTT(&encoded)
 
-	output = utils.AddPlainNew(output, encoded)
+	output = utils.AddPlainNew(output, encoded) // output = output + 0.5
 
 	ans := utils.Decrypt(&output)
 

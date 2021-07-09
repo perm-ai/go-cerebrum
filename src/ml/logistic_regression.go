@@ -54,6 +54,14 @@ func (lr LogisticRegression) Sigmoid(x ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
+func SigmoidCheck(input float64) float64 {
+	// In real case, evaluate sigmoid by taylor estimation
+	// 0.5 + 0.197x + 0.004x^3
+
+	return 1.0 / (1.0 + math.Exp(-1*input))
+
+}
+
 func (lr LogisticRegression) PredictCipher(x ckks.Ciphertext, y ckks.Ciphertext) ckks.Ciphertext {
 	// Predict whether it is class 0 or 1
 
@@ -96,7 +104,7 @@ func (lr *LogisticRegression) UpdateGradient(gradient LogisticRegressionGradient
 func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, target ckks.Ciphertext, learningRate float64, size int, epoch int) {
 
 	log := logger.NewLogger(true)
-	log.Log("Starting Linear Regression Training on encrypted data")
+	log.Log("Starting Logistic Regression Training on encrypted data")
 
 	for i := 0; i < epoch; i++ {
 
@@ -113,4 +121,41 @@ func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, t
 		// fmt.Printf("The three coefficients are %f, %f, and %f", b0[0], b1, b2)
 		fmt.Println("Finished Training")
 	}
+}
+
+func (model LogisticRegression) AccuracyTest(x []float64, y []float64, target []float64, size int) float64 {
+
+	// Evaluate b0 + b1*data1 + b2*data2 then into sigmoid then check with target
+
+	// model.utils.Decrypt(&x)
+	// model.utils.Decrypt(&y)
+	// model.utils.Decrypt(&target)
+
+	b0plain := model.utils.Decrypt(&model.b0)
+	b1plain := model.utils.Decrypt(&model.b1)
+	b2plain := model.utils.Decrypt(&model.b2)
+
+	correct := 0
+	incorrect := 0
+
+	for i := 0; i < size; i++ {
+		yhat := b0plain[i] + b1plain[i]*x[i] + b2plain[i]*y[i]
+		guess := SigmoidCheck(yhat)
+
+		if guess > 0.5 {
+			guess = 1
+		} else {
+			guess = 0
+		}
+
+		if guess == target[i] {
+			correct++
+		} else {
+			incorrect++
+		}
+	}
+
+	acc := float64(correct) / float64(size) * float64(100)
+
+	return acc
 }
