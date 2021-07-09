@@ -108,19 +108,49 @@ func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, t
 
 	for i := 0; i < epoch; i++ {
 
+		// if model.b0.Level() < 6 || model.b1.Level() < 6 || model.b2.Level() < 6 {
+		// 	fmt.Println("Bootstrapping gradient")
+		// 	if model.b0.Level() != 1 {
+		// 		model.utils.Evaluator.DropLevel(&model.b0, model.b0.Level()-1)
+		// 	}
+		// 	model.utils.BootstrapInPlace(&model.b0)
+		// 	model.utils.BootstrapInPlace(&model.b1)
+		// 	model.utils.BootstrapInPlace(&model.b2)
+
+		// 	fmt.Printf("NEW b0 scale and level is %f and %d \n", model.b0.Scale(), model.b0.Level())
+		// 	fmt.Printf("NEW b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
+		// 	fmt.Printf("NEW b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
+
+		// }
+
 		log.Log("Performing SGD " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Sgd(x, y, target, learningRate, size)
 
 		log.Log("Updating gradients " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		model.UpdateGradient(fwd)
 
-		// b0 := model.utils.Decrypt(&model.b0)
-		// b1 := model.utils.Decrypt(&model.b1)
-		// b2 := model.utils.Decrypt(&model.b2)
+		fmt.Println("Finished Training the epoch number " + strconv.Itoa(i+1))
+		fmt.Printf("b0 scale and level is %f and %d \n", model.b0.Scale(), model.b0.Level())
+		fmt.Printf("b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
+		fmt.Printf("b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
 
-		// fmt.Printf("The three coefficients are %f, %f, and %f", b0[0], b1, b2)
-		fmt.Println("Finished Training")
+		if model.b0.Level() < 6 || model.b1.Level() < 6 || model.b2.Level() < 6 {
+			fmt.Println("Bootstrapping gradient")
+			if model.b0.Level() != 1 {
+				model.utils.Evaluator.DropLevel(&model.b0, model.b0.Level()-1)
+			}
+			model.utils.BootstrapInPlace(&model.b0)
+			model.utils.BootstrapInPlace(&model.b1)
+			model.utils.BootstrapInPlace(&model.b2)
+
+			fmt.Printf("NEW b0 scale and level is %f and %d \n", model.b0.Scale(), model.b0.Level())
+			fmt.Printf("NEW b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
+			fmt.Printf("NEW b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
+
+		}
+
 	}
+
 }
 
 func (model LogisticRegression) AccuracyTest(x []float64, y []float64, target []float64, size int) float64 {
