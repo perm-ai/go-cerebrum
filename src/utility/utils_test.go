@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(100, true, true)
+var utils = NewUtils(math.Pow(2, 35), 100, true, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {

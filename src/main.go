@@ -35,7 +35,7 @@ func main() {
 	// }
 	// fmt.Printf("Average Accuracy : %f", Acc/10)
 	datasetSize := 300
-	utils := utility.NewUtils(math.Pow(2, 40), 0, true, true)
+	utils := utility.NewUtils(math.Pow(2, 35), 0, true, true)
 	data1, data2, data3 := utility.GenerateLinearData(datasetSize)
 	logisticRegression := ml.NewLogisticRegression(utils)
 

@@ -27,10 +27,11 @@ type Utils struct {
 	Decryptor    ckks.Decryptor
 
 	Filters []ckks.Plaintext
+	Scale	float64
 	log     logger.Logger
 }
 
-func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
+func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 
 	log := logger.NewLogger(logEnabled)
 
@@ -104,6 +105,7 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			Encryptor,
 			Decryptor,
 			filters,
+			scale,
 			log,
 		}
 	} else {
@@ -121,6 +123,7 @@ func NewUtils(filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 			Encryptor,
 			Decryptor,
 			filters,
+			scale,
 			log,
 		}
 	}
@@ -257,7 +260,7 @@ func (u Utils) EncodeCoeffsToScale(value []float64, scale float64) ckks.Plaintex
 func (u Utils) Encrypt(value []float64) ckks.Ciphertext {
 
 	// Encode value
-	plaintext := u.Encode(value)
+	plaintext := u.EncodeToScale(value, u.Scale)
 
 	// Encrypt value
 	ciphertext := u.Encryptor.EncryptFastNew(&plaintext)
