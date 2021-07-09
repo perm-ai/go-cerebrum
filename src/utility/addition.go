@@ -20,7 +20,7 @@ func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 
 }
 
-func (u Utils) AddPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
+func (u Utils) AddPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext) {
 
 	u.ReEncodeAsNTT(b)
 	u.Evaluator.Add(a, b, destination)

@@ -72,7 +72,7 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 		if model.UseActivation {
 
-			activationGradient := model.Activation.backward(*output)
+			activationGradient := model.Activation.backward(*output, model.OutputUnit)
 			gradients.BiasGradient = model.utils.MultiplyNew(gradient, activationGradient, true, false)
 
 		} else {
@@ -118,7 +118,7 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 		// Apply activation gradient
 		if model.UseActivation {
-			activationGradient := model.Activation.backward(*output)
+			activationGradient := model.Activation.backward(*output, model.OutputUnit)
 			gradients.BiasGradient = model.utils.MultiplyNew(activationGradient, sum, true, false)
 		} else {
 			gradients.BiasGradient = sum

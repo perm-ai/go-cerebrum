@@ -87,6 +87,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 	}
 
 }
+
 func (u Utils) MultiplyConstNew(a ckks.Ciphertext, b []float64, rescale bool, bootstrap bool) ckks.Ciphertext {
 
 	cmplx := u.Float64ToComplex128(b)
@@ -102,6 +103,7 @@ func (u Utils) MultiplyConstNew(a ckks.Ciphertext, b []float64, rescale bool, bo
 	}
 	return *result
 }
+
 func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 
 	if a.Level() != b.Level() {
