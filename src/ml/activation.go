@@ -77,7 +77,7 @@ func (s Sigmoid) backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 }
 
 //=================================================
-//					SIGMOID
+//					TANH
 //=================================================
 
 type Tanh struct {

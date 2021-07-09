@@ -35,7 +35,7 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[2]
+	bootstrappingParams := ckks.DefaultBootstrapParams[0]
 	Params, _ := bootstrappingParams.Params()
 
 	log.Log("Util Initialization: Generating key generator")
