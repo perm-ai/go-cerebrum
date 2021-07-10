@@ -8,8 +8,8 @@ import (
 
 type Activation interface {
 
-	forward(input ckks.Ciphertext, inputLength int) 	ckks.Ciphertext
-	backward(input ckks.Ciphertext, inputLength int)	ckks.Ciphertext
+	Forward(input ckks.Ciphertext, inputLength int) 	ckks.Ciphertext
+	Backward(input ckks.Ciphertext, inputLength int)	ckks.Ciphertext
 
 }
 
@@ -23,7 +23,7 @@ type Sigmoid struct {
 	backwardDeg0		map[int]ckks.Plaintext
 }
 
-func (s Sigmoid) forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// y := 0.5 + 0.197x + 0.004x^3
 	
@@ -52,7 +52,7 @@ func (s Sigmoid) forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 
 }
 
-func (s Sigmoid) backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Sigmoid) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// 0.012x^2 + 0.197
 	
@@ -85,7 +85,7 @@ type Tanh struct {
 	backwardDeg0	map[int]ckks.Plaintext
 }
 
-func (t Tanh) forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (t Tanh) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// y = (-0.00752x^3) + (0.37x)
 	
@@ -104,7 +104,7 @@ func (t Tanh) forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 }
 
-func (t Tanh) backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// (-0.02256x^2) + 0.37
 	

@@ -26,13 +26,13 @@ func TestSigmoid(t *testing.T){
 
 	sigmoid := Sigmoid{utils: utils}
 
-	fwdResult := sigmoid.forward(encryptedInput, 100)
+	fwdResult := sigmoid.Forward(encryptedInput, 100)
 
 	if !utility.ValidateResult(utils.Decrypt(&fwdResult), forwardExpected, false, 1, log){
 		t.Error("Sigmoid forward wasn't evaluated properly")
 	}
 
-	backwardResult := sigmoid.backward(encryptedInput, 100)
+	backwardResult := sigmoid.Backward(encryptedInput, 100)
 
 	if !utility.ValidateResult(utils.Decrypt(&backwardResult), backwardExpected, false, 1, log){
 		t.Error("Sigmoid backward wasn't evaluated properly")
@@ -58,13 +58,13 @@ func TestTanh(t *testing.T){
 
 	tanh := Tanh{utils: utils}
 
-	fwdResult := tanh.forward(encryptedInput, 100)
+	fwdResult := tanh.Forward(encryptedInput, 100)
 
 	if !utility.ValidateResult(utils.Decrypt(&fwdResult), forwardExpected, false, 1, log){
 		t.Error("Tanh forward wasn't evaluated properly")
 	}
 
-	backwardResult := tanh.backward(encryptedInput, 100)
+	backwardResult := tanh.Backward(encryptedInput, 100)
 
 	if !utility.ValidateResult(utils.Decrypt(&backwardResult), backwardExpected, false, 1, log){
 		t.Error("Tanh backward wasn't evaluated properly")
