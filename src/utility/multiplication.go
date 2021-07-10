@@ -72,7 +72,7 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 
 }
 
-func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
+func (u Utils) MultiplyConstArray(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
@@ -88,7 +88,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b []float64, destination *ckks.
 
 }
 
-func (u Utils) MultiplyConstNew(a ckks.Ciphertext, b []float64, rescale bool, bootstrap bool) ckks.Ciphertext {
+func (u Utils) MultiplyConstArrayNew(a ckks.Ciphertext, b []float64, rescale bool, bootstrap bool) ckks.Ciphertext {
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
@@ -122,6 +122,29 @@ func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 		u.Evaluator.DropLevel(requireSwitch, requireSwitch.Level()-constant.Level())
 
 	}
+
+}
+
+func (u Utils) MultiplyConst(a *ckks.Ciphertext, b float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
+
+	u.Evaluator.MultByConst(a, b, destination)
+
+	if bootstrap {
+		u.BootstrapIfNecessary(destination)
+	}
+
+	if rescale {
+		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
+	}
+
+}
+
+func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b float64, rescale bool, bootstrap bool) ckks.Ciphertext {
+
+	destination := ckks.NewCiphertext(u.Params, a.Degree(), a.Level(), a.Scale())
+	u.MultiplyConst(a, b, destination, rescale, bootstrap)
+
+	return *destination
 
 }
 

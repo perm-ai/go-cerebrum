@@ -34,15 +34,15 @@ func TestSigmoid(t *testing.T) {
 	y := testCase[1]
 
 	output := utils.MultiplyNew(x, x, true, false)                                                                            // output = x * x
-	output = utils.MultiplyNew(output, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
-	output = utils.AddNew(output, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.197), true, false))                   // output = output + 0.197 * x
+	output = utils.MultiplyNew(output, utils.MultiplyConstArrayNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
+	output = utils.AddNew(output, utils.MultiplyConstArrayNew(x, utils.GenerateFilledArray(0.197), true, false))                   // output = output + 0.197 * x
 	output = utils.AddNew(output, y)                                                                                          // output = output + 0.5
 
 	// output := utils.AddConstNew(&y, utils.GenerateFilledArray(0.5))
 
 	ans := utils.Decrypt(&output)
 
-	if EvalCorrectness(ans, utils.GenerateFilledArray(0.701), false, 2) {
+	if ValidateResult(ans, utils.GenerateFilledArray(0.701), false, 2, log) {
 		fmt.Println("The data was correctly evaluated")
 	} else {
 		fmt.Println("The data was not correctly evaluated")
@@ -62,9 +62,9 @@ func TestSigApprox(t *testing.T) {
 
 	x := testCase[0]
 
-	output := utils.MultiplyNew(utils.MultiplyNew(x, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false), utils.MultiplyNew(x, x, true, false), true, false) // output = 0.004 * x^3
+	output := utils.MultiplyNew(utils.MultiplyNew(x, utils.MultiplyConstArrayNew(x, utils.GenerateFilledArray(0.004), true, false), true, false), utils.MultiplyNew(x, x, true, false), true, false) // output = 0.004 * x^3
 	// output = utils.MultiplyNew(output, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
-	output = utils.SubNew(utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.197), true, false), output) // output = output + 0.197 * x
+	output = utils.SubNew(utils.MultiplyConstArrayNew(x, utils.GenerateFilledArray(0.197), true, false), output) // output = output + 0.197 * x
 
 	SigCont := utils.GenerateFilledArray(0.5)
 	encoded := utils.EncodeToScale(SigCont, math.Pow(2.0, 20.0))
@@ -74,7 +74,7 @@ func TestSigApprox(t *testing.T) {
 
 	ans := utils.Decrypt(&output)
 
-	if EvalCorrectness(ans, utils.GenerateFilledArray(0.693), false, 10) {
+	if ValidateResult(ans, utils.GenerateFilledArray(0.693), false, 10, log) {
 		fmt.Println("The data was correctly evaluated")
 	} else {
 		fmt.Println("The data was not correctly evaluated")
