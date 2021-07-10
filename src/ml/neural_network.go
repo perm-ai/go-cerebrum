@@ -8,6 +8,10 @@ import (
 
 )
 
+//=================================================
+//					DENSE LAYER
+//=================================================
+
 type Dense struct {
 
 	InputUnit		int
@@ -45,7 +49,7 @@ func NewDense(inputUnit int, outputUnit int, activation Activation, useActivatio
 
 }
 
-func (model Dense) Forward(input *ckks.Ciphertext) ckks.Ciphertext{
+func (model Dense) Forward(input *ckks.Ciphertext) (ckks.Ciphertext, ckks.Ciphertext){
 
 	results := make([]ckks.Ciphertext, model.OutputUnit)
 
@@ -56,11 +60,15 @@ func (model Dense) Forward(input *ckks.Ciphertext) ckks.Ciphertext{
 
 	}
 
-	result := model.utils.PackVector(results)
+	z := model.utils.PackVector(results)
+	model.utils.Add(z, model.Bias, &z)
 
-	model.utils.Add(result, model.Bias, &result)
-
-	return result
+	if model.UseActivation {
+		a := model.Activation.Forward(z, model.OutputUnit)
+		return z, a
+	} else {
+		return z, z
+	}
 
 }
 
@@ -72,7 +80,7 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 		if model.UseActivation {
 
-			activationGradient := model.Activation.backward(*output, model.OutputUnit)
+			activationGradient := model.Activation.Backward(*output, model.OutputUnit)
 			gradients.BiasGradient = model.utils.MultiplyNew(gradient, activationGradient, true, false)
 
 		} else {
@@ -118,7 +126,7 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 		// Apply activation gradient
 		if model.UseActivation {
-			activationGradient := model.Activation.backward(*output, model.OutputUnit)
+			activationGradient := model.Activation.Backward(*output, model.OutputUnit)
 			gradients.BiasGradient = model.utils.MultiplyNew(activationGradient, sum, true, false)
 		} else {
 			gradients.BiasGradient = sum
@@ -130,5 +138,68 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 		return gradients
 
 	}
+
+}
+
+//=================================================
+//						MODEL
+//=================================================
+
+type Model struct {
+
+	Layers	[]Dense
+	Loss 	Loss
+
+}
+
+func NewModel(utils utility.Utils) Model {
+
+	layers := make([]Dense, 3)
+
+	tanh := Tanh{utils: utils}
+	softmax := Softmax{utils: utils}
+	crossEntropy := CrossEntropy{utils: utils}
+
+	layers[0] = NewDense(784, 128, tanh, true, utils)
+	layers[1] = NewDense(128, 64, tanh, true, utils)
+	layers[2] = NewDense(64, 10, softmax, true, utils)
+
+	return Model{layers, crossEntropy}
+
+}
+
+func (m Model) Forward(input ckks.Ciphertext) map[string]*ckks.Ciphertext {
+
+	outputs := map[string]*ckks.Ciphertext{}
+
+	outputs["A0"] = input.CopyNew()
+
+	z1, a1 := m.Layers[0].Forward(outputs["A0"])
+	outputs["Z1"] = &z1
+	outputs["A1"] = &a1
+
+	z2, a2 := m.Layers[0].Forward(outputs["A1"])
+	outputs["Z2"] = &z2
+	outputs["A2"] = &a2
+
+	z3, a3 := m.Layers[0].Forward(outputs["A2"])
+	outputs["Z3"] = &z3
+	outputs["A3"] = &a3
+
+	return outputs
+
+}
+
+func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, lr float64) []NeuralNetworkGradient {
+
+	gradient := m.Loss.Backward(*outputs["A3"], y, m.Layers[2].OutputUnit)
+
+	denseGradients := make([]NeuralNetworkGradient, len(m.Layers))
+
+	denseGradients[2] = m.Layers[2].Backward(outputs["A2"], outputs["Z3"], gradient, &Dense{})
+	denseGradients[1] = m.Layers[2].Backward(outputs["A2"], outputs["Z2"], denseGradients[2].BiasGradient, &m.Layers[2])
+	denseGradients[0] = m.Layers[2].Backward(outputs["A1"], outputs["Z1"], denseGradients[1].BiasGradient, &m.Layers[1])
+	
+	return denseGradients
 
 }
