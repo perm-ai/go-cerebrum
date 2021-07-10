@@ -25,19 +25,6 @@ func NewLogisticRegression2() LogisticRegression2 {
 	return LogisticRegression2{0.5, 0.5, 0.5}
 }
 
-func Predict2(model LogisticRegression2, x []float64, y []float64, j int) float64 {
-
-	// Predict whether it is class 0 or 1
-
-	// yhat = b0 + b1*x + b2*y
-	// return sigmoid(yhat)
-	var yhat float64
-	yhat = model.b0 + model.b1*(x[j]) + model.b2*(y[j])
-
-	return SigmoidNew(yhat)
-
-}
-
 func (lr LogisticRegression2) PredictCipherPlain(x []float64, y []float64) []float64 {
 	// Predict whether it is class 0 or 1
 
