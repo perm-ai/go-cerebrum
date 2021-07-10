@@ -127,3 +127,25 @@ func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 	return result
 
 }
+
+//=================================================
+//					SOFTMAX
+//=================================================
+
+type Softmax struct {
+	utils	utility.Utils
+}
+
+func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+
+	// TODO: Implement Homomorphic Encryption frienly version of sigmoid
+	return input
+
+}
+
+func (s Softmax) Backward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+
+	// TODO: Implement Homomorphic Encryption frienly version of sigmoid
+	return input
+
+}
