@@ -26,7 +26,7 @@ func Predict(model LogisticRegressionPlain, x []float64, y []float64, j int) flo
 	// return sigmoid(yhat)
 	yhat := model.b0 + model.b1*(x[j]) + model.b2*(y[j])
 
-	return SigmoidNew(yhat)
+	return SigmoidApprox(yhat)
 
 }
 
@@ -76,22 +76,22 @@ func Train(model LogisticRegressionPlain, x []float64, y []float64, target []flo
 	// choose number of test data
 
 	rand.Seed(time.Now().UnixNano())
-	NumberOfTestData := 20
-	fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
-	xtest := make([]float64, NumberOfTestData)
-	ytest := make([]float64, NumberOfTestData)
-	targettest := make([]float64, NumberOfTestData)
-	for i := 0; i < NumberOfTestData; i++ {
-		OrderRemoved := (int)(math.Floor((rand.Float64() * (float64)(len(x)))))
-		// fmt.Printf("Remove : %o \n", OrderRemoved)
-		xtest[i] = x[OrderRemoved]
-		ytest[i] = y[OrderRemoved]
-		targettest[i] = target[OrderRemoved]
-		remove(x, OrderRemoved)
-		remove(y, OrderRemoved)
-		remove(target, OrderRemoved)
-		NumberOfTestData--
-	}
+	// NumberOfTestData := 20
+	// fmt.Printf("Amount of test data : %o \n", NumberOfTestData)
+	xtest := x
+	ytest := y
+	targettest := target
+	// for i := 0; i < NumberOfTestData; i++ {
+	// 	OrderRemoved := (int)(math.Floor((rand.Float64() * (float64)(len(x)))))
+	// 	// fmt.Printf("Remove : %o \n", OrderRemoved)
+	// 	xtest[i] = x[OrderRemoved]
+	// 	ytest[i] = y[OrderRemoved]
+	// 	targettest[i] = target[OrderRemoved]
+	// 	remove(x, OrderRemoved)
+	// 	remove(y, OrderRemoved)
+	// 	remove(target, OrderRemoved)
+	// 	NumberOfTestData--
+	// }
 
 	fmt.Println("Starting training process")
 
@@ -145,9 +145,9 @@ func Normalize_Data(input []float64) {
 	}
 }
 
-func remove(s []float64, index int) []float64 {
+// func remove(s []float64, index int) []float64 {
 
-	// remove and shift left
+// 	// remove and shift left
 
-	return append(s[:index], s[index+1:]...)
-}
+// 	return append(s[:index], s[index+1:]...)
+// }
