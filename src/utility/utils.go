@@ -1,10 +1,11 @@
 package utility
 
 import (
-
+	"fmt"
 	"math"
 	"math/rand"
 	"sort"
+	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/ldsec/lattigo/v2/rlwe"
@@ -276,5 +277,37 @@ func (u Utils) Decrypt(ciphertext *ckks.Ciphertext) []float64 {
 	decoded := u.Decode(decrypted)
 
 	return decoded
+
+}
+
+func ValidateResult(evalData []float64, expected []float64, isDot bool, decimalPrecision float64, log logger.Logger) bool {
+
+	precision := math.Pow(10, float64(-1*decimalPrecision))
+
+	if !isDot {
+
+		if len(expected) != len(evalData) {
+			log.Log("Data has inequal length")
+			return false
+		}
+
+		for i := range evalData {
+			if math.Abs(evalData[i]-expected[i]) > precision {
+				log.Log("Incorrect evaluation (Expected: " + fmt.Sprintf("%f", expected[i]) + " Got: " + fmt.Sprintf("%f", evalData[i]) + " Index: " + strconv.Itoa(i) + ")")
+				return false
+			}
+		}
+
+	} else {
+
+		for i := range evalData {
+			if math.Abs(evalData[i]-expected[0]) > precision {
+				log.Log("Incorrect evaluation (Expected: " + fmt.Sprintf("%f", expected[i]) + " Got: " + fmt.Sprintf("%f", evalData[i]) + " Index: " + strconv.Itoa(i) + ")")
+				return false
+			}
+		}
+	}
+
+	return true
 
 }
