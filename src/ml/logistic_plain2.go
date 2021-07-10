@@ -48,9 +48,9 @@ func (lr LogisticRegression2) SgdPlain(x []float64, y []float64, target []float6
 	var Db2 = make([]float64,len(x))
 	var Db1 = make([]float64,len(x))
 	var Db0 = make([]float64,len(x))
+	err = subtArray(target,yhat)
 	for i := 0;i<len(x);i++{
 	// err := lr.utils.SubNew(target, yhat) // find error of yhat and target
-	err[i] = target[i] - yhat[i]
 	Db2[i] = (-2/float64(size))*learningRate*sumArray(mulArray(y,error))
 	Db1[i] = (-2/float64(size))*learningRate*sumArray(mulArray(x,error))
 	Db0[i] = (-2/float64(size))*learningRate*sumArray(error)
@@ -106,12 +106,20 @@ func SigmoidArray(x []float64) []float64 {
 	}
 	return sig
 }
+
 func sumArray(x []float64) float{
 	sum := 0.0
 	for i := 0; i<len(x); i++{
 		sum += x[i]
 	}
 	return sum
+}
+func subtArray(x []float64,y []float64)[]float64{
+	var Ans = make([]float64,len(x))
+	for i = 0; i<len(x);i++{
+		Ans[i] = x[i]-y[i]
+	}
+	return Ans
 }
 func mulArray(x []float64,y []float64)[]float64{
 	var Ans = make([]float64,len(x))
