@@ -86,10 +86,10 @@ func (model *LogisticRegression) TrainLRPlain(x []float64, y []float64, target [
 	for i := 0; i < epoch; i++ {
 
 		log.Log("Performing SGD " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		fwd := model.Sgd(x, y, target, learningRate, size)
+		fwd := model.SgdPlain(x, y, target, learningRate, size)
 
 		log.Log("Updating gradients " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		model.UpdateGradient(fwd)
+		model.UpdateGradientPlain(fwd)
 
 		// b0 := model.utils.Decrypt(&model.b0)
 		// b1 := model.utils.Decrypt(&model.b1)
