@@ -324,12 +324,26 @@ func TestBootstrapping(t *testing.T) {
 	}
 
 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
-	utils.Multiply(encTwos, ct, &ct, true, true)
 
-	decrypted = utils.Decrypt(&ct)
+	addResult := utils.AddNew(ct, encTwos)
 
-	if(!ValidateResult(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1, log)){
-		t.Error("Wasn't evaluated correctly after bootstrap")
+	// Test if bootstrapped ciphertext can correctly evaluate addition
+	if(!ValidateResult(utils.Decrypt(&addResult), utils.GenerateFilledArray(3.12 + 2), false, 1, log)){
+		t.Error("Addition wasn't evaluated correctly after bootstrap")
+	}
+
+	productByConst := utils.MultiplyConstNew(&ct, 0.1, false, false)
+
+	// Test if bootstrapped ciphertext can correctly evaluate addition
+	if(!ValidateResult(utils.Decrypt(&productByConst), utils.GenerateFilledArray(3.12 * 0.1), false, 1, log)){
+		t.Error("Multiplication by const wasn't evaluated correctly after bootstrap")
+	}
+
+	product := utils.MultiplyNew(encTwos, ct, true, true)
+
+	// Test if bootstrapped ciphertext can correctly evaluate addition
+	if(!ValidateResult(utils.Decrypt(&product), utils.GenerateFilledArray(3.12 * 2), false, 1, log)){
+		t.Error("Multiplication wasn't evaluated correctly after bootstrap")
 	}
 
 }
