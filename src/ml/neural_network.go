@@ -1,11 +1,12 @@
 package ml
 
 import (
+	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	// "github.com/perm-ai/GO-HEML-prototype/src/logger"
+	"github.com/perm-ai/GO-HEML-prototype/src/importer"
 	"github.com/perm-ai/GO-HEML-prototype/src/utility"
-
 )
 
 //=================================================
@@ -141,12 +142,23 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 }
 
+func (d *Dense) UpdateGradient(gradient NeuralNetworkGradient){
+
+	d.utils.Sub(d.Bias, gradient.BiasGradient, &gradient.BiasGradient)
+
+	for i := range d.Weights{
+		d.utils.Sub(d.Weights[i], gradient.WeightGradient[i], &d.Weights[i])
+	}
+
+}
+
 //=================================================
 //						MODEL
 //=================================================
 
 type Model struct {
 
+	utils	utility.Utils
 	Layers	[]Dense
 	Loss 	Loss
 
@@ -164,7 +176,7 @@ func NewModel(utils utility.Utils) Model {
 	layers[1] = NewDense(128, 64, tanh, true, utils)
 	layers[2] = NewDense(64, 10, softmax, true, utils)
 
-	return Model{layers, crossEntropy}
+	return Model{utils, layers, crossEntropy}
 
 }
 
@@ -201,5 +213,130 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 	denseGradients[0] = m.Layers[2].Backward(outputs["A1"], outputs["Z1"], denseGradients[1].BiasGradient, &m.Layers[1])
 	
 	return denseGradients
+
+}
+
+func (m *Model) UpdateGradient(gradients []NeuralNetworkGradient){
+
+	for i, layer := range m.Layers{
+
+		layer.UpdateGradient(gradients[i])
+
+	}
+
+}
+
+func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, batchSize int, miniBatchSize int, epoch int){
+
+	// TODO: find the best way to incorperate learning rate into gradient
+
+	if !(batchSize % miniBatchSize == 0) {
+		panic("Batch size must be divisable by mini batch size")
+	}
+
+	// Loop through each epoch
+	for e := 0; e < epoch; e++ {
+
+		totalBatches := dataLoader.TrainingDataPoint / batchSize
+
+		// Loop through each batch
+		for batch := 0; batch < totalBatches; batch++{
+
+			batchData := dataLoader.GetDataAsBatch(batch, batchSize)
+			totalMiniBatches := batchSize / miniBatchSize
+			miniBatchGradient := make([][]NeuralNetworkGradient, totalMiniBatches)
+
+			// Loop through each mini bacth
+			for miniBatch := 0; miniBatch < totalMiniBatches; miniBatch++ {
+
+				// Store the sum of neural netowrk gradient
+				backwardGradients := make([][]NeuralNetworkGradient, miniBatchSize)
+
+				// Loop through each data in mini batch
+				for i, data := range batchData[(miniBatch * miniBatchSize) : (miniBatch + miniBatchSize)]{
+
+					// Calculate forward outputs
+					forwardOutputs := m.Forward(data.Image)
+
+					// Get gradients
+					backwardOutputs := m.Backward(forwardOutputs, data.Label, learningRate)
+
+					// Save gradients to array
+					backwardGradients[i] = backwardOutputs
+
+				}
+
+				// Calculate minibatch average gradient
+				miniBatchGradient[miniBatch] = m.AverageNeuralNetworkGradients(backwardGradients, true)
+
+				// TODO: combine ciphertexts into one ciphertext and bootstrap once
+
+			}
+
+			// Average batch gradient
+
+			batchGradientAverage := m.AverageNeuralNetworkGradients(miniBatchGradient, false)
+			m.UpdateGradient(batchGradientAverage)
+
+		}
+
+	}
+
+}
+
+func (m Model) AverageNeuralNetworkGradients(gradients [][]NeuralNetworkGradient, rescale bool) []NeuralNetworkGradient {
+
+	var result []NeuralNetworkGradient
+
+	for i, gradient := range gradients{
+
+		if i == 0{
+			result = gradient
+		} else {
+
+			for layer := range result{
+				// Combine mini batch bias gradient
+				m.utils.Add(result[layer].BiasGradient, gradient[layer].BiasGradient, &result[layer].BiasGradient)
+
+				// Loop through each node weight gradient and add
+				for weightIndex := range result[layer].WeightGradient{
+					m.utils.Add(result[layer].WeightGradient[weightIndex], gradient[layer].WeightGradient[weightIndex], &result[layer].WeightGradient[weightIndex])
+				}
+
+			}
+
+		}
+
+	}
+
+	for layer := range result{
+
+		m.utils.MultiplyConst(&result[layer].BiasGradient, (1 / float64(len(gradients))), &result[layer].BiasGradient, rescale, false)
+
+		for _, weight := range result[layer].WeightGradient{
+
+			var averager ckks.Plaintext
+						
+			if weight.Level() == 1 {
+
+				// Calculate scale that will allow bootstrapping at level 0
+				desiredScale := math.Exp2(math.Round(math.Log2(float64(m.utils.Params.Q()[0]) / m.utils.Bootstrapper.MessageRatio)))
+
+				// Encode plaintext of 1/n with scale that when multiply with weight gradient will result in ct with desired scale
+				averager = m.utils.EncodeToScale(m.utils.GenerateFilledArraySize(1 / float64(len(gradients)), m.Layers[layer].InputUnit), desiredScale / weight.Scale())
+				
+				m.utils.MultiplyPlain(&weight, &averager, &weight, false, false)
+
+			} else {
+
+				m.utils.MultiplyConst(&weight, 1 / float64(len(gradients)), &weight, rescale, false)
+
+			}
+
+		}
+
+	}
+
+	return result
 
 }

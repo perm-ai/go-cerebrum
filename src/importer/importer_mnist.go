@@ -42,8 +42,9 @@ func getMnistData(filepath string) mnistDatas {
 
 type MnistDataLoader struct {
 
-	utils		utility.Utils
-	RawData 	[]MnistData
+	utils				utility.Utils
+	RawData 			[]MnistData
+	TrainingDataPoint	int
 
 }
 
@@ -57,6 +58,8 @@ func (m *MnistDataLoader) LoadData(filepath string) {
 		m.RawData = append(m.RawData, MnistData{data.Image, label})
 
 	}
+
+	m.TrainingDataPoint = len(m.RawData)
 
 }
 
