@@ -128,7 +128,7 @@ func (c CiphertextGroup) BreakGroup(rescale bool) []ckks.Ciphertext {
 		for f := ciphertext.start; f < ciphertext.end; f++ {
 			filter[f] = 1
 		}
-
+		
 		encodedFilter := c.utils.Encoder.EncodeNTTNew(c.utils.Float64ToComplex128(filter), c.utils.Params.LogSlots())
 		brokenCiphertexts[i] = c.utils.MultiplyPlainNew(&c.CiphertextGroups[ciphertext.groupIndex], encodedFilter, rescale, false)
 

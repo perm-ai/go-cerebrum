@@ -10,6 +10,42 @@ import (
 )
 
 //=================================================
+//			  NEURAL NETWORK GRADIENT
+//=================================================
+
+type NeuralNetworkGradient struct {
+
+	BiasGradient	ckks.Ciphertext
+	WeightGradient	[]ckks.Ciphertext
+
+}
+
+func (n NeuralNetworkGradient) GroupGradients(utils utility.Utils, weightLength int, biasLenght int) utility.CiphertextGroup {
+
+	ctData := make([]utility.CiphertextData, len(n.WeightGradient) + 1)
+
+	for i := range n.WeightGradient{
+
+		ctData[i] = utility.CiphertextData{Ciphertext: n.WeightGradient[i], Length: weightLength}
+
+	}
+
+	ctData[len(n.WeightGradient)] =  utility.CiphertextData{Ciphertext: n.BiasGradient, Length: biasLenght}
+
+	return utility.NewCiphertextGroup(ctData, utils)
+
+}
+
+func (n *NeuralNetworkGradient) LoadFromGroup(group utility.CiphertextGroup, rescale bool) {
+
+	ct := group.BreakGroup(rescale)
+
+	n.WeightGradient = ct[0:len(ct) - 1]
+	n.BiasGradient = ct[len(ct) - 1]
+
+}
+
+//=================================================
 //					DENSE LAYER
 //=================================================
 
@@ -24,13 +60,6 @@ type Dense struct {
 	utils 			utility.Utils
 
 	Declared		bool
-
-}
-
-type NeuralNetworkGradient struct {
-
-	BiasGradient	ckks.Ciphertext
-	WeightGradient	[]ckks.Ciphertext
 
 }
 
@@ -267,14 +296,29 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 				}
 
 				// Calculate minibatch average gradient
-				miniBatchGradient[miniBatch] = m.AverageNeuralNetworkGradients(backwardGradients, true)
+				averagedMiniBatch := m.AverageNeuralNetworkGradients(backwardGradients, true)
 
 				// TODO: combine ciphertexts into one ciphertext and bootstrap once
+				
+				for layer := range averagedMiniBatch{
 
+					if layer == 0{
+						for i := range averagedMiniBatch[layer].WeightGradient{
+							m.utils.BootstrapInPlace(&averagedMiniBatch[layer].WeightGradient[i])
+						}
+						m.utils.BootstrapInPlace(&averagedMiniBatch[layer].BiasGradient)
+					} else {
+						grouped := averagedMiniBatch[layer].GroupGradients(m.utils, m.Layers[layer].InputUnit, m.Layers[layer].OutputUnit)
+						grouped.Bootstrap()
+						averagedMiniBatch[layer].LoadFromGroup(grouped, true)
+					}
+					
+				}
+
+				miniBatchGradient[miniBatch] = averagedMiniBatch
 			}
 
 			// Average batch gradient
-
 			batchGradientAverage := m.AverageNeuralNetworkGradients(miniBatchGradient, false)
 			m.UpdateGradient(batchGradientAverage)
 
@@ -313,18 +357,24 @@ func (m Model) AverageNeuralNetworkGradients(gradients [][]NeuralNetworkGradient
 
 		m.utils.MultiplyConst(&result[layer].BiasGradient, (1 / float64(len(gradients))), &result[layer].BiasGradient, rescale, false)
 
+		// Calculate scale that will allow bootstrapping at level 0
+		desiredScale := math.Exp2(math.Round(math.Log2(float64(m.utils.Params.Q()[0]) / m.utils.Bootstrapper.MessageRatio)))
+
+		averager := ckks.NewPlaintext(m.utils.Params, m.utils.Params.MaxLevel(), desiredScale) 
+
+		if result[layer].WeightGradient[0].Level() == 1 {
+
+			// Encode plaintext of 1/n with scale that when multiply with weight gradient will result in ct with desired scale
+			m.utils.Encoder.EncodeNTT(averager, m.utils.Float64ToComplex128(m.utils.GenerateFilledArraySize(1 / float64(len(gradients)), m.Layers[layer].InputUnit)), m.utils.Params.LogSlots())
+
+		}
+
 		for _, weight := range result[layer].WeightGradient{
 
 			var averager ckks.Plaintext
 						
 			if weight.Level() == 1 {
 
-				// Calculate scale that will allow bootstrapping at level 0
-				desiredScale := math.Exp2(math.Round(math.Log2(float64(m.utils.Params.Q()[0]) / m.utils.Bootstrapper.MessageRatio)))
-
-				// Encode plaintext of 1/n with scale that when multiply with weight gradient will result in ct with desired scale
-				averager = m.utils.EncodeToScale(m.utils.GenerateFilledArraySize(1 / float64(len(gradients)), m.Layers[layer].InputUnit), desiredScale / weight.Scale())
-				
 				m.utils.MultiplyPlain(&weight, &averager, &weight, false, false)
 
 			} else {
