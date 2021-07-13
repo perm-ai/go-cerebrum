@@ -148,12 +148,6 @@ func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b float64, rescale bool, boo
 
 }
 
-func (u Utils) Exp(ciphertext *ckks.Ciphertext, destination *ckks.Ciphertext){
-
-	*destination = *u.ExpNew(ciphertext)
-
-}
-
 func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 	
 	coeffs := []complex128{
@@ -172,7 +166,7 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 	var err error
 	var result *ckks.Ciphertext
 
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, math.Pow(2, 40)); err != nil {
 		panic(err)
 	}
 

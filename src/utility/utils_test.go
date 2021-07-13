@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(math.Pow(2, 35), 100, true, true)
+var utils = NewUtils(math.Pow(2, 35), 100, false, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -277,6 +277,29 @@ func TestMultiplication(t *testing.T) {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescale)")
 		}
 
+	}
+
+}
+
+func TestExponential(t *testing.T){
+
+	random := utils.GenerateRandomFloatArray(100, -1, 3)
+	expRandom := make([]float64, len(random))
+
+	for i := range random {
+
+		expRandom[i] = math.Exp(random[i])
+
+	}
+
+	ct := utils.EncryptToScale(random, math.Pow(2, 40))
+
+	expCt := utils.ExpNew(&ct)
+
+	fmt.Println(ct.Level(), expCt.Level())
+
+	if !ValidateResult(utils.Decrypt(expCt), expRandom, false, -0.3, log){
+		t.Error("Exponential function wasn't correctly evaluated")
 	}
 
 }
