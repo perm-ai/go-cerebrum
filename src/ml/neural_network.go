@@ -103,7 +103,7 @@ func (model Dense) Forward(input *ckks.Ciphertext) (ckks.Ciphertext, ckks.Cipher
 
 }
 
-func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gradient ckks.Ciphertext, nextLayerTransposedWeight []ckks.Ciphertext) NeuralNetworkGradient {
+func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gradient ckks.Ciphertext, nextLayerTransposedWeight []ckks.Ciphertext, lr float64) NeuralNetworkGradient {
 
 	gradients := NeuralNetworkGradient{}
 
@@ -120,7 +120,7 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 		}
 		// Calculate outer product of bias_gradient and input to layer to calculate weight gradient
-		gradients.WeightGradient = model.utils.Outer(&gradients.BiasGradient, input, model.OutputUnit, model.InputUnit)
+		gradients.WeightGradient = model.utils.Outer(&gradients.BiasGradient, input, model.OutputUnit, model.InputUnit, lr)
 		
 		return gradients
 
@@ -162,7 +162,7 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 		}
 
 		// Calculate weight gradient by doing outer product
-		gradients.WeightGradient = model.utils.Outer(&gradients.BiasGradient, input, model.OutputUnit, model.InputUnit)
+		gradients.WeightGradient = model.utils.Outer(&gradients.BiasGradient, input, model.OutputUnit, model.InputUnit, lr)
 
 		return gradients
 
@@ -255,7 +255,7 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 		if layer == len(m.Layers) - 1{
 
 			// If last layer put in empty transposed weight and calculate backward gradient
-			denseGradients[layer] = m.Layers[layer].Backward(outputs[layerIn], outputs[layerOut], gradient, empty)
+			denseGradients[layer] = m.Layers[layer].Backward(outputs[layerIn], outputs[layerOut], gradient, empty, lr)
 
 		} else {
 
@@ -271,7 +271,7 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 			transposedWeight := m.transposeCache[layer + 1][batchNumber]
 
 			// Calculate backward gradient
-			denseGradients[layer] = m.Layers[layer].Backward(outputs[layerIn], outputs[layerOut], gradient, transposedWeight)
+			denseGradients[layer] = m.Layers[layer].Backward(outputs[layerIn], outputs[layerOut], gradient, transposedWeight, lr)
 
 		}
 

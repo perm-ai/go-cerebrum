@@ -405,7 +405,7 @@ func TestOuterProduct(t *testing.T){
 	testCaseA := utils.Encrypt([]float64{3, 4})
 	testCaseB := utils.Encrypt([]float64{2, 3, 5, 6})
 
-	outerProduct := utils.Outer(&testCaseA, &testCaseB, 2, 4)
+	outerProduct := utils.Outer(&testCaseA, &testCaseB, 2, 4, 1)
 	
 	for i := range outerProduct {
 

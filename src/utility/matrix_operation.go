@@ -61,7 +61,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 }
 
-func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int) []ckks.Ciphertext {
+func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int, filterBy float64) []ckks.Ciphertext {
 
 	// Need to cover rotation in range [0, aSize)
 	pow2rotationEvaluator := u.Get2PowRotationEvaluator()
@@ -70,7 +70,23 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 	for i := 0; i < aSize; i++ {
 
-		filtered := u.MultiplyPlainNew(a, &u.Filters[i], true, false)
+		var filtered ckks.Ciphertext
+
+		if(filterBy == 0 || filterBy == 1){
+
+			filtered = u.MultiplyPlainNew(a, &u.Filters[i], true, false)
+			
+		} else {
+			
+			// Generate filter with given filter scale
+			filterCmplx := make([]complex128, u.Params.Slots())
+			filterCmplx[i] = complex(filterBy, 0)
+			filter := u.Encoder.EncodeNTTNew(filterCmplx, u.Params.LogSlots())
+
+			filtered = u.MultiplyPlainNew(a, filter, true, false)
+			
+		}
+		
 
 		// If aSize is more than 2^(logSlot - 2) it would be more or equally efficient to compute sumElement
 		if bSize > int(u.Params.Slots())/4 {
