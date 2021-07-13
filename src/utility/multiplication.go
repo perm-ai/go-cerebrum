@@ -148,6 +148,38 @@ func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b float64, rescale bool, boo
 
 }
 
+func (u Utils) Exp(ciphertext *ckks.Ciphertext, destination *ckks.Ciphertext){
+
+	*destination = *u.ExpNew(ciphertext)
+
+}
+
+func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
+	
+	coeffs := []complex128{
+		complex(1.0, 0),
+		complex(1.0, 0),
+		complex(1.0/2, 0),
+		complex(1.0/6, 0),
+		complex(1.0/24, 0),
+		complex(1.0/120, 0),
+		complex(1.0/720, 0),
+		complex(1.0/5040, 0),
+	}
+
+	poly := ckks.NewPoly(coeffs)
+
+	var err error
+	var result *ckks.Ciphertext
+
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
+		panic(err)
+	}
+
+	return result
+
+}
+
 func (u Utils) ReEncodeAsNTT(a *ckks.Plaintext) {
 
 	if !a.IsNTT() {
