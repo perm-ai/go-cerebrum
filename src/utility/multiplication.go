@@ -206,6 +206,7 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 func (u Utils) InverseNew(ct *ckks.Ciphertext, n int, scaleDownBy float64) ckks.Ciphertext {
 
 	// Calculate approximate inverse of a ciphertext. only works within the bound of [0.175, 1.5]
+	// Costs 5 mutiplicative depth
 
 	if scaleDownBy != 1 {
 

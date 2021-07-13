@@ -319,15 +319,15 @@ func TestInverse(t *testing.T){
 
 	inverse := utils.InverseNew(&ct, 2, (float64(1) / float64(50)))
 
-	fmt.Printf("Scaled up: %f\n", utils.Decrypt(&inverse)[0])
+	fmt.Printf("Cost: %d Levels\n", ct.Level() - inverse.Level())
 
-	if !ValidateResult(utils.Decrypt(&inverse), expected, false, 1, log){
+	if !ValidateResult(utils.Decrypt(&inverse)[0:100], expected[0:100], false, 1, log){
 		t.Error("Inverse wasn't correctly evaluated")
 	}
 
 	mulResult := utils.MultiplyConstArrayNew(inverse, utils.GenerateFilledArraySize(5, 100), true, false)
 
-	if !ValidateResult(utils.Decrypt(&mulResult)[0:99], mulExpected[0:99], false, 1, log){
+	if !ValidateResult(utils.Decrypt(&mulResult)[0:100], mulExpected[0:100], false, 1, log){
 		t.Error("Inversed ciphertext wasn't correctly multiplied with plaintext")
 	}
 
