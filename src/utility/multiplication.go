@@ -1,6 +1,7 @@
 package utility
 
 import (
+	
 	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -166,11 +167,60 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 	var err error
 	var result *ckks.Ciphertext
 
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, math.Pow(2, 40)); err != nil {
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
 		panic(err)
 	}
 
 	return result
+
+}
+
+func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
+
+	// Degree 7 approximation of inverse function
+
+	coeffs := []complex128{
+		complex(8, 0),
+		complex(-28, 0),
+		complex(56, 0),
+		complex(-70, 0),
+		complex(56, 0),
+		complex(-28, 0),
+		complex(8, 0),
+		complex(-1, 0),
+	}
+
+	poly := ckks.NewPoly(coeffs)
+
+	var err error
+	var result *ckks.Ciphertext
+
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
+		panic(err)
+	}
+
+	return result
+
+}
+
+func (u Utils) InverseNew(ct *ckks.Ciphertext, n int, scaleDownBy float64) ckks.Ciphertext {
+
+	// Calculate approximate inverse of a ciphertext. only works within the bound of [0.175, 1.5]
+
+	if scaleDownBy != 1 {
+
+		// Multiply with scaledDownBy to get elements of ciphertexts under 1.5
+		result := u.MultiplyConstNew(ct, scaleDownBy, true, false)
+
+		// Calculate inverse
+		inversed := u.InverseApproxNew(&result)
+
+		// Multiply with scaledDownBy to correct 
+		return u.MultiplyConstNew(inversed, scaleDownBy, true, false)
+
+	} else {
+		return *u.Evaluator.InverseNew(ct, n)
+	}
 
 }
 
