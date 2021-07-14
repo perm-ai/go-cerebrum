@@ -54,11 +54,16 @@ func main() {
 	ml.Normalize_Data(data1)
 	ml.Normalize_Data(data2)
 
-	data1Plain := data1
-	data2Plain := data2
-	data3Plain := data3
-	LogisticRegressionPlain := ml.NewLogisticRegressionPlain()
-	ml.Train(LogisticRegressionPlain, data1Plain, data2Plain, data3Plain, 0.1, 5)
+	// data1Plain := data1
+	// data2Plain := data2
+	// data3Plain := data3
+	// LogisticRegression2 := ml.NewLogisticRegression2()
+	// LogisticRegression2.TrainLRPlain(data1Plain, data2Plain, data2Plain, 0.01, 713, 20)
+
+	// LogisticRegression2.AccuracyTestPlain(data1Plain, data2Plain, data3Plain, 713)
+
+	// accuracyPlain := LogisticRegression2.AccuracyTestPlain(data1Plain, data2Plain, data3Plain, 713)
+	// fmt.Printf("The accuracy of this plain logistic regression model is %f percent \n", accuracyPlain)
 
 	x := utils.Encrypt(data1)
 	y := utils.Encrypt(data2)

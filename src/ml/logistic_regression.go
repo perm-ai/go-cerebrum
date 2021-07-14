@@ -134,7 +134,7 @@ func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, t
 		fmt.Printf("b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
 		fmt.Printf("b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
 
-		if model.b0.Level() < 6 || model.b1.Level() < 6 || model.b2.Level() < 6 {
+		if model.b0.Level() < 7 || model.b1.Level() < 7 || model.b2.Level() < 7 {
 			fmt.Println("Bootstrapping gradient")
 			if model.b0.Level() != 1 {
 				model.utils.Evaluator.DropLevel(&model.b0, model.b0.Level()-1)

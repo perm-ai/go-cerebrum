@@ -5,12 +5,9 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/utility"
 )
 
-
 type Activation interface {
-
-	Forward(input ckks.Ciphertext, inputLength int) 	ckks.Ciphertext
-	Backward(input ckks.Ciphertext, inputLength int)	ckks.Ciphertext
-
+	Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
+	Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 }
 
 //=================================================
@@ -18,15 +15,15 @@ type Activation interface {
 //=================================================
 
 type Sigmoid struct {
-	utils				utility.Utils
-	forwardDeg0			map[int]ckks.Plaintext
-	backwardDeg0		map[int]ckks.Plaintext
+	utils        utility.Utils
+	forwardDeg0  map[int]ckks.Plaintext
+	backwardDeg0 map[int]ckks.Plaintext
 }
 
 func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// y := 0.5 + 0.197x + 0.004x^3
-	
+
 	// Calculate degree three
 	xSquared := s.utils.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
 	deg3 := s.utils.MultiplyConstNew(input.CopyNew(), 0.004, true, false)
@@ -55,7 +52,7 @@ func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 func (s Sigmoid) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// 0.012x^2 + 0.197
-	
+
 	// Calculate degree three
 	xSquared := s.utils.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
 	deg2 := s.utils.MultiplyConstNew(&xSquared, 0.012, true, false)
@@ -81,14 +78,14 @@ func (s Sigmoid) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 //=================================================
 
 type Tanh struct {
-	utils			utility.Utils
-	backwardDeg0	map[int]ckks.Plaintext
+	utils        utility.Utils
+	backwardDeg0 map[int]ckks.Plaintext
 }
 
 func (t Tanh) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// y = (-0.00752x^3) + (0.37x)
-	
+
 	// Calculate degree three
 	xSquared := t.utils.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
 	deg3 := t.utils.MultiplyConstNew(input.CopyNew(), -0.00752, true, false)
@@ -107,7 +104,7 @@ func (t Tanh) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// (-0.02256x^2) + 0.37
-	
+
 	// Calculate degree three
 	xSquared := t.utils.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
 	deg2 := t.utils.MultiplyConstNew(&xSquared, -0.02256, true, false)
@@ -133,17 +130,17 @@ func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 //=================================================
 
 type Softmax struct {
-	utils	utility.Utils
+	utils utility.Utils
 }
 
-func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+func (s Softmax) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// TODO: Implement Homomorphic Encryption frienly version of sigmoid
 	return input
 
 }
 
-func (s Softmax) Backward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+func (s Softmax) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// TODO: Implement Homomorphic Encryption frienly version of sigmoid
 	return input
