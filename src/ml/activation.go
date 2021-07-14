@@ -131,10 +131,9 @@ func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 //					SOFTMAX
 //=================================================
 
-
 type Softmax struct {
-	utils			utility.Utils
-	zeroEliminator	map[int]ckks.Plaintext
+	utils          utility.Utils
+	zeroEliminator map[int]ckks.Plaintext
 }
 
 func NewSoftmax(u utility.Utils) Softmax {
@@ -145,17 +144,18 @@ func NewSoftmax(u utility.Utils) Softmax {
 
 }
 
-func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+func (s Softmax) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// Homomorphic friendly softmax function
 	// e^x / (e^x1 + e^x2 + ... + e^xn)
+	// Cost 7 level if rescale is false and 8 if rescale is true
 
 	// Encode filter if doesn't exist in cache
-	if _, ok := s.zeroEliminator[inputLength]; !ok{
+	if _, ok := s.zeroEliminator[inputLength]; !ok {
 
 		arr := s.utils.GenerateFilledArray(1)
 
-		for i := 0; i < inputLength; i++{
+		for i := 0; i < inputLength; i++ {
 			arr[i] = 0
 		}
 
@@ -165,10 +165,10 @@ func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 	// Exponentiate input
 	exp := s.utils.ExpNew(&input) // Level input - 2
 
-	if exp.Scale() > math.Pow(2, 40.1){
-		s.utils.Evaluator.Rescale(exp, math.Pow(2,35), exp)
+	if exp.Scale() > math.Pow(2, 40.1) && exp.Level() == 6 {
+		s.utils.Evaluator.Rescale(exp, math.Pow(2, 35), exp)
 	}
-	
+
 	// Filter 1 (since e^0 = 1)
 	s.utils.SubPlain(*exp, s.zeroEliminator[inputLength], exp)
 
@@ -178,16 +178,16 @@ func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 	stretchScale := (float64(1) / float64(40))
 
 	// Calculate inverse of sum of e^input
-	inverseSum := s.utils.InverseApproxNew(&expSum, stretchScale)  // Level input - 4
+	inverseSum := s.utils.InverseApproxNew(&expSum, stretchScale) // Level input - 4
 
 	// Apply stretch scale to exponentiated input
 	s.utils.MultiplyConstArray(exp, s.utils.GenerateFilledArraySize(stretchScale, inputLength), exp, true, false) // Level input - 3
 
-	return s.utils.MultiplyNew(*exp, *inverseSum, true, false) // Level input - 5
+	return s.utils.MultiplyNew(*exp, *inverseSum, false, false) // Level input - 5
 
 }
 
-func (s Softmax) Backward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+func (s Softmax) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// Not implemented, won't be used
 	return input
