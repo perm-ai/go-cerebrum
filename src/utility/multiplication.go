@@ -175,7 +175,9 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 
 }
 
-func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
+func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float64) *ckks.Ciphertext {
+
+	// This function is used to calculate 1 / (n * stretchScale)
 
 	// Degree 7 approximation of inverse function
 
@@ -188,6 +190,16 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 		complex(-28, 0),
 		complex(8, 0),
 		complex(-1, 0),
+	}
+
+	if stretchScale != 1 {
+
+		for i, coeff := range coeffs{
+
+			coeffs[i] = complex(real(coeff) * math.Pow(stretchScale, float64(i)), 0)
+
+		}
+
 	}
 
 	poly := ckks.NewPoly(coeffs)
@@ -203,24 +215,23 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 
 }
 
-func (u Utils) InverseNew(ct *ckks.Ciphertext, n int, scaleDownBy float64) ckks.Ciphertext {
+func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64) ckks.Ciphertext {
 
 	// Calculate approximate inverse of a ciphertext. only works within the bound of [0.175, 1.5]
-	// Costs 5 mutiplicative depth
+	// Costs 3 mutiplicative depth
+	// horizontalStretchScale is applied to get the number between wanted bound
+	// This function, if used with correct ciphertext and stretching params, will return 1/n.
 
-	if scaleDownBy != 1 {
-
-		// Multiply with scaledDownBy to get elements of ciphertexts under 1.5
-		result := u.MultiplyConstNew(ct, scaleDownBy, true, false)
+	if horizontalStretchScale != 1 {
 
 		// Calculate inverse
-		inversed := u.InverseApproxNew(&result)
+		inversed := u.InverseApproxNew(ct, horizontalStretchScale)
 
-		// Multiply with scaledDownBy to correct 
-		return u.MultiplyConstNew(inversed, scaleDownBy, true, false)
+		// Apply vertical stretch
+		return u.MultiplyConstNew(inversed, horizontalStretchScale, true, false)
 
 	} else {
-		return *u.Evaluator.InverseNew(ct, n)
+		return *u.InverseApproxNew(ct, 1)
 	}
 
 }

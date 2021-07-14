@@ -317,7 +317,7 @@ func TestInverse(t *testing.T){
 
 	ct := utils.Encrypt(randomArr)
 
-	inverse := utils.InverseNew(&ct, 2, (float64(1) / float64(50)))
+	inverse := utils.InverseNew(&ct, (float64(1) / float64(50)))
 
 	fmt.Printf("Cost: %d Levels\n", ct.Level() - inverse.Level())
 
