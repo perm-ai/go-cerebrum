@@ -96,7 +96,7 @@ func TestSoftmax(t *testing.T){
 
 	// Encryption
 	encInput := utils.Encrypt(randomArr)
-	// utils.Evaluator.DropLevel(&encInput, encInput.Level() - 9)
+	utils.Evaluator.DropLevel(&encInput, encInput.Level() - 9)
 	startingLevel := encInput.Level()
 
 	// Softmax initiation

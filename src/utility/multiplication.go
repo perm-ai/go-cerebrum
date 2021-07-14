@@ -167,7 +167,7 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 	var err error
 	var result *ckks.Ciphertext
 
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, math.Pow(2, 30)); err != nil {
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
 		panic(err)
 	}
 

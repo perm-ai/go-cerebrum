@@ -1,6 +1,8 @@
 package ml
 
 import (
+	"math"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/GO-HEML-prototype/src/utility"
 )
@@ -162,6 +164,10 @@ func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 
 	// Exponentiate input
 	exp := s.utils.ExpNew(&input) // Level input - 2
+
+	if exp.Scale() > math.Pow(2, 40.1){
+		s.utils.Evaluator.Rescale(exp, math.Pow(2,35), exp)
+	}
 	
 	// Filter 1 (since e^0 = 1)
 	s.utils.SubPlain(*exp, s.zeroEliminator[inputLength], exp)
