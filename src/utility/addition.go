@@ -70,3 +70,21 @@ func (utils Utils) SubNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 	return *ct
 
 }
+
+func (utils Utils) SubPlain(a ckks.Ciphertext, b ckks.Plaintext, destination *ckks.Ciphertext) {
+
+	// Subtract ciphertext and plaintext and save result to destination given
+
+	utils.Evaluator.Sub(a, b, destination)
+
+}
+
+func (utils Utils) SubPlainNew(a ckks.Ciphertext, b ckks.Plaintext) ckks.Ciphertext {
+
+	// Subtract ciphertext and plaintext and return result as a new ciphertext
+
+	ct := utils.Evaluator.SubNew(a, b)
+
+	return *ct
+
+}

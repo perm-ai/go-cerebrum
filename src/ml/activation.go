@@ -129,20 +129,61 @@ func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 //					SOFTMAX
 //=================================================
 
+
 type Softmax struct {
-	utils utility.Utils
+	utils			utility.Utils
+	zeroEliminator	map[int]ckks.Plaintext
 }
 
-func (s Softmax) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func NewSoftmax(u utility.Utils) Softmax {
 
-	// TODO: Implement Homomorphic Encryption frienly version of sigmoid
-	return input
+	eliminator := make(map[int]ckks.Plaintext)
+
+	return Softmax{u, eliminator}
 
 }
 
-func (s Softmax) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Softmax) Forward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
 
-	// TODO: Implement Homomorphic Encryption frienly version of sigmoid
+	// Homomorphic friendly softmax function
+	// e^x / (e^x1 + e^x2 + ... + e^xn)
+
+	// Encode filter if doesn't exist in cache
+	if _, ok := s.zeroEliminator[inputLength]; !ok{
+
+		arr := s.utils.GenerateFilledArray(1)
+
+		for i := 0; i < inputLength; i++{
+			arr[i] = 0
+		}
+
+		s.zeroEliminator[inputLength] = *s.utils.Encoder.EncodeNTTNew(s.utils.Float64ToComplex128(arr), s.utils.Params.LogSlots())
+	}
+
+	// Exponentiate input
+	exp := s.utils.ExpNew(&input) // Level input - 2
+	
+	// Filter 1 (since e^0 = 1)
+	s.utils.SubPlain(*exp, s.zeroEliminator[inputLength], exp)
+
+	expSum := s.utils.SumElementsNew(*exp)
+
+	// Declare stretch scale as 1/40
+	stretchScale := (float64(1) / float64(40))
+
+	// Calculate inverse of sum of e^input
+	inverseSum := s.utils.InverseApproxNew(&expSum, stretchScale)  // Level input - 4
+
+	// Apply stretch scale to exponentiated input
+	s.utils.MultiplyConstArray(exp, s.utils.GenerateFilledArraySize(stretchScale, inputLength), exp, true, false) // Level input - 3
+
+	return s.utils.MultiplyNew(*exp, *inverseSum, true, false) // Level input - 5
+
+}
+
+func (s Softmax) Backward (input ckks.Ciphertext, inputLength int) ckks.Ciphertext{
+
+	// Not implemented, won't be used
 	return input
 
 }
