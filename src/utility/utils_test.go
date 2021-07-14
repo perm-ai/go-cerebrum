@@ -304,6 +304,35 @@ func TestExponential(t *testing.T){
 
 }
 
+func TestInverse(t *testing.T){
+
+	randomArr := utils.GenerateRandomFloatArray(100, 20, 40)
+	expected := make([]float64, len(randomArr))
+	mulExpected := make([]float64, len(randomArr))
+
+	for i := 0; i < 100; i++{
+		expected[i] = 1/randomArr[i]
+		mulExpected[i] = 5 * expected[i]
+	}
+
+	ct := utils.Encrypt(randomArr)
+
+	inverse := utils.InverseNew(&ct, (float64(1) / float64(50)))
+
+	fmt.Printf("Cost: %d Levels\n", ct.Level() - inverse.Level())
+
+	if !ValidateResult(utils.Decrypt(&inverse)[0:100], expected[0:100], false, 1, log){
+		t.Error("Inverse wasn't correctly evaluated")
+	}
+
+	mulResult := utils.MultiplyConstArrayNew(inverse, utils.GenerateFilledArraySize(5, 100), true, false)
+
+	if !ValidateResult(utils.Decrypt(&mulResult)[0:100], mulExpected[0:100], false, 1, log){
+		t.Error("Inversed ciphertext wasn't correctly multiplied with plaintext")
+	}
+
+}
+
 func TestDotProduct(t *testing.T) {
 
 	testCases := GenerateTestCases(utils)
