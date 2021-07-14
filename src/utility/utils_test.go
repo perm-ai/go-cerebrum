@@ -331,6 +331,16 @@ func TestInverse(t *testing.T){
 		t.Error("Inversed ciphertext wasn't correctly multiplied with plaintext")
 	}
 
+	ct2 := utils.EncryptToScale(randomArr, 2475880078665336141973028864.0)
+
+	inverseApprox := utils.InverseApproxNew(&ct2, (float64(1) / float64(50)))
+	fmt.Printf("Consumed %d levels\n", ct.Level() - inverseApprox.Level())
+
+	utils.MultiplyConstArray(inverseApprox, utils.GenerateFilledArray((float64(1) / float64(50))), inverseApprox, true, false)
+	if !ValidateResult(utils.Decrypt(inverseApprox)[0:100], expected[0:100], false, 1, log){
+		t.Error("Inversed Approx ciphertext wasn't correctly calculated")
+	}
+
 }
 
 func TestDotProduct(t *testing.T) {
