@@ -334,21 +334,26 @@ func (u Utils) DumpKeys(filepath string) {
 
 	if u.hasSecretKey {
 
+		u.log.Log("Dumping SK")
 		var err1 error
 		secret, err1 = u.secretKey.MarshalBinary()
 		check(err1)
 
 	}
 
+	u.log.Log("Dumping PK")
 	public, err2 := u.PublicKey.MarshalBinary()
 	check(err2)
 
+	u.log.Log("Dumping RLK")
 	relin, err3 := u.RelinKey.MarshalBinary()
 	check(err3)
 
+	u.log.Log("Dumping GLK")
 	galois, err4 := u.GaloisKey.MarshalBinary()
 	check(err4)
 	
+	u.log.Log("Dumping BTP_GLK")
 	// bootstrappingGalois :=
 	bootstrappingGalois := []byte{}
 
@@ -363,17 +368,24 @@ func (u Utils) DumpKeys(filepath string) {
 	secretStr := ""
 
 	if len(secret) == 0{
+		u.log.Log("Encoding SK")
 		secretStr = hex.EncodeToString(secret)
 	}
 
+	u.log.Log("Encoding PK")
 	publicStr := hex.EncodeToString(public)
+
+	u.log.Log("Encoding RLK")
 	relinStr := hex.EncodeToString(relin)
+
+	u.log.Log("Encoding GLK")
 	galoisStr := hex.EncodeToString(galois)
 
 
 	btpGaloisStr := ""
 
 	if len(secret) == 0{
+		u.log.Log("Encoding BTP_GLK")
 		btpGaloisStr = hex.EncodeToString(bootstrappingGalois)
 	}
 
