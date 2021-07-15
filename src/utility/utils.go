@@ -276,6 +276,7 @@ func check(err error){
 
 func LoadKey(filepath string) KeyChain {
 
+	fmt.Println("Loading JSON")
 	jsonFile, _ := os.Open(filepath)
 	defer jsonFile.Close()
 	file, _ := ioutil.ReadAll(jsonFile)
@@ -286,6 +287,7 @@ func LoadKey(filepath string) KeyChain {
 	hasSecret := false
 	secretByte := []byte{}
 
+	fmt.Println("Decoding secret")
 	if(data.SecretKey == ""){
 
 		var err1 error
@@ -295,12 +297,15 @@ func LoadKey(filepath string) KeyChain {
 
 	}
 
+	fmt.Println("Decoding public")
 	publicByte, err2 := hex.DecodeString(data.PublicKey)
 	check(err2)
 
+	fmt.Println("Decoding relin")
 	relinByte, err3 := hex.DecodeString(data.RelinKey)
 	check(err3)
 
+	fmt.Println("Decoding galois")
 	galoisByte, err4 := hex.DecodeString(data.GaloisKey)
 	check(err4)
 	
@@ -309,6 +314,7 @@ func LoadKey(filepath string) KeyChain {
 
 	if(data.BootstrapGaloisKey == ""){
 
+		fmt.Println("Decoding btp glk")
 		var err5 error
 		bootstrappingGalois, err5 = hex.DecodeString(data.BootstrapGaloisKey)
 		check(err5)
@@ -367,7 +373,7 @@ func (u Utils) DumpKeys(filepath string) {
 
 	secretStr := ""
 
-	if len(secret) == 0{
+	if u.hasSecretKey{
 		u.log.Log("Encoding SK")
 		secretStr = hex.EncodeToString(secret)
 	}
@@ -381,13 +387,21 @@ func (u Utils) DumpKeys(filepath string) {
 	u.log.Log("Encoding GLK")
 	galoisStr := hex.EncodeToString(galois)
 
-
 	btpGaloisStr := ""
 
-	if len(secret) == 0{
+	if u.bootstrapEnabled{
 		u.log.Log("Encoding BTP_GLK")
 		btpGaloisStr = hex.EncodeToString(bootstrappingGalois)
 	}
+
+	// Free memory
+	secret = nil
+	public = nil
+	relin = nil
+	galois = nil
+	bootstrappingGalois = nil
+
+	u.log.Log("Saving json")
 
 	jsonData := JsonKey{
 		secretStr,
