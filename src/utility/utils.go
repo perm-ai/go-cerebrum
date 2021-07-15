@@ -1,10 +1,8 @@
 package utility
 
 import (
-	"encoding/hex"
-	"encoding/json"
+
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"os"
@@ -274,49 +272,41 @@ func check(err error){
 	}
 }
 
-func LoadKey(filepath string) KeyChain {
-
-	fmt.Println("Loading JSON")
-	jsonFile, _ := os.Open(filepath)
-	defer jsonFile.Close()
-	file, _ := ioutil.ReadAll(jsonFile)
-
-	var data JsonKey
-	json.Unmarshal(file, &data)
+func LoadKey(directoryPath string) KeyChain {
 
 	hasSecret := false
 	secretByte := []byte{}
 
 	fmt.Println("Decoding secret")
-	if(data.SecretKey == ""){
+	if _, err := os.Stat(directoryPath + "/secret_key"); err == nil {
 
 		var err1 error
-		secretByte, err1 = hex.DecodeString(data.SecretKey)
+		secretByte, err1 = os.ReadFile(directoryPath + "/secret_key")
 		check(err1)
 		hasSecret = true
 
 	}
 
 	fmt.Println("Decoding public")
-	publicByte, err2 := hex.DecodeString(data.PublicKey)
+	publicByte, err2 := os.ReadFile(directoryPath + "/public_key")
 	check(err2)
 
 	fmt.Println("Decoding relin")
-	relinByte, err3 := hex.DecodeString(data.RelinKey)
+	relinByte, err3 := os.ReadFile(directoryPath + "/relin_key")
 	check(err3)
 
 	fmt.Println("Decoding galois")
-	galoisByte, err4 := hex.DecodeString(data.GaloisKey)
+	galoisByte, err4 := os.ReadFile(directoryPath + "/galois_key")
 	check(err4)
 	
 	bootstrapEnabled := false
 	bootstrappingGalois := []byte{}
 
-	if(data.BootstrapGaloisKey == ""){
+	if _, err := os.Stat(directoryPath + "/bootstrap_galois_key"); err == nil {
 
 		fmt.Println("Decoding btp glk")
 		var err5 error
-		bootstrappingGalois, err5 = hex.DecodeString(data.BootstrapGaloisKey)
+		bootstrappingGalois, err5 = os.ReadFile(directoryPath + "/bootstrap_galois_key")
 		check(err5)
 		bootstrapEnabled = true
 
@@ -334,88 +324,93 @@ func LoadKey(filepath string) KeyChain {
 
 }
 
-func (u Utils) DumpKeys(filepath string) {
+func (u Utils) DumpKeys(directoryPath string) {
+
+	os.Mkdir(directoryPath, 0755)
+
+	var file *os.File
+	var err error
 
 	secret := []byte{}
 
 	if u.hasSecretKey {
 
+		// Dumping secret key into byte array
 		u.log.Log("Dumping SK")
 		var err1 error
 		secret, err1 = u.secretKey.MarshalBinary()
 		check(err1)
 
+		// dumping byte array into file
+		file, err = os.Create(directoryPath + "/secret_key")
+		check(err)
+		file.Write(secret)
+
+		// free memory
+		secret = nil
+
 	}
 
+	// Dumping public key into byte array
 	u.log.Log("Dumping PK")
 	public, err2 := u.PublicKey.MarshalBinary()
 	check(err2)
 
+	// dumping byte array into file
+	file, err = os.Create(directoryPath + "/public_key")
+	check(err)
+	file.Write(public)
+
+	// free memory
+	public = nil
+
+
+	// Dumping relinearlize key into byte array
 	u.log.Log("Dumping RLK")
 	relin, err3 := u.RelinKey.MarshalBinary()
 	check(err3)
 
+	// dumping byte array into file
+	file, err = os.Create(directoryPath + "/relin_key")
+	check(err)
+	file.Write(relin)
+
+	// free memory
+	relin = nil
+
+
+	// Dumping galois key into byte array
 	u.log.Log("Dumping GLK")
 	galois, err4 := u.GaloisKey.MarshalBinary()
 	check(err4)
+
+	// dumping byte array into file
+	file, err = os.Create(directoryPath + "/galois_key")
+	check(err)
+	file.Write(galois)
+
+	// free memory
+	galois = nil
 	
 	u.log.Log("Dumping BTP_GLK")
-	// bootstrappingGalois :=
 	bootstrappingGalois := []byte{}
 
 	if u.bootstrapEnabled {
 
+		// Dumping bootstrapping galois key into byte array
 		var err5 error
 		bootstrappingGalois, err5 = u.BtspGaloisKey.MarshalBinary()
 		check(err5)
 
+		// dumping byte array into file
+		file, err = os.Create(directoryPath + "/bootstrap_galois_key")
+		check(err)
+		file.Write(bootstrappingGalois)
+
+		// free memory
+		bootstrappingGalois = nil
+
 	}
-
-	secretStr := ""
-
-	if u.hasSecretKey{
-		u.log.Log("Encoding SK")
-		secretStr = hex.EncodeToString(secret)
-	}
-
-	u.log.Log("Encoding PK")
-	publicStr := hex.EncodeToString(public)
-
-	u.log.Log("Encoding RLK")
-	relinStr := hex.EncodeToString(relin)
-
-	u.log.Log("Encoding GLK")
-	galoisStr := hex.EncodeToString(galois)
-
-	// Free memory
-	secret = nil
-	public = nil
-	relin = nil
-	galois = nil
-
-	btpGaloisStr := ""
-
-	if u.bootstrapEnabled{
-		u.log.Log("Encoding BTP_GLK")
-		btpGaloisStr = hex.EncodeToString(bootstrappingGalois)
-	}
-
-	// Free memory
-	bootstrappingGalois = nil
-
-	u.log.Log("Saving json")
-
-	jsonData := JsonKey{
-		secretStr,
-		publicStr,
-		relinStr,
-		galoisStr,
-		btpGaloisStr,
-	}
-
-	file, _ := json.MarshalIndent(jsonData, "", " ")
- 
-	_ = ioutil.WriteFile(filepath, file, 0644)
 
 }
 
