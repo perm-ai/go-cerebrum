@@ -504,12 +504,16 @@ func TestKeyDumpAndLoad(t *testing.T){
 
 	filename := "key_dump_test.json"
 
+	log.Log("Dumping")
 	utils.DumpKeys(filename)
 
+	log.Log("Loading")
 	keyChain := LoadKey(filename)
 
+	log.Log("Generating new utils")
 	newUtils := NewUtilsFromKeyChain(keyChain, math.Pow(2, 35), 0, true)
 
+	log.Log("Testing")
 	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
 		t.Error("Incorrect validation")
 	}
