@@ -203,10 +203,19 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 
 		log.Log("Util Initialization: Generating bootstrapping key")
 
-		rotationKeys := rlwe.RotationKeySet{}
+		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
+		btpGalEl := make([]uint64, len(rotations) + 1)
+
+		btpGalEl[0] = Params.GaloisElementForRowRotation()
+
+		for i := 1; i < len(btpGalEl); i++{
+			btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i-1])
+		}
+
+		rotationKeys := ckks.NewRotationKeySet(Params, btpGalEl)
 		rotationKeys.UnmarshalBinary(keyChain.BootstrapGaloisKey)
 
-		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: &rotationKeys}
+		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: rotationKeys}
 
 		var err error
 		var bootstrapper *ckks.Bootstrapper
