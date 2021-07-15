@@ -387,6 +387,12 @@ func (u Utils) DumpKeys(filepath string) {
 	u.log.Log("Encoding GLK")
 	galoisStr := hex.EncodeToString(galois)
 
+	// Free memory
+	secret = nil
+	public = nil
+	relin = nil
+	galois = nil
+
 	btpGaloisStr := ""
 
 	if u.bootstrapEnabled{
@@ -395,10 +401,6 @@ func (u Utils) DumpKeys(filepath string) {
 	}
 
 	// Free memory
-	secret = nil
-	public = nil
-	relin = nil
-	galois = nil
 	bootstrappingGalois = nil
 
 	u.log.Log("Saving json")
