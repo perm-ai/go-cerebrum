@@ -1,7 +1,6 @@
 package utility
 
 import (
-
 	"fmt"
 	"math"
 	"math/rand"
@@ -15,31 +14,26 @@ import (
 )
 
 type KeyChain struct {
-
-	hasSecretKey		bool
-	bootstrapEnabled	bool
-	secretKey           []byte
-	PublicKey           []byte
-	RelinKey            []byte
-	GaloisKey           []byte
+	hasSecretKey       bool
+	bootstrapEnabled   bool
+	secretKey          []byte
+	PublicKey          []byte
+	RelinKey           []byte
+	GaloisKey          []byte
 	BootstrapGaloisKey []byte
-
 }
 
 type JsonKey struct {
-
-	SecretKey           string
-	PublicKey           string
-	RelinKey            string
-	GaloisKey           string
-	BootstrapGaloisKey  string
-
+	SecretKey          string
+	PublicKey          string
+	RelinKey           string
+	GaloisKey          string
+	BootstrapGaloisKey string
 }
 
 type Utils struct {
-
-	hasSecretKey		bool
-	bootstrapEnabled	bool
+	hasSecretKey     bool
+	bootstrapEnabled bool
 
 	BootstrappingParams ckks.BootstrappingParameters
 	Params              ckks.Parameters
@@ -47,7 +41,7 @@ type Utils struct {
 	PublicKey           rlwe.PublicKey
 	RelinKey            rlwe.RelinearizationKey
 	GaloisKey           rlwe.RotationKeySet
-	BtspGaloisKey		rlwe.RotationKeySet
+	BtspGaloisKey       rlwe.RotationKeySet
 
 	Bootstrapper *ckks.Bootstrapper
 	Encoder      ckks.Encoder
@@ -56,7 +50,7 @@ type Utils struct {
 	Decryptor    ckks.Decryptor
 
 	Filters []ckks.Plaintext
-	Scale	float64
+	Scale   float64
 	log     logger.Logger
 }
 
@@ -178,7 +172,7 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 	log.Log("Util Initialization: Loading galois keys")
 
 	ks := getSumElementsKs(Params.LogSlots())
-	galEl := make([]uint64, len(ks) + 1)
+	galEl := make([]uint64, len(ks)+1)
 
 	for i := range galEl {
 		if i == 0 {
@@ -266,8 +260,8 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 	}
 }
 
-func check(err error){
-	if err != nil{
+func check(err error) {
+	if err != nil {
 		panic(err)
 	}
 }
@@ -298,7 +292,7 @@ func LoadKey(directoryPath string) KeyChain {
 	fmt.Println("Decoding galois")
 	galoisByte, err4 := os.ReadFile(directoryPath + "/galois_key")
 	check(err4)
-	
+
 	bootstrapEnabled := false
 	bootstrappingGalois := []byte{}
 
@@ -326,7 +320,8 @@ func LoadKey(directoryPath string) KeyChain {
 
 func (u Utils) DumpKeys(directoryPath string) {
 
-	os.Mkdir(directoryPath, 0777)
+	e := os.Mkdir(directoryPath, 0777)
+	check(e)
 
 	var file *os.File
 	var err error
@@ -361,7 +356,6 @@ func (u Utils) DumpKeys(directoryPath string) {
 	// free memory
 	public = nil
 
-
 	// Dumping relinearlize key into byte array
 	u.log.Log("Dumping RLK")
 	relin, err3 := u.RelinKey.MarshalBinary()
@@ -375,7 +369,6 @@ func (u Utils) DumpKeys(directoryPath string) {
 	// free memory
 	relin = nil
 
-
 	// Dumping galois key into byte array
 	u.log.Log("Dumping GLK")
 	galois, err4 := u.GaloisKey.MarshalBinary()
@@ -388,7 +381,7 @@ func (u Utils) DumpKeys(directoryPath string) {
 
 	// free memory
 	galois = nil
-	
+
 	if u.bootstrapEnabled {
 
 		u.log.Log("Dumping BTP_GLK")
@@ -414,7 +407,7 @@ func (u Utils) GenerateRandomFloatArray(length int, lowerBound float64, upperBou
 	randomArr := make([]float64, u.Params.Slots())
 	rand.Seed(time.Now().UnixNano())
 
-	for i := 0; i < length; i++{
+	for i := 0; i < length; i++ {
 
 		randomArr[i] = (rand.Float64() * (upperBound - lowerBound)) + lowerBound
 
