@@ -502,7 +502,7 @@ func TestKeyDumpAndLoad(t *testing.T){
 	data[1] = 0
 	ct := utils.Encrypt(data)
 
-	filename := "keychainPath"
+	filename := "keychain"
 
 	log.Log("Dumping")
 	utils.DumpKeys(filename)

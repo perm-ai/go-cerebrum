@@ -326,19 +326,16 @@ func LoadKey(directoryPath string) KeyChain {
 
 func (u Utils) DumpKeys(directoryPath string) {
 
-	os.Mkdir(directoryPath, 0755)
+	os.Mkdir(directoryPath, 0777)
 
 	var file *os.File
 	var err error
-
-	secret := []byte{}
 
 	if u.hasSecretKey {
 
 		// Dumping secret key into byte array
 		u.log.Log("Dumping SK")
-		var err1 error
-		secret, err1 = u.secretKey.MarshalBinary()
+		secret, err1 := u.secretKey.MarshalBinary()
 		check(err1)
 
 		// dumping byte array into file
@@ -392,14 +389,12 @@ func (u Utils) DumpKeys(directoryPath string) {
 	// free memory
 	galois = nil
 	
-	u.log.Log("Dumping BTP_GLK")
-	bootstrappingGalois := []byte{}
-
 	if u.bootstrapEnabled {
 
+		u.log.Log("Dumping BTP_GLK")
+
 		// Dumping bootstrapping galois key into byte array
-		var err5 error
-		bootstrappingGalois, err5 = u.BtspGaloisKey.MarshalBinary()
+		bootstrappingGalois, err5 := u.BtspGaloisKey.MarshalBinary()
 		check(err5)
 
 		// dumping byte array into file
