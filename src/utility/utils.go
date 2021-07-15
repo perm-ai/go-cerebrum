@@ -1,10 +1,13 @@
 package utility
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/rand"
-	"sort"
+	"os"
 	"strconv"
 	"time"
 
@@ -13,14 +16,40 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
+type KeyChain struct {
+
+	hasSecretKey		bool
+	bootstrapEnabled	bool
+	secretKey           []byte
+	PublicKey           []byte
+	RelinKey            []byte
+	GaloisKey           []byte
+	BootstrapGaloisKey []byte
+
+}
+
+type JsonKey struct {
+
+	SecretKey           string
+	PublicKey           string
+	RelinKey            string
+	GaloisKey           string
+	BootstrapGaloisKey  string
+
+}
+
 type Utils struct {
+
+	hasSecretKey		bool
+	bootstrapEnabled	bool
+
 	BootstrappingParams ckks.BootstrappingParameters
 	Params              ckks.Parameters
 	secretKey           rlwe.SecretKey
 	PublicKey           rlwe.PublicKey
 	RelinKey            rlwe.RelinearizationKey
-	BootstrapingKey     ckks.BootstrappingKey
 	GaloisKey           rlwe.RotationKeySet
+	BtspGaloisKey		rlwe.RotationKeySet
 
 	Bootstrapper *ckks.Bootstrapper
 	Encoder      ckks.Encoder
@@ -50,15 +79,6 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
 
 	log.Log("Util Initialization: Generating galois keys")
-	// galEls := []uint64{Params.GaloisElementForRowRotation())}
-
-	// for i := 1; i <= Params.Slots(); i++{
-	// 	galEls = append(galEls, Params.GaloisElementForColumnRotationBy(i))
-	// }
-
-	// galoisKey := keyGenerator.GenRotationKeys(galEls, secretKey)
-
-	// log.Log("Util Initialization: Generating sum elements keys")
 	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
@@ -94,13 +114,15 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 		}
 
 		return Utils{
+			true,
+			bootstrapEnabled,
 			*bootstrappingParams,
 			Params,
 			*secretKey,
 			*publicKey,
 			*relinKey,
-			bootstrappingKey,
 			*galoisKey,
+			*rotationKeys,
 			bootstrapper,
 			Encoder,
 			Evaluator,
@@ -112,13 +134,15 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 		}
 	} else {
 		return Utils{
+			true,
+			bootstrapEnabled,
 			*bootstrappingParams,
 			Params,
 			*secretKey,
 			*publicKey,
 			*relinKey,
-			ckks.BootstrappingKey{},
 			*galoisKey,
+			rlwe.RotationKeySet{},
 			&ckks.Bootstrapper{},
 			Encoder,
 			Evaluator,
@@ -132,80 +156,238 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 
 }
 
-func getSumElementsKs(logSlots int) []int {
+func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, logEnabled bool) Utils {
 
-	ks := []int{}
+	log := logger.NewLogger(logEnabled)
 
-	for i := 0; i <= logSlots; i++{
-		positive := int(math.Pow(2, float64(i)))
-		ks = append(ks, positive)
-		ks = append(ks, (-1 * positive))
+	bootstrappingParams := ckks.DefaultBootstrapParams[0]
+	Params, _ := bootstrappingParams.Params()
+
+	log.Log("Util Initialization: Loading private / public key pair")
+	secretKey := rlwe.NewSecretKey(Params.Parameters)
+
+	if len(keyChain.secretKey) != 0 {
+		secretKey.UnmarshalBinary(keyChain.secretKey)
 	}
 
-	sort.Ints(ks[:])
+	publicKey := rlwe.NewPublicKey(Params.Parameters)
+	publicKey.UnmarshalBinary(keyChain.PublicKey)
 
-	return ks
+	log.Log("Util Initialization: Loading relin key")
+	relinKey := ckks.NewRelinearizationKey(Params)
+	relinKey.UnmarshalBinary(keyChain.RelinKey)
+
+	log.Log("Util Initialization: Loading galois keys")
+
+	ks := getSumElementsKs(Params.LogSlots())
+	galEl := make([]uint64, len(ks) + 1)
+
+	for i := range galEl {
+		if i == 0 {
+			galEl[i] = Params.GaloisElementForRowRotation()
+		} else {
+			galEl[i] = Params.GaloisElementForColumnRotationBy(i)
+		}
+	}
+
+	galoisKey := ckks.NewRotationKeySet(Params, galEl)
+	galoisKey.UnmarshalBinary(keyChain.GaloisKey)
+
+	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
+	Encoder := ckks.NewEncoder(Params)
+	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
+	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
+	Decryptor := ckks.NewDecryptor(Params, secretKey)
+
+	filters := make([]ckks.Plaintext, filtersAmount)
+
+	for i := range filters {
+		filter := make([]complex128, filtersAmount)
+		filter[i] = complex(1, 0)
+		filters[i] = *Encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
+	}
+
+	if keyChain.bootstrapEnabled {
+
+		log.Log("Util Initialization: Generating bootstrapping key")
+
+		rotationKeys := rlwe.RotationKeySet{}
+		rotationKeys.UnmarshalBinary(keyChain.BootstrapGaloisKey)
+
+		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: &rotationKeys}
+
+		var err error
+		var bootstrapper *ckks.Bootstrapper
+
+		log.Log("Util Initialization: Generating bootstrapper")
+		bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
+
+		if err != nil {
+			panic("BOOTSTRAPPER GENERATION ERROR")
+		}
+
+		return Utils{
+			keyChain.hasSecretKey,
+			keyChain.bootstrapEnabled,
+			*bootstrappingParams,
+			Params,
+			*secretKey,
+			*publicKey,
+			*relinKey,
+			*galoisKey,
+			rotationKeys,
+			bootstrapper,
+			Encoder,
+			Evaluator,
+			Encryptor,
+			Decryptor,
+			filters,
+			scale,
+			log,
+		}
+	} else {
+		return Utils{
+			keyChain.hasSecretKey,
+			keyChain.bootstrapEnabled,
+			*bootstrappingParams,
+			Params,
+			*secretKey,
+			*publicKey,
+			*relinKey,
+			*galoisKey,
+			rlwe.RotationKeySet{},
+			&ckks.Bootstrapper{},
+			Encoder,
+			Evaluator,
+			Encryptor,
+			Decryptor,
+			filters,
+			scale,
+			log,
+		}
+	}
+}
+
+func check(err error){
+	if err != nil{
+		panic(err)
+	}
+}
+
+func LoadKey(filepath string) KeyChain {
+
+	jsonFile, _ := os.Open(filepath)
+	defer jsonFile.Close()
+	file, _ := ioutil.ReadAll(jsonFile)
+
+	var data JsonKey
+	json.Unmarshal(file, &data)
+
+	hasSecret := false
+	secretByte := []byte{}
+
+	if(data.SecretKey == ""){
+
+		var err1 error
+		secretByte, err1 = hex.DecodeString(data.SecretKey)
+		check(err1)
+		hasSecret = true
+
+	}
+
+	publicByte, err2 := hex.DecodeString(data.PublicKey)
+	check(err2)
+
+	relinByte, err3 := hex.DecodeString(data.RelinKey)
+	check(err3)
+
+	galoisByte, err4 := hex.DecodeString(data.GaloisKey)
+	check(err4)
+	
+	bootstrapEnabled := false
+	bootstrappingGalois := []byte{}
+
+	if(data.BootstrapGaloisKey == ""){
+
+		var err5 error
+		bootstrappingGalois, err5 = hex.DecodeString(data.BootstrapGaloisKey)
+		check(err5)
+		bootstrapEnabled = true
+
+	}
+
+	return KeyChain{
+		hasSecret,
+		bootstrapEnabled,
+		secretByte,
+		publicByte,
+		relinByte,
+		galoisByte,
+		bootstrappingGalois,
+	}
 
 }
 
-func (u Utils) Get2PowRotationEvaluator() ckks.Evaluator {
+func (u Utils) DumpKeys(filepath string) {
 
-	return u.Evaluator.WithKey(rlwe.EvaluationKey{Rlk: &u.RelinKey, Rtks: &u.GaloisKey})
+	secret := []byte{}
 
-}
+	if u.hasSecretKey {
 
-func (u Utils) Float64ToComplex128(value []float64) []complex128 {
+		var err1 error
+		secret, err1 = u.secretKey.MarshalBinary()
+		check(err1)
 
-	cmplx := make([]complex128, len(value))
-	for i := range value {
-		cmplx[i] = complex(value[i], 0)
-	}
-	return cmplx
-
-}
-
-func (u Utils) Complex128ToFloat64(value []complex128) []float64 {
-
-	flt := make([]float64, len(value))
-	for i := range value {
-		flt[i] = real(value[i])
-	}
-	return flt
-
-}
-
-func (u Utils) GenerateFilledArray(value float64) []float64 {
-
-	arr := make([]float64, u.Params.Slots())
-	for i := range arr {
-		arr[i] = value
 	}
 
-	return arr
+	public, err2 := u.PublicKey.MarshalBinary()
+	check(err2)
 
-}
+	relin, err3 := u.RelinKey.MarshalBinary()
+	check(err3)
 
-func (u Utils) GenerateFilledArraySize(value float64, size int) []float64 {
+	galois, err4 := u.GaloisKey.MarshalBinary()
+	check(err4)
+	
+	// bootstrappingGalois :=
+	bootstrappingGalois := []byte{}
 
-	arr := make([]float64, u.Params.Slots())
-	for i := 0; i < size; i++ {
-		arr[i] = value
+	if u.bootstrapEnabled {
+
+		var err5 error
+		bootstrappingGalois, err5 = u.BtspGaloisKey.MarshalBinary()
+		check(err5)
+
 	}
 
-	return arr
+	secretStr := ""
 
-}
-
-func (u Utils) GenerateRandomNormalArray(length int) []float64 {
-
-	randomArr := make([]float64, u.Params.Slots())
-	rand.Seed(time.Now().UnixNano())
-
-	for i := 0; i < length; i++ {
-		randomArr[i] = rand.NormFloat64()
+	if len(secret) == 0{
+		secretStr = hex.EncodeToString(secret)
 	}
 
-	return randomArr
+	publicStr := hex.EncodeToString(public)
+	relinStr := hex.EncodeToString(relin)
+	galoisStr := hex.EncodeToString(galois)
+
+
+	btpGaloisStr := ""
+
+	if len(secret) == 0{
+		btpGaloisStr = hex.EncodeToString(bootstrappingGalois)
+	}
+
+	jsonData := JsonKey{
+		secretStr,
+		publicStr,
+		relinStr,
+		galoisStr,
+		btpGaloisStr,
+	}
+
+	file, _ := json.MarshalIndent(jsonData, "", " ")
+ 
+	_ = ioutil.WriteFile(filepath, file, 0644)
 
 }
 

@@ -495,3 +495,46 @@ func TestOuterProduct(t *testing.T){
 	}
 
 }
+
+func TestKeyDumpAndLoad(t *testing.T){
+
+	data := utils.GenerateFilledArray(5)
+	data[1] = 0
+	ct := utils.Encrypt(data)
+
+	filename := "key_dump_test.json"
+
+	utils.DumpKeys(filename)
+
+	keyChain := LoadKey(filename)
+
+	newUtils := NewUtilsFromKeyChain(keyChain, math.Pow(2, 35), 0, true)
+
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect validation")
+	}
+
+	rotated := newUtils.RotateNew(&ct, 1)
+	rotatedExpected := utils.GenerateFilledArray(5)
+	rotatedExpected[0] = 0
+
+	if !ValidateResult(newUtils.Decrypt(&rotated), rotatedExpected, false, 1, log){
+		t.Error("Incorrect rotation")
+	}
+
+	productExpected := newUtils.GenerateFilledArray(10)
+	productExpected[1] = 0
+	product := newUtils.MultiplyConstNew(&ct, 2, true, false)
+
+	if !ValidateResult(newUtils.Decrypt(&product), productExpected, false, 1, log){
+		t.Error("Incorrect multiplication")
+	}
+
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 2)
+	newUtils.BootstrapInPlace(&ct)
+
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect bootstrapping")
+	}
+
+}
