@@ -236,7 +236,7 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 			*publicKey,
 			*relinKey,
 			*galoisKey,
-			rotationKeys,
+			*rotationKeys,
 			bootstrapper,
 			Encoder,
 			Evaluator,
