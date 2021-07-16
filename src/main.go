@@ -39,6 +39,8 @@ func main() {
 
 		lrCommand.Parse(arguments[2:])
 		lr, _ := strconv.ParseFloat(*learningRate, 64)
+		fmt.Printf("Starting program with config keyChainPath: %s, csvPath: %s, xColumn: %d, yColumn: %d, learningRate: %f, epoch: %d, destination: %s", *keyChainPath, *csvPath, *xColumn, *yColumn, lr, *epoch, *destination)
+		
 		cmd.LinearRegression(*keyChainPath, *csvPath, *xColumn, *yColumn, lr, *epoch, *destination)
 
 	case "decrypt":
