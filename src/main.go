@@ -26,7 +26,7 @@ func main() {
 	csvPath := lrCommand.String("csv", "", "Path to csv file for encryption of data.")
 	xColumn := lrCommand.Int("x", 0, "Index of column for x value starting at 0")
 	yColumn := lrCommand.Int("y", 1, "Index of column for y value starting at 0")
-	learningRate := lrCommand.String("lr", "", "Training learning rate")
+	learningRate := lrCommand.Float64("lr", 0.01, "Training learning rate")
 	epoch := lrCommand.Int("epoch", 0, "Training epoch")
 	destination := lrCommand.String("destination", "linear_regression_result", "Destination output save location")
 
@@ -38,10 +38,9 @@ func main() {
 	case "linearRegression":
 
 		lrCommand.Parse(arguments[2:])
-		lr, _ := strconv.ParseFloat(*learningRate, 64)
-		fmt.Printf("Starting program with config keyChainPath: %s, csvPath: %s, xColumn: %d, yColumn: %d, learningRate: %f, epoch: %d, destination: %s", *keyChainPath, *csvPath, *xColumn, *yColumn, lr, *epoch, *destination)
+		fmt.Printf("Starting program with config keyChainPath: %s, csvPath: %s, xColumn: %d, yColumn: %d, learningRate: %f, epoch: %d, destination: %s\n", *keyChainPath, *csvPath, *xColumn, *yColumn, *learningRate, *epoch, *destination)
 		
-		cmd.LinearRegression(*keyChainPath, *csvPath, *xColumn, *yColumn, lr, *epoch, *destination)
+		cmd.LinearRegression(*keyChainPath, *csvPath, *xColumn, *yColumn, *learningRate, *epoch, *destination)
 
 	case "decrypt":
 		decryptCommand.Parse(arguments[2:])
