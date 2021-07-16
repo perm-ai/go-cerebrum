@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(math.Pow(2, 35), 100, true, true)
+var utils = NewUtils(math.Pow(2, 35), 100, false, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -512,6 +512,54 @@ func TestKeyDumpAndLoad(t *testing.T){
 
 	log.Log("Generating new utils")
 	newUtils := NewUtilsFromKeyChain(keyChain, math.Pow(2, 35), 0, true)
+
+	log.Log("Testing")
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect validation")
+	}
+
+	rotated := newUtils.RotateNew(&ct, 1)
+	rotatedExpected := utils.GenerateFilledArray(5)
+	rotatedExpected[0] = 0
+
+	if !ValidateResult(newUtils.Decrypt(&rotated), rotatedExpected, false, 1, log){
+		t.Error("Incorrect rotation")
+	}
+
+	productExpected := newUtils.GenerateFilledArray(10)
+	productExpected[1] = 0
+	product := newUtils.MultiplyConstNew(&ct, 2, true, false)
+
+	if !ValidateResult(newUtils.Decrypt(&product), productExpected, false, 1, log){
+		t.Error("Incorrect multiplication")
+	}
+
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 2)
+	newUtils.BootstrapInPlace(&ct)
+
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect bootstrapping")
+	}
+
+}
+
+func TestKeyPairDumpAndLoad(t *testing.T){
+
+	data := utils.GenerateFilledArray(5)
+	data[1] = 0
+	ct := utils.Encrypt(data)
+
+	filename := "/usr/local/go/src/github.com/perm-ai/GO-HEML-prototype/"
+	filename += "keychain"
+
+	log.Log("Dumping")
+	utils.DumpKeyPair(filename)
+
+	log.Log("Loading")
+	keyChain := LoadKeyPair(filename)
+
+	log.Log("Generating new utils")
+	newUtils := NewUtilsFromKeyPair(keyChain, math.Pow(2, 35), 0, true, true)
 
 	log.Log("Testing")
 	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
