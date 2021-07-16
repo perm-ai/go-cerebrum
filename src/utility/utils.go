@@ -206,10 +206,12 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
 		btpGalEl := make([]uint64, len(rotations) + 1)
 
-		btpGalEl[0] = Params.GaloisElementForRowRotation()
-
-		for i := 1; i < len(btpGalEl); i++{
-			btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i-1])
+		for i := range btpGalEl{
+			if i == 0{
+				btpGalEl[i] = Params.GaloisElementForRowRotation()
+			} else {
+				btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i])
+			}
 		}
 
 		rotationKeys := ckks.NewRotationKeySet(Params, btpGalEl)
@@ -341,6 +343,7 @@ func (u Utils) DumpKeys(directoryPath string) {
 		u.log.Log("Dumping SK")
 		secret, err1 := u.secretKey.MarshalBinary()
 		check(err1)
+		u.log.Log(fmt.Sprintf("SK size: %d bytes", len(secret)))
 
 		// dumping byte array into file
 		file, err = os.Create(directoryPath + "/secret_key")
@@ -356,6 +359,7 @@ func (u Utils) DumpKeys(directoryPath string) {
 	u.log.Log("Dumping PK")
 	public, err2 := u.PublicKey.MarshalBinary()
 	check(err2)
+	u.log.Log(fmt.Sprintf("PK size: %d bytes", len(public)))
 
 	// dumping byte array into file
 	file, err = os.Create(directoryPath + "/public_key")
@@ -369,6 +373,7 @@ func (u Utils) DumpKeys(directoryPath string) {
 	u.log.Log("Dumping RLK")
 	relin, err3 := u.RelinKey.MarshalBinary()
 	check(err3)
+	u.log.Log(fmt.Sprintf("RelinK size: %d bytes", len(relin)))
 
 	// dumping byte array into file
 	file, err = os.Create(directoryPath + "/relin_key")
@@ -382,6 +387,7 @@ func (u Utils) DumpKeys(directoryPath string) {
 	u.log.Log("Dumping GLK")
 	galois, err4 := u.GaloisKey.MarshalBinary()
 	check(err4)
+	u.log.Log(fmt.Sprintf("GLK size: %d bytes", len(galois)))
 
 	// dumping byte array into file
 	file, err = os.Create(directoryPath + "/galois_key")
@@ -398,6 +404,7 @@ func (u Utils) DumpKeys(directoryPath string) {
 		// Dumping bootstrapping galois key into byte array
 		bootstrappingGalois, err5 := u.BtspGaloisKey.MarshalBinary()
 		check(err5)
+		u.log.Log(fmt.Sprintf("BTP GLK size: %d bytes", len(bootstrappingGalois)))
 
 		// dumping byte array into file
 		file, err = os.Create(directoryPath + "/bootstrap_galois_key")
