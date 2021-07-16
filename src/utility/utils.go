@@ -336,6 +336,51 @@ func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bo
 
 }
 
+func NewDecryptionUtils(keyChain KeyChain, logEnabled bool) Utils {
+
+	if len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0 || !keyChain.hasSecretKey{
+		panic("Missing secret key or public key")
+	}
+
+	log := logger.NewLogger(logEnabled)
+
+	bootstrappingParams := ckks.DefaultBootstrapParams[0]
+	Params, _ := bootstrappingParams.Params()
+
+	log.Log("Util Initialization: Loading private / public key pair")
+	secretKey := rlwe.NewSecretKey(Params.Parameters)
+	secretKey.UnmarshalBinary(keyChain.secretKey)
+
+	publicKey := rlwe.NewPublicKey(Params.Parameters)
+	publicKey.UnmarshalBinary(keyChain.PublicKey)
+
+	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
+	Encoder := ckks.NewEncoder(Params)
+	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
+	Decryptor := ckks.NewDecryptor(Params, secretKey)
+
+	return Utils{
+		true,
+		false,
+		*bootstrappingParams,
+		Params,
+		*secretKey,
+		*publicKey,
+		rlwe.RelinearizationKey{},
+		rlwe.RotationKeySet{},
+		rlwe.RotationKeySet{},
+		nil,
+		Encoder,
+		nil,
+		Encryptor,
+		Decryptor,
+		nil,
+		Params.Scale(),
+		log,
+	}
+
+}
+
 func check(err error) {
 	if err != nil {
 		panic(err)

@@ -83,10 +83,6 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
 
-		m := model.utils.Decrypt(&model.M)
-		b := model.utils.Decrypt(&model.B)
-		fmt.Printf("Updated M: %f Updated B: %f\n\n", m[0], b[0])
-
 		if model.M.Level() < 4 || model.B.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
 			if(model.B.Level() != 1){
@@ -97,9 +93,5 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 		}
 
 	}
-
-	m := model.utils.Decrypt(&model.M)
-	b := model.utils.Decrypt(&model.B)
-	fmt.Printf("Result M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
 
 }

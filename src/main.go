@@ -1,78 +1,48 @@
 package main
 
 import (
-
-	//"math"
-	//"fmt"
-
+	"flag"
 	"fmt"
+	"os"
+	"strconv"
 
-	"github.com/perm-ai/GO-HEML-prototype/src/importer"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
-
-	// "fmt"
-
-	"github.com/perm-ai/GO-HEML-prototype/src/ml"
+	"github.com/perm-ai/GO-HEML-prototype/src/cmd"
 )
 
 func main() {
 
-	// lrData := importer.GetTitanicData("./test-data/titanic1.json")
-	// x := lrData.Age
-	// y := lrData.Pclass
-	// target := lrData.Target
-	// ml.Normalize_Data(x)
-	// ml.Normalize_Data(y)
-	// logisticRegression := ml.NewLogisticRegression()
-	// ml.Train(logisticRegression, x, y, target, 0.1, 20)
+	arguments := os.Args
 
-	// Acc := 0.0
-	// for i := 0; i < 10; i++ {
-	// 	x, y, target := utility.GenerateLinearData(300)
-	// 	logisticRegression := ml.NewLogisticRegression()
-	// 	Acc += ml.Train(logisticRegression, x, y, target, 0.1, 20)
-	// }
-	// fmt.Printf("Average Accuracy : %f", Acc/10)
-	// datasetSize := 300
-	// utils := utility.NewUtils(math.Pow(2, 35), 0, true, true)
-	// data1, data2, data3 := utility.GenerateLinearData(datasetSize)
-	// logisticRegression := ml.NewLogisticRegression(utils)
+	if len(arguments) < 2{
+		fmt.Println("list or count subcommand is required")
+        os.Exit(1)
+	}
 
-	datasetSize := 713
-	utils := utility.NewUtils(35, 0, true, true)
-	// data1, data2, data3 := utility.GenerateLinearData(datasetSize)
-	// logisticRegression := ml.NewLogisticRegression(utils)
+	lrCommand := flag.NewFlagSet("linearRegression", flag.ExitOnError)
+	decryptCommand := flag.NewFlagSet("decrypt", flag.ExitOnError)
 
-	// x := utils.Encrypt(data1)
-	// y := utils.Encrypt(data2)
-	// target := utils.Encrypt(data3)
+	// Flag for lr command
+	keyChainPath := lrCommand.String("key", "", "Load saved keys from given path. If not provided we will generate new keys.")
+	csvPath := lrCommand.String("csv", "", "Path to csv file for encryption of data.")
+	xColumn := lrCommand.Int("x", 0, "Index of column for x value starting at 0")
+	yColumn := lrCommand.Int("y", 1, "Index of column for y value starting at 0")
+	learningRate := lrCommand.String("lr", "", "Training learning rate")
+	epoch := lrCommand.Int("epoch", 0, "Training epoch")
+	destination := lrCommand.String("destination", "linear_regression_result", "Destination output save location")
 
-	lrData := importer.GetTitanicData("./test-data/titanic1.json")
-	data1 := lrData.Age
-	data2 := lrData.Pclass
-	data3 := lrData.Target
-	ml.Normalize_Data(data1)
-	ml.Normalize_Data(data2)
+	// Flag for decrypt command
+	key := decryptCommand.String("key", "", "Load saved keys from given path. If not provided we will generate new keys.")
+	data := decryptCommand.String("data", "", "Path to binary file of data to be decrypted.")
 
-	// data1Plain := data1
-	// data2Plain := data2
-	// data3Plain := data3
-	// LogisticRegression2 := ml.NewLogisticRegression2()
-	// LogisticRegression2.TrainLRPlain(data1Plain, data2Plain, data2Plain, 0.01, 713, 20)
+	switch arguments[1] {
+	case "linearRegression":
 
-	// LogisticRegression2.AccuracyTestPlain(data1Plain, data2Plain, data3Plain, 713)
+		lrCommand.Parse(arguments[2:])
+		lr, _ := strconv.ParseFloat(*learningRate, 64)
+		cmd.LinearRegression(*keyChainPath, *csvPath, *xColumn, *yColumn, lr, *epoch, *destination)
 
-	// accuracyPlain := LogisticRegression2.AccuracyTestPlain(data1Plain, data2Plain, data3Plain, 713)
-	// fmt.Printf("The accuracy of this plain logistic regression model is %f percent \n", accuracyPlain)
-
-	x := utils.Encrypt(data1)
-	y := utils.Encrypt(data2)
-	target := utils.Encrypt(data3)
-
-	logisticRegression := ml.NewLogisticRegression(utils)
-
-	logisticRegression.TrainLR(x, y, target, 0.1, datasetSize, 5)
-
-	accuracy := logisticRegression.AccuracyTest(data1, data2, data3, datasetSize)
-	fmt.Printf("The accuracy of this logistic regression model is %f percent \n", accuracy)
+	case "decrypt":
+		decryptCommand.Parse(arguments[2:])
+		cmd.Decrypt(*key, *data)
+	}
 }
