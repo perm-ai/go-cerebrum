@@ -210,7 +210,7 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 			if i == 0{
 				btpGalEl[i] = Params.GaloisElementForRowRotation()
 			} else {
-				btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i])
+				btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i-1])
 			}
 		}
 
@@ -279,10 +279,11 @@ func check(err error) {
 
 func LoadKey(directoryPath string) KeyChain {
 
+	log := logger.NewLogger(true)
 	hasSecret := false
 	secretByte := []byte{}
 
-	fmt.Println("Decoding secret")
+	log.Log("Decoding secret")
 	if _, err := os.Stat(directoryPath + "/secret_key"); err == nil {
 
 		var err1 error
@@ -292,15 +293,15 @@ func LoadKey(directoryPath string) KeyChain {
 
 	}
 
-	fmt.Println("Decoding public")
+	log.Log("Decoding public")
 	publicByte, err2 := os.ReadFile(directoryPath + "/public_key")
 	check(err2)
 
-	fmt.Println("Decoding relin")
+	log.Log("Decoding relin")
 	relinByte, err3 := os.ReadFile(directoryPath + "/relin_key")
 	check(err3)
 
-	fmt.Println("Decoding galois")
+	log.Log("Decoding galois")
 	galoisByte, err4 := os.ReadFile(directoryPath + "/galois_key")
 	check(err4)
 
@@ -309,7 +310,7 @@ func LoadKey(directoryPath string) KeyChain {
 
 	if _, err := os.Stat(directoryPath + "/bootstrap_galois_key"); err == nil {
 
-		fmt.Println("Decoding btp glk")
+		log.Log("Decoding btp glk")
 		var err5 error
 		bootstrappingGalois, err5 = os.ReadFile(directoryPath + "/bootstrap_galois_key")
 		check(err5)
