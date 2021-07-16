@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/perm-ai/GO-HEML-prototype/src/cmd"
 )

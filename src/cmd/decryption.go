@@ -18,7 +18,7 @@ func Decrypt (key string, data string){
 	}
 
 	log.Log("Loading Keys")
-	keys := utility.LoadKey(key)
+	keys := utility.LoadKeyPair(key)
 
 	log.Log("Generating Utils")
 	utils := utility.NewDecryptionUtils(keys, true)
