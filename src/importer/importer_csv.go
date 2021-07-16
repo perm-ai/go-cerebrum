@@ -36,8 +36,14 @@ func GetCSV(filepath string, colNum1 int, colNum2 int) csvData {
 			log.Fatal(error)
 		}
 
-		firstData, _ := strconv.ParseFloat(line[colNum1], 64)
-		secondData, _ := strconv.ParseFloat(line[colNum2], 64)
+		firstData, err := strconv.ParseFloat(line[colNum1], 64)
+		if err != nil {
+			continue
+		}
+		secondData, err := strconv.ParseFloat(line[colNum2], 64)
+		if err != nil {
+			continue
+		}
 
 		data.FirstData = append(data.FirstData, firstData)
 		data.SecondData = append(data.SecondData, secondData)
