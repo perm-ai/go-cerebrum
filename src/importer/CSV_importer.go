@@ -13,11 +13,14 @@ import (
 )
 
 type csvData struct {
-	age []float64
-	sex []float64
+	FirstData  []float64
+	SecondData []float64
 }
 
-func getCSV(filepath string) csvData {
+func GetCSV(filepath string, colNum1 int, colNum2 int) csvData {
+
+	// path, column number1, column number2
+
 	csvFile, _ := os.Open(filepath)
 	reader := csv.NewReader(bufio.NewReader(csvFile))
 
@@ -30,10 +33,11 @@ func getCSV(filepath string) csvData {
 		} else if error != nil {
 			log.Fatal(error)
 		}
-		age, _ := strconv.ParseFloat(line[0], 64)
-		data.age = append(data.age, age)
-		sex, _ := strconv.ParseFloat(line[1], 64)
-		data.sex = append(data.sex, sex)
+		firstData, _ := strconv.ParseFloat(line[colNum1], 64)
+		secondData, _ := strconv.ParseFloat(line[colNum2], 64)
+
+		data.FirstData = append(data.FirstData, firstData)
+		data.SecondData = append(data.SecondData, secondData)
 	}
 
 	return data
