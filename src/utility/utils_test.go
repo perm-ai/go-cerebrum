@@ -12,7 +12,7 @@ import (
 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
 )
 
-var utils = NewUtils(math.Pow(2,35), 100, false, true)
+var utils = NewUtils(math.Pow(2, 35), 100, false, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -74,38 +74,6 @@ func GenerateTestCases(u Utils) [4]TestCase {
 
 }
 
-func EvalCorrectness(evalData []float64, expected []float64, isDot bool, decimalPrecision float64) bool {
-
-	precision := math.Pow(10, float64(-1*decimalPrecision))
-
-	if !isDot {
-
-		if len(expected) != len(evalData) {
-			log.Log("Data has inequal length")
-			return false
-		}
-
-		for i := range evalData {
-			if math.Abs(evalData[i]-expected[i]) > precision {
-				log.Log("Incorrect evaluation (Expected: " + fmt.Sprintf("%f", expected[i]) + " Got: " + fmt.Sprintf("%f", evalData[i]) + " Index: " + strconv.Itoa(i) + ")")
-				return false
-			}
-		}
-
-	} else {
-
-		for i := range evalData {
-			if math.Abs(evalData[i]-expected[0]) > precision {
-				log.Log("Incorrect evaluation (Expected: " + fmt.Sprintf("%f", expected[i]) + " Got: " + fmt.Sprintf("%f", evalData[i]) + " Index: " + strconv.Itoa(i) + ")")
-				return false
-			}
-		}
-	}
-
-	return true
-
-}
-
 func TestComplexToFloat(t *testing.T) {
 
 	data := make([]complex128, utils.Params.Slots())
@@ -148,7 +116,7 @@ func TestEncodingDecoding(t *testing.T) {
 
 	fmt.Println(decoded[0])
 
-	if !EvalCorrectness(decoded, data, false, 1) {
+	if !ValidateResult(decoded, data, false, 1, log) {
 		t.Error("Data wasn't correctly encoded")
 	}
 
@@ -164,7 +132,7 @@ func TestEncodingToScale(t *testing.T) {
 	encoded := utils.EncodeToScale(data, math.Pow(2.0, 20.0))
 	decoded := utils.Decode(&encoded)
 
-	if !EvalCorrectness(decoded, data, false, 1) {
+	if !ValidateResult(decoded, data, false, 1, log) {
 		t.Error("Data wasn't correctly encoded to scale (2^80)")
 	}
 
@@ -176,7 +144,7 @@ func TestEncodingToScale(t *testing.T) {
 	encoded = utils.EncodeToScale(data, math.Pow(2.0, 60))
 	decoded = utils.Decode(&encoded)
 
-	if !EvalCorrectness(decoded, data, false, 1) {
+	if !ValidateResult(decoded, data, false, 1, log) {
 		t.Error("Data wasn't correctly encoded to scale (2^60)")
 	}
 
@@ -188,7 +156,7 @@ func TestEncodingToScale(t *testing.T) {
 	encoded = utils.EncodeToScale(data, math.Pow(2.0, 80))
 	decoded = utils.Decode(&encoded)
 
-	if !EvalCorrectness(decoded, data, false, 1) {
+	if !ValidateResult(decoded, data, false, 1, log) {
 		t.Error("Data wasn't correctly encoded to scale (2^80)")
 	}
 
@@ -226,14 +194,14 @@ func TestAddition(t *testing.T) {
 		sum := utils.AddNew(ct1, ct2)
 		addNewD := utils.Decrypt(&sum)
 
-		if !EvalCorrectness(addNewD, testCases[i].addExpected, false, 1) {
+		if !ValidateResult(addNewD, testCases[i].addExpected, false, 1, log) {
 			t.Error("Data wasn't correctly added (AddNew)")
 		}
 
 		utils.Add(ct1, ct2, &sum)
 		addD := utils.Decrypt(&sum)
 
-		if !EvalCorrectness(addD, testCases[i].addExpected, false, 1) {
+		if !ValidateResult(addD, testCases[i].addExpected, false, 1, log) {
 			t.Error("Data wasn't correctly added (Add)")
 		}
 
@@ -254,14 +222,14 @@ func TestSubtraction(t *testing.T) {
 		subNew := utils.SubNew(ct1, ct2)
 		subNewD := utils.Decrypt(&subNew)
 
-		if !EvalCorrectness(subNewD, testCases[i].subExpected, false, 1) {
+		if !ValidateResult(subNewD, testCases[i].subExpected, false, 1, log) {
 			t.Error("Data wasn't correctly subtracted (SubNew)")
 		}
 
 		utils.Sub(ct1, ct2, &ct1)
 		subD := utils.Decrypt(&ct1)
 
-		if !EvalCorrectness(subD, testCases[i].subExpected, false, 1) {
+		if !ValidateResult(subD, testCases[i].subExpected, false, 1, log) {
 			t.Error("Data wasn't correctly subtracted (Sub)")
 		}
 
@@ -282,33 +250,95 @@ func TestMultiplication(t *testing.T) {
 		mulNew := utils.MultiplyNew(ct1, ct2, false, true)
 		mulNewD := utils.Decrypt(&mulNew)
 
-		if !EvalCorrectness(mulNewD, testCases[i].mulExpected, false, 1) {
+		if !ValidateResult(mulNewD, testCases[i].mulExpected, false, 1, log) {
 			t.Error("Data wasn't correctly multiplied (MultiplyNew)")
 		}
 
-		newCiphertext1 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
+		newCiphertext1 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
 		utils.Multiply(ct1, ct2, newCiphertext1, false, true)
 		mulD := utils.Decrypt(newCiphertext1)
 
-		if !EvalCorrectness(mulD, testCases[i].mulExpected, false, 1) {
+		if !ValidateResult(mulD, testCases[i].mulExpected, false, 1, log) {
 			t.Error("Data wasn't correctly multiplied (Multiply)")
 		}
 
 		mulNewRes := utils.MultiplyNew(ct1, ct2, true, true)
 		mulNewResD := utils.Decrypt(&mulNewRes)
 
-		if !EvalCorrectness(mulNewResD, testCases[i].mulExpected, false, 1) && mulNewRes.Scale() != ct1.Scale()*ct2.Scale() {
+		if !ValidateResult(mulNewResD, testCases[i].mulExpected, false, 1, log) && mulNewRes.Scale() != ct1.Scale()*ct2.Scale() {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescaleNew)")
 		}
 
-		newCiphertext2 := ckks.NewCiphertext(&utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
+		newCiphertext2 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
 		utils.Multiply(ct1, ct2, newCiphertext2,  true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 
-		if !EvalCorrectness(mulResD, testCases[i].mulExpected, false, 1) && newCiphertext2.Scale() != ct1.Scale()*ct2.Scale() {
+		if !ValidateResult(mulResD, testCases[i].mulExpected, false, 1, log) && newCiphertext2.Scale() != ct1.Scale()*ct2.Scale() {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescale)")
 		}
 
+	}
+
+}
+
+func TestExponential(t *testing.T){
+
+	random := utils.GenerateRandomFloatArray(100, -1, 3)
+	expRandom := make([]float64, len(random))
+
+	for i := range random {
+
+		expRandom[i] = math.Exp(random[i])
+
+	}
+
+	ct := utils.EncryptToScale(random, math.Pow(2, 40))
+
+	expCt := utils.ExpNew(&ct)
+
+	fmt.Println(ct.Level(), expCt.Level())
+
+	if !ValidateResult(utils.Decrypt(expCt), expRandom, false, -0.3, log){
+		t.Error("Exponential function wasn't correctly evaluated")
+	}
+
+}
+
+func TestInverse(t *testing.T){
+
+	randomArr := utils.GenerateRandomFloatArray(100, 20, 40)
+	expected := make([]float64, len(randomArr))
+	mulExpected := make([]float64, len(randomArr))
+
+	for i := 0; i < 100; i++{
+		expected[i] = 1/randomArr[i]
+		mulExpected[i] = 5 * expected[i]
+	}
+
+	ct := utils.Encrypt(randomArr)
+
+	inverse := utils.InverseNew(&ct, (float64(1) / float64(50)))
+
+	fmt.Printf("Cost: %d Levels\n", ct.Level() - inverse.Level())
+
+	if !ValidateResult(utils.Decrypt(&inverse)[0:100], expected[0:100], false, 1, log){
+		t.Error("Inverse wasn't correctly evaluated")
+	}
+
+	mulResult := utils.MultiplyConstArrayNew(inverse, utils.GenerateFilledArraySize(5, 100), true, false)
+
+	if !ValidateResult(utils.Decrypt(&mulResult)[0:100], mulExpected[0:100], false, 1, log){
+		t.Error("Inversed ciphertext wasn't correctly multiplied with plaintext")
+	}
+
+	ct2 := utils.EncryptToScale(randomArr, 2475880078665336141973028864.0)
+
+	inverseApprox := utils.InverseApproxNew(&ct2, (float64(1) / float64(50)))
+	fmt.Printf("Consumed %d levels\n", ct.Level() - inverseApprox.Level())
+
+	utils.MultiplyConstArray(inverseApprox, utils.GenerateFilledArray((float64(1) / float64(50))), inverseApprox, true, false)
+	if !ValidateResult(utils.Decrypt(inverseApprox)[0:100], expected[0:100], false, 1, log){
+		t.Error("Inversed Approx ciphertext wasn't correctly calculated")
 	}
 
 }
@@ -323,45 +353,62 @@ func TestDotProduct(t *testing.T) {
 	dotNew := utils.DotProductNew(ct1, ct2, true)
 	dotNewD := utils.Decrypt(&dotNew)
 
-	if !EvalCorrectness(dotNewD, testCases[0].dotExpected, true, -0.69) {
+	if !ValidateResult(dotNewD, testCases[0].dotExpected, true, -0.69, log) {
 		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
 	}
 
 	utils.DotProduct(ct1, ct2, &ct1, true)
 	dotD := utils.Decrypt(&ct1)
 
-	if !EvalCorrectness(dotD, testCases[0].dotExpected, true, -0.69) {
+	if !ValidateResult(dotD, testCases[0].dotExpected, true, -0.69, log) {
 		t.Error("Dot product wasn't correctly calculated (DotProduct)")
 	}
 
 }
 
-// func TestBootstrapping(t *testing.T) {
+func TestBootstrapping(t *testing.T) {
 
-// 	pt := ckks.NewPlaintext(&utils.Params, 1, math.Pow(2, 40))
-// 	utils.Encoder.Encode(pt, utils.Float64ToComplex128(utils.GenerateFilledArray(3.12)), utils.Params.LogSlots())
-// 	ct := utils.Encryptor.EncryptFastNew(pt)
-// 	preBootstrap := ct.Level()
+	ct := utils.Encrypt(utils.GenerateFilledArray(3.12))
+	maxLevel := ct.Level()
+	
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 1)
+	preBootstrap := ct.Level()
 
-// 	utils.BootstrapIfNecessary(ct)
+	utils.BootstrapIfNecessary(&ct)
 
-// 	decrypted := utils.Decrypt(ct)
+	decrypted := utils.Decrypt(&ct)
 
-// 	// Test if bootstrap increase level and correctly decrypt
-// 	if(ct.Level() <= preBootstrap || !EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12), false, 1)){
-// 		t.Error("Wasn't bootstrapped correctly")
-// 	}
+	log.Log(fmt.Sprintf("Max Level: %d, Post Bootstrapping level: %d", maxLevel, ct.Level()))
 
-// 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
-// 	utils.Multiply(encTwos, *ct, ct, true, true)
+	// Test if bootstrap increase level and correctly decrypt
+	if(ct.Level() <= preBootstrap || !ValidateResult(decrypted, utils.GenerateFilledArray(3.12), false, 1, log)){
+		t.Error("Wasn't bootstrapped correctly")
+	}
 
-// 	decrypted = utils.Decrypt(ct)
+	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
 
-// 	if(!EvalCorrectness(decrypted, utils.GenerateFilledArray(3.12 * 2), false, 1)){
-// 		t.Error("Wasn't evaluated correctly after bootstrap")
-// 	}
+	addResult := utils.AddNew(ct, encTwos)
 
-// }
+	// Test if bootstrapped ciphertext can correctly evaluate addition
+	if(!ValidateResult(utils.Decrypt(&addResult), utils.GenerateFilledArray(3.12 + 2), false, 1, log)){
+		t.Error("Addition wasn't evaluated correctly after bootstrap")
+	}
+
+	productByConst := utils.MultiplyConstNew(&ct, 0.1, false, false)
+
+	// Test if bootstrapped ciphertext can correctly evaluate addition
+	if(!ValidateResult(utils.Decrypt(&productByConst), utils.GenerateFilledArray(3.12 * 0.1), false, 1, log)){
+		t.Error("Multiplication by const wasn't evaluated correctly after bootstrap")
+	}
+
+	product := utils.MultiplyNew(encTwos, ct, true, true)
+
+	// Test if bootstrapped ciphertext can correctly evaluate addition
+	if(!ValidateResult(utils.Decrypt(&product), utils.GenerateFilledArray(3.12 * 2), false, 1, log)){
+		t.Error("Multiplication wasn't evaluated correctly after bootstrap")
+	}
+
+}
 
 func TestTranspose(t *testing.T){
 
@@ -401,7 +448,7 @@ func TestTranspose(t *testing.T){
 	for i := range transposedCt{
 		decryptedResult := utils.Decrypt(&transposedCt[i])
 
-		if !EvalCorrectness(decryptedResult, expected[i], false, 1){
+		if !ValidateResult(decryptedResult, expected[i], false, 1, log){
 
 			t.Error("Data was incorrectly transposed")
 
@@ -420,7 +467,7 @@ func TestOuterProduct(t *testing.T){
 	testCaseA := utils.Encrypt([]float64{3, 4})
 	testCaseB := utils.Encrypt([]float64{2, 3, 5, 6})
 
-	outerProduct := utils.Outer(&testCaseA, &testCaseB, 2, 4)
+	outerProduct := utils.Outer(&testCaseA, &testCaseB, 2, 4, 1)
 	
 	for i := range outerProduct {
 
@@ -439,12 +486,107 @@ func TestOuterProduct(t *testing.T){
 			expectedResult[3] = 24
 		}
 
-		if !EvalCorrectness(decryptedProduct, expectedResult, false, 1){
+		if !ValidateResult(decryptedProduct, expectedResult, false, 1, log){
 
 			t.Error("Outer was incorrectly calculated")
 
 		}
 
+	}
+
+}
+
+func TestKeyDumpAndLoad(t *testing.T){
+
+	data := utils.GenerateFilledArray(5)
+	data[1] = 0
+	ct := utils.Encrypt(data)
+
+	filename := "keychain"
+
+	log.Log("Dumping")
+	utils.DumpKeys(filename)
+
+	log.Log("Loading")
+	keyChain := LoadKey(filename)
+
+	log.Log("Generating new utils")
+	newUtils := NewUtilsFromKeyChain(keyChain, math.Pow(2, 35), 0, true)
+
+	log.Log("Testing")
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect validation")
+	}
+
+	rotated := newUtils.RotateNew(&ct, 1)
+	rotatedExpected := utils.GenerateFilledArray(5)
+	rotatedExpected[0] = 0
+
+	if !ValidateResult(newUtils.Decrypt(&rotated), rotatedExpected, false, 1, log){
+		t.Error("Incorrect rotation")
+	}
+
+	productExpected := newUtils.GenerateFilledArray(10)
+	productExpected[1] = 0
+	product := newUtils.MultiplyConstNew(&ct, 2, true, false)
+
+	if !ValidateResult(newUtils.Decrypt(&product), productExpected, false, 1, log){
+		t.Error("Incorrect multiplication")
+	}
+
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 2)
+	newUtils.BootstrapInPlace(&ct)
+
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect bootstrapping")
+	}
+
+}
+
+func TestKeyPairDumpAndLoad(t *testing.T){
+
+	data := utils.GenerateFilledArray(5)
+	data[1] = 0
+	ct := utils.Encrypt(data)
+
+	filename := "/usr/local/go/src/github.com/perm-ai/GO-HEML-prototype/"
+	filename += "keychain"
+
+	log.Log("Dumping")
+	utils.DumpKeyPair(filename)
+
+	log.Log("Loading")
+	keyChain := LoadKeyPair(filename)
+
+	log.Log("Generating new utils")
+	newUtils := NewUtilsFromKeyPair(keyChain, math.Pow(2, 35), 0, true, true)
+
+	log.Log("Testing")
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect validation")
+	}
+
+	rotated := newUtils.RotateNew(&ct, 1)
+	rotatedExpected := utils.GenerateFilledArray(5)
+	rotatedExpected[0] = 0
+
+	if !ValidateResult(newUtils.Decrypt(&rotated), rotatedExpected, false, 1, log){
+		t.Error("Incorrect rotation")
+	}
+
+	productExpected := newUtils.GenerateFilledArray(10)
+	productExpected[1] = 0
+	product := newUtils.MultiplyConstNew(&ct, 2, true, false)
+
+	if !ValidateResult(newUtils.Decrypt(&product), productExpected, false, 1, log){
+		t.Error("Incorrect multiplication")
+	}
+
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 2)
+	newUtils.BootstrapInPlace(&ct)
+
+	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log){
+		t.Error("Incorrect bootstrapping")
 	}
 
 }

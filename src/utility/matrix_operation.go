@@ -1,7 +1,6 @@
 package utility
 
 import (
-	// "math"
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
@@ -25,7 +24,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 		if i == 0 {
 			rotated[i] = ciphertexts[i]
 		} else {
-			rotated[i] = *u.Evaluator.RotateNew(&ciphertexts[i], uint64(int(u.Params.Slots())-i), &u.GaloisKey)
+			rotated[i] = u.RotateNew(&ciphertexts[i], -i)
 		}
 	}
 
@@ -33,7 +32,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 	for c := 0; c < column; c++ {
 
-		newRow := ckks.NewCiphertext(&u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale())
+		newRow := ckks.NewCiphertext(u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale())
 
 		// Zero out non-target slot and add
 		// [ E(x11,  0 ,  0 ,  0 ),
@@ -54,7 +53,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 		// Rotate ciphertext to align back to original position
 		// Eg. E(x24, x34, x44, x14) => E(x14, x24, x34, x44)
-		transposed[c] = *u.Evaluator.RotateNew(newRow, uint64(c), &u.GaloisKey)
+		transposed[c] = u.RotateNew(newRow, c)
 
 	}
 
@@ -62,13 +61,32 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 }
 
-func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int) []ckks.Ciphertext {
+func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int, filterBy float64) []ckks.Ciphertext {
+
+	// Need to cover rotation in range [0, aSize)
+	pow2rotationEvaluator := u.Get2PowRotationEvaluator()
 
 	outerProduct := make([]ckks.Ciphertext, aSize)
 
 	for i := 0; i < aSize; i++ {
 
-		filtered := u.MultiplyPlainNew(a, &u.Filters[i], true, false)
+		var filtered ckks.Ciphertext
+
+		if(filterBy == 0 || filterBy == 1){
+
+			filtered = u.MultiplyPlainNew(a, &u.Filters[i], true, false)
+			
+		} else {
+			
+			// Generate filter with given filter scale
+			filterCmplx := make([]complex128, u.Params.Slots())
+			filterCmplx[i] = complex(filterBy, 0)
+			filter := u.Encoder.EncodeNTTNew(filterCmplx, u.Params.LogSlots())
+
+			filtered = u.MultiplyPlainNew(a, filter, true, false)
+			
+		}
+		
 
 		// If aSize is more than 2^(logSlot - 2) it would be more or equally efficient to compute sumElement
 		if bSize > int(u.Params.Slots())/4 {
@@ -77,12 +95,12 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 			if i != 0 {
 				// Rotate data of interest to slot 0
-				u.Evaluator.Rotate(&filtered, uint64(i), &u.GaloisKey, &filtered)
+				u.Rotate(&filtered, i, &filtered)
 			}
 
 			for j := 1; j < bSize; j *= 2 {
 				// Rotate and add to double the amount of data each iteration
-				rotated := u.Evaluator.RotateNew(&filtered, uint64(int(u.Params.Slots())-j), &u.GaloisKey)
+				rotated := pow2rotationEvaluator.RotateNew(&filtered, -j)
 				u.Add(filtered, *rotated, &filtered)
 			}
 
@@ -99,7 +117,7 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 func (u Utils) PackVector(ciphertexts []ckks.Ciphertext) ckks.Ciphertext {
 
-	result := ckks.NewCiphertext(&u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
+	result := ckks.NewCiphertext(u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
 
 	for i := range ciphertexts{
 
