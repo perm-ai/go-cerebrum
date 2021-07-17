@@ -23,10 +23,10 @@ func LinearRegression(key string, csv string, x int, y int, lr float64, epoch in
 	utils := utility.Utils{}
 
 	if key == "" {
-		utils = utility.NewUtils(math.Pow(2, 40), 0, true, true)
+		utils = utility.NewUtils(math.Pow(2, 35), 0, true, true)
 	} else {
 		keys := utility.LoadKeyPair(key)
-		utils = utility.NewUtilsFromKeyPair(keys, math.Pow(2, 40), 0, true, true)
+		utils = utility.NewUtilsFromKeyPair(keys, math.Pow(2, 35), 0, true, true)
 	}
 
 	if csv == ""{
