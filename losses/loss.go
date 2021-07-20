@@ -1,4 +1,4 @@
-package ml
+package losses
 
 import (
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -11,7 +11,7 @@ type Loss interface {
 }
 
 type CrossEntropy struct {
-	utils utility.Utils
+	U utility.Utils
 }
 
 func (c CrossEntropy) Forward(pred ckks.Ciphertext, y ckks.Ciphertext, predLength int) ckks.Ciphertext {
@@ -19,5 +19,5 @@ func (c CrossEntropy) Forward(pred ckks.Ciphertext, y ckks.Ciphertext, predLengt
 }
 
 func (c CrossEntropy) Backward(pred ckks.Ciphertext, y ckks.Ciphertext, predLength int) ckks.Ciphertext {
-	return c.utils.SubNew(pred, y)
+	return c.U.SubNew(pred, y)
 }

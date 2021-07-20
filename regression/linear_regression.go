@@ -1,4 +1,4 @@
-package ml
+package regression
 
 import (
 	"fmt"

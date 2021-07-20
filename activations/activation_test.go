@@ -1,12 +1,16 @@
-package ml
+package activations
 
 import (
 	"fmt"
 	"math"
 	"testing"
 
+	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
+
+var log = logger.NewLogger(true)
+var utils = utility.NewUtils(math.Pow(2, 35), 100, false, true)
 
 func TestSigmoid(t *testing.T) {
 
@@ -24,7 +28,7 @@ func TestSigmoid(t *testing.T) {
 
 	encryptedInput := utils.Encrypt(inputArrray)
 
-	sigmoid := Sigmoid{utils: utils}
+	sigmoid := Sigmoid{U: utils}
 
 	fwdResult := sigmoid.Forward(encryptedInput, 100)
 
@@ -56,7 +60,7 @@ func TestTanh(t *testing.T) {
 
 	encryptedInput := utils.Encrypt(inputArrray)
 
-	tanh := Tanh{utils: utils}
+	tanh := Tanh{U: utils}
 
 	fwdResult := tanh.Forward(encryptedInput, 100)
 
