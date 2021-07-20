@@ -7,7 +7,7 @@ import (
 
 	"github.com/perm-ai/go-cerebrum/importer"
 	"github.com/perm-ai/go-cerebrum/logger"
-	"github.com/perm-ai/go-cerebrum/ml"
+	"github.com/perm-ai/go-cerebrum/regression"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -51,7 +51,7 @@ func LinearRegression(key string, csv string, x int, y int, lr float64, epoch in
 		encYbin[0], encYbin[1], encYbin[len(encYbin)-2], encYbin[len(encYbin)-2]))
 
 	log.Log("Initializing model")
-	model := ml.NewLinearRegression(utils)
+	model := regression.NewLinearRegression(utils)
 
 	log.Log("Begin training")
 	model.Train(&encX, &encY, lr, len(data.FirstData), epoch)
