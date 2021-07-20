@@ -5,9 +5,9 @@ import (
 	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	// "github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/importer"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	// "github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/importer"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 //=================================================
@@ -15,23 +15,21 @@ import (
 //=================================================
 
 type NeuralNetworkGradient struct {
-
-	BiasGradient	ckks.Ciphertext
-	WeightGradient	[]ckks.Ciphertext
-
+	BiasGradient   ckks.Ciphertext
+	WeightGradient []ckks.Ciphertext
 }
 
 func (n NeuralNetworkGradient) GroupGradients(utils utility.Utils, weightLength int, biasLenght int) utility.CiphertextGroup {
 
-	ctData := make([]utility.CiphertextData, len(n.WeightGradient) + 1)
+	ctData := make([]utility.CiphertextData, len(n.WeightGradient)+1)
 
-	for i := range n.WeightGradient{
+	for i := range n.WeightGradient {
 
 		ctData[i] = utility.CiphertextData{Ciphertext: n.WeightGradient[i], Length: weightLength}
 
 	}
 
-	ctData[len(n.WeightGradient)] =  utility.CiphertextData{Ciphertext: n.BiasGradient, Length: biasLenght}
+	ctData[len(n.WeightGradient)] = utility.CiphertextData{Ciphertext: n.BiasGradient, Length: biasLenght}
 
 	return utility.NewCiphertextGroup(ctData, utils)
 
@@ -41,8 +39,8 @@ func (n *NeuralNetworkGradient) LoadFromGroup(group utility.CiphertextGroup, res
 
 	ct := group.BreakGroup(rescale)
 
-	n.WeightGradient = ct[0:len(ct) - 1]
-	n.BiasGradient = ct[len(ct) - 1]
+	n.WeightGradient = ct[0 : len(ct)-1]
+	n.BiasGradient = ct[len(ct)-1]
 
 }
 
@@ -51,24 +49,22 @@ func (n *NeuralNetworkGradient) LoadFromGroup(group utility.CiphertextGroup, res
 //=================================================
 
 type Dense struct {
+	InputUnit     int
+	OutputUnit    int
+	Weights       []ckks.Ciphertext
+	Bias          ckks.Ciphertext
+	Activation    Activation
+	UseActivation bool
+	utils         utility.Utils
 
-	InputUnit		int
-	OutputUnit		int
-	Weights			[]ckks.Ciphertext
-	Bias			ckks.Ciphertext
-	Activation 		Activation
-	UseActivation	bool
-	utils 			utility.Utils
-
-	Declared		bool
-
+	Declared bool
 }
 
 func NewDense(inputUnit int, outputUnit int, activation Activation, useActivation bool, utils utility.Utils) Dense {
 
 	weights := make([]ckks.Ciphertext, outputUnit)
 
-	for i := range weights{
+	for i := range weights {
 
 		weights[i] = utils.Encrypt(utils.GenerateRandomNormalArray(inputUnit))
 
@@ -80,7 +76,7 @@ func NewDense(inputUnit int, outputUnit int, activation Activation, useActivatio
 
 }
 
-func (model Dense) Forward(input *ckks.Ciphertext) (ckks.Ciphertext, ckks.Ciphertext){
+func (model Dense) Forward(input *ckks.Ciphertext) (ckks.Ciphertext, ckks.Ciphertext) {
 
 	results := make([]ckks.Ciphertext, model.OutputUnit)
 
@@ -121,15 +117,15 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 		}
 		// Calculate outer product of bias_gradient and input to layer to calculate weight gradient
 		gradients.WeightGradient = model.utils.Outer(&gradients.BiasGradient, input, model.OutputUnit, model.InputUnit, lr)
-		
+
 		return gradients
 
 	} else {
 
 		var sum ckks.Ciphertext
 
-		for i := range nextLayerTransposedWeight{
-			
+		for i := range nextLayerTransposedWeight {
+
 			if i == 0 {
 
 				// Calculate dot product and replace sum with new ciphertext
@@ -170,11 +166,11 @@ func (model Dense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertext, gra
 
 }
 
-func (d *Dense) UpdateGradient(gradient NeuralNetworkGradient){
+func (d *Dense) UpdateGradient(gradient NeuralNetworkGradient) {
 
 	d.utils.Sub(d.Bias, gradient.BiasGradient, &gradient.BiasGradient)
 
-	for i := range d.Weights{
+	for i := range d.Weights {
 		d.utils.Sub(d.Weights[i], gradient.WeightGradient[i], &d.Weights[i])
 	}
 
@@ -185,12 +181,10 @@ func (d *Dense) UpdateGradient(gradient NeuralNetworkGradient){
 //=================================================
 
 type Model struct {
-
-	utils			utility.Utils
-	Layers			[]Dense
-	Loss 			Loss
-	transposeCache	[]map[int][]ckks.Ciphertext
-
+	utils          utility.Utils
+	Layers         []Dense
+	Loss           Loss
+	transposeCache []map[int][]ckks.Ciphertext
 }
 
 func NewModel(utils utility.Utils) Model {
@@ -245,14 +239,14 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 	empty := []ckks.Ciphertext{}
 
 	// Loop through each layer to calculate backward gradient
-	for layer := len(m.Layers) - 1; layer >= 0; layer--{
+	for layer := len(m.Layers) - 1; layer >= 0; layer-- {
 
 		// Get the string that map to input and output of the layer (activation of last layer as in, non-activated output as out)
 		layerIn := fmt.Sprintf("A%d", layer)
-		layerOut := fmt.Sprintf("Z%d", layer + 1)
+		layerOut := fmt.Sprintf("Z%d", layer+1)
 
 		// Check if last layer
-		if layer == len(m.Layers) - 1{
+		if layer == len(m.Layers)-1 {
 
 			// If last layer put in empty transposed weight and calculate backward gradient
 			denseGradients[layer] = m.Layers[layer].Backward(outputs[layerIn], outputs[layerOut], gradient, empty, lr)
@@ -260,15 +254,15 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 		} else {
 
 			// Check if there is cached transposed weight
-			if _, ok := m.transposeCache[layer + 1][batchNumber]; !ok{
+			if _, ok := m.transposeCache[layer+1][batchNumber]; !ok {
 
 				// If not exist, create one and add to cache
-				m.transposeCache[layer + 1][batchNumber] = m.utils.Transpose(m.Layers[layer + 1].Weights, m.Layers[layer + 1].InputUnit)
-				
-			} 
+				m.transposeCache[layer+1][batchNumber] = m.utils.Transpose(m.Layers[layer+1].Weights, m.Layers[layer+1].InputUnit)
+
+			}
 
 			// Pull transposed weight from cache
-			transposedWeight := m.transposeCache[layer + 1][batchNumber]
+			transposedWeight := m.transposeCache[layer+1][batchNumber]
 
 			// Calculate backward gradient
 			denseGradients[layer] = m.Layers[layer].Backward(outputs[layerIn], outputs[layerOut], gradient, transposedWeight, lr)
@@ -276,14 +270,14 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 		}
 
 	}
-	
+
 	return denseGradients
 
 }
 
-func (m *Model) UpdateGradient(gradients []NeuralNetworkGradient){
+func (m *Model) UpdateGradient(gradients []NeuralNetworkGradient) {
 
-	for i, layer := range m.Layers{
+	for i, layer := range m.Layers {
 
 		layer.UpdateGradient(gradients[i])
 
@@ -291,11 +285,11 @@ func (m *Model) UpdateGradient(gradients []NeuralNetworkGradient){
 
 }
 
-func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, batchSize int, miniBatchSize int, epoch int){
+func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, batchSize int, miniBatchSize int, epoch int) {
 
 	// TODO: find the best way to incorperate learning rate into gradient
 
-	if !(batchSize % miniBatchSize == 0) {
+	if !(batchSize%miniBatchSize == 0) {
 		panic("Batch size must be divisable by mini batch size")
 	}
 
@@ -305,7 +299,7 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 		totalBatches := dataLoader.TrainingDataPoint / batchSize
 
 		// Loop through each batch
-		for batch := 0; batch < totalBatches; batch++{
+		for batch := 0; batch < totalBatches; batch++ {
 
 			batchData := dataLoader.GetDataAsBatch(batch, batchSize)
 			totalMiniBatches := batchSize / miniBatchSize
@@ -318,7 +312,7 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 				backwardGradients := make([][]NeuralNetworkGradient, miniBatchSize)
 
 				// Loop through each data in mini batch
-				for i, data := range batchData[(miniBatch * miniBatchSize) : (miniBatch + miniBatchSize)]{
+				for i, data := range batchData[(miniBatch * miniBatchSize):(miniBatch + miniBatchSize)] {
 
 					// Calculate forward outputs
 					forwardOutputs := m.Forward(data.Image)
@@ -334,16 +328,16 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 				// Calculate minibatch average gradient
 				averagedMiniBatch := m.AverageNeuralNetworkGradients(backwardGradients, true)
 
-				// Bootstrap efficiently by combining weights of each node into one ciphertext using CiphertextGroup struct				
-				for layer := range averagedMiniBatch{
+				// Bootstrap efficiently by combining weights of each node into one ciphertext using CiphertextGroup struct
+				for layer := range averagedMiniBatch {
 
-					if layer == 0{
+					if layer == 0 {
 
 						// Layer that require highest level possible weight gradient will be bootstrapped normally
 						// since ungrouping require 1 multiplicative depth
-						
+
 						// Can be optimized further by bootstrapping more when forward propagating making the calculation starts at level 8
-						for i := range averagedMiniBatch[layer].WeightGradient{
+						for i := range averagedMiniBatch[layer].WeightGradient {
 							m.utils.BootstrapInPlace(&averagedMiniBatch[layer].WeightGradient[i])
 						}
 
@@ -357,7 +351,7 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 						averagedMiniBatch[layer].LoadFromGroup(grouped, true)
 
 					}
-					
+
 				}
 
 				// Add this bootstrapped minibatch gradient into array
@@ -380,18 +374,18 @@ func (m Model) AverageNeuralNetworkGradients(gradients [][]NeuralNetworkGradient
 
 	var result []NeuralNetworkGradient
 
-	for i, gradient := range gradients{
+	for i, gradient := range gradients {
 
-		if i == 0{
+		if i == 0 {
 			result = gradient
 		} else {
 
-			for layer := range result{
+			for layer := range result {
 				// Combine mini batch bias gradient
 				m.utils.Add(result[layer].BiasGradient, gradient[layer].BiasGradient, &result[layer].BiasGradient)
 
 				// Loop through each node weight gradient and add
-				for weightIndex := range result[layer].WeightGradient{
+				for weightIndex := range result[layer].WeightGradient {
 					m.utils.Add(result[layer].WeightGradient[weightIndex], gradient[layer].WeightGradient[weightIndex], &result[layer].WeightGradient[weightIndex])
 				}
 
@@ -401,33 +395,33 @@ func (m Model) AverageNeuralNetworkGradients(gradients [][]NeuralNetworkGradient
 
 	}
 
-	for layer := range result{
+	for layer := range result {
 
 		m.utils.MultiplyConst(&result[layer].BiasGradient, (1 / float64(len(gradients))), &result[layer].BiasGradient, rescale, false)
 
 		// Calculate scale that will allow bootstrapping at level 0
 		desiredScale := math.Exp2(math.Round(math.Log2(float64(m.utils.Params.Q()[0]) / m.utils.Bootstrapper.MessageRatio)))
 
-		averager := ckks.NewPlaintext(m.utils.Params, m.utils.Params.MaxLevel(), desiredScale) 
+		averager := ckks.NewPlaintext(m.utils.Params, m.utils.Params.MaxLevel(), desiredScale)
 
 		if result[layer].WeightGradient[0].Level() == 1 {
 
 			// Encode plaintext of 1/n with scale that when multiply with weight gradient will result in ct with desired scale
-			m.utils.Encoder.EncodeNTT(averager, m.utils.Float64ToComplex128(m.utils.GenerateFilledArraySize(1 / float64(len(gradients)), m.Layers[layer].InputUnit)), m.utils.Params.LogSlots())
+			m.utils.Encoder.EncodeNTT(averager, m.utils.Float64ToComplex128(m.utils.GenerateFilledArraySize(1/float64(len(gradients)), m.Layers[layer].InputUnit)), m.utils.Params.LogSlots())
 
 		}
 
-		for _, weight := range result[layer].WeightGradient{
+		for _, weight := range result[layer].WeightGradient {
 
 			var averager ckks.Plaintext
-						
+
 			if weight.Level() == 1 {
 
 				m.utils.MultiplyPlain(&weight, &averager, &weight, false, false)
 
 			} else {
 
-				m.utils.MultiplyConst(&weight, 1 / float64(len(gradients)), &weight, rescale, false)
+				m.utils.MultiplyConst(&weight, 1/float64(len(gradients)), &weight, rescale, false)
 
 			}
 

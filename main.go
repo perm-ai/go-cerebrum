@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/perm-ai/GO-HEML-prototype/src/cmd"
+	"github.com/perm-ai/go-cerebrum/cmd"
 )
 
 func main() {
 
 	arguments := os.Args
 
-	if len(arguments) < 2{
+	if len(arguments) < 2 {
 		fmt.Println("list or count subcommand is required")
-        os.Exit(1)
+		os.Exit(1)
 	}
 
 	lrCommand := flag.NewFlagSet("linearRegression", flag.ExitOnError)
@@ -38,7 +38,7 @@ func main() {
 
 		lrCommand.Parse(arguments[2:])
 		fmt.Printf("Starting program with config keyChainPath: %s, csvPath: %s, xColumn: %d, yColumn: %d, learningRate: %f, epoch: %d, destination: %s\n", *keyChainPath, *csvPath, *xColumn, *yColumn, *learningRate, *epoch, *destination)
-		
+
 		cmd.LinearRegression(*keyChainPath, *csvPath, *xColumn, *yColumn, *learningRate, *epoch, *destination)
 
 	case "decrypt":

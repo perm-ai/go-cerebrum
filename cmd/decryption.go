@@ -5,15 +5,15 @@ import (
 	"os"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-func Decrypt (key string, data string){
+func Decrypt(key string, data string) {
 
 	log := logger.NewLogger(true)
 
-	if key == ""{
+	if key == "" {
 		panic("No key path provided")
 	}
 
@@ -26,7 +26,7 @@ func Decrypt (key string, data string){
 	log.Log("Reading binary file")
 	ctBin, readErr := os.ReadFile(data)
 	check(readErr)
-	
+
 	log.Log("Loading binary")
 	ct := ckks.Ciphertext{}
 	unmarshalErr := ct.UnmarshalBinary(ctBin)

@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type Activation interface {

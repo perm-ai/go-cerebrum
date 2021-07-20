@@ -5,10 +5,10 @@ import (
 	"math"
 	"os"
 
-	"github.com/perm-ai/GO-HEML-prototype/src/importer"
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/ml"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/importer"
+	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/ml"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 func check(err error) {
@@ -29,7 +29,7 @@ func LinearRegression(key string, csv string, x int, y int, lr float64, epoch in
 		utils = utility.NewUtilsFromKeyPair(keys, math.Pow(2, 35), 0, true, true)
 	}
 
-	if csv == ""{
+	if csv == "" {
 		panic("No csv filepath provided")
 	}
 
@@ -39,16 +39,16 @@ func LinearRegression(key string, csv string, x int, y int, lr float64, epoch in
 	log.Log("Encrypting X")
 	encX := utils.Encrypt(data.FirstData)
 	encXbin, _ := encX.MarshalBinary()
-	log.Log(fmt.Sprintf("Encrypted X [%f %f . . . %f %f] => [%b %b . . . %b %b]", 
-	data.FirstData[0], data.FirstData[1], data.FirstData[len(data.FirstData) - 2], data.FirstData[len(data.FirstData) - 1], 
-	encXbin[0], encXbin[1], encXbin[len(encXbin) - 2], encXbin[len(encXbin) - 2]))
+	log.Log(fmt.Sprintf("Encrypted X [%f %f . . . %f %f] => [%b %b . . . %b %b]",
+		data.FirstData[0], data.FirstData[1], data.FirstData[len(data.FirstData)-2], data.FirstData[len(data.FirstData)-1],
+		encXbin[0], encXbin[1], encXbin[len(encXbin)-2], encXbin[len(encXbin)-2]))
 
 	log.Log("Encrypting Y")
 	encY := utils.Encrypt(data.SecondData)
 	encYbin, _ := encY.MarshalBinary()
-	log.Log(fmt.Sprintf("Encrypted Y [%f %f . . . %f %f] => [%b %b . . . %b %b]", 
-	data.SecondData[0], data.SecondData[1], data.SecondData[len(data.FirstData) - 2], data.SecondData[len(data.FirstData) - 1], 
-	encYbin[0], encYbin[1], encYbin[len(encYbin) - 2], encYbin[len(encYbin) - 2]))
+	log.Log(fmt.Sprintf("Encrypted Y [%f %f . . . %f %f] => [%b %b . . . %b %b]",
+		data.SecondData[0], data.SecondData[1], data.SecondData[len(data.FirstData)-2], data.SecondData[len(data.FirstData)-1],
+		encYbin[0], encYbin[1], encYbin[len(encYbin)-2], encYbin[len(encYbin)-2]))
 
 	log.Log("Initializing model")
 	model := ml.NewLinearRegression(utils)
@@ -62,7 +62,7 @@ func LinearRegression(key string, csv string, x int, y int, lr float64, epoch in
 	mBytes, mByteErr := model.M.MarshalBinary()
 	check(mByteErr)
 
-	mFile, mFileErr := os.Create(dest+"/m")
+	mFile, mFileErr := os.Create(dest + "/m")
 	check(mFileErr)
 
 	_, mWriteErr := mFile.Write(mBytes)
@@ -71,7 +71,7 @@ func LinearRegression(key string, csv string, x int, y int, lr float64, epoch in
 	bBytes, bByteErr := model.B.MarshalBinary()
 	check(bByteErr)
 
-	bFile, bFileErr := os.Create(dest+"/b")
+	bFile, bFileErr := os.Create(dest + "/b")
 	check(bFileErr)
 
 	_, bWriteErr := bFile.Write(bBytes)

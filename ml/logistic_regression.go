@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type LogisticRegression struct {

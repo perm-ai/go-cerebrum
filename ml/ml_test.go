@@ -3,8 +3,8 @@ package ml
 import (
 	"math"
 
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 // This file is only for global varaiable declaration for ml package tests

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
 type KeyChain struct {
@@ -31,11 +31,10 @@ func LoadKeyPair(directoryPath string) KeyChain {
 		publicByte, err2 := os.ReadFile(directoryPath + "/public_key")
 		check(err2)
 
-
 		return KeyChain{
 			hasSecretKey: true,
-			secretKey: secretByte,
-			PublicKey: publicByte,
+			secretKey:    secretByte,
+			PublicKey:    publicByte,
 		}
 
 	} else {
@@ -97,7 +96,7 @@ func LoadKey(directoryPath string) KeyChain {
 
 }
 
-func (u Utils) DumpKeyPair(directoryPath string){
+func (u Utils) DumpKeyPair(directoryPath string) {
 
 	e := os.Mkdir(directoryPath, 0777)
 	check(e)

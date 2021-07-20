@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type LinearRegression struct {
@@ -76,7 +76,7 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(x.CopyNew())
-		
+
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(x.CopyNew(), fwd, y, size, learningRate)
 
@@ -85,8 +85,8 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 
 		if model.M.Level() < 4 || model.B.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
-			if(model.B.Level() != 1){
-				model.utils.Evaluator.DropLevel(&model.B, model.B.Level() - 1)
+			if model.B.Level() != 1 {
+				model.utils.Evaluator.DropLevel(&model.B, model.B.Level()-1)
 			}
 			model.utils.BootstrapInPlace(&model.M)
 			model.utils.BootstrapInPlace(&model.B)

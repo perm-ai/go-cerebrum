@@ -6,7 +6,7 @@ package ml
 // 	"strconv"
 
 // 	// "github.com/ldsec/lattigo/v2/ckks"
-// 	"github.com/perm-ai/GO-HEML-prototype/src/logger"
+// 	"github.com/perm-ai/go-cerebrum/logger"
 // )
 
 // type LogisticRegression2 struct {

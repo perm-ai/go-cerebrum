@@ -9,7 +9,7 @@ import (
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/ldsec/lattigo/v2/rlwe"
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
 type Utils struct {
@@ -185,10 +185,10 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 		log.Log("Util Initialization: Generating bootstrapping key")
 
 		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
-		btpGalEl := make([]uint64, len(rotations) + 1)
+		btpGalEl := make([]uint64, len(rotations)+1)
 
-		for i := range btpGalEl{
-			if i == 0{
+		for i := range btpGalEl {
+			if i == 0 {
 				btpGalEl[i] = Params.GaloisElementForRowRotation()
 			} else {
 				btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i-1])
@@ -252,9 +252,9 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 	}
 }
 
-func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils{
+func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
 
-	if !keyChain.hasSecretKey || len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0{
+	if !keyChain.hasSecretKey || len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0 {
 		panic("No secret key binary provided")
 	}
 
@@ -338,7 +338,7 @@ func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bo
 
 func NewDecryptionUtils(keyChain KeyChain, logEnabled bool) Utils {
 
-	if len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0 || !keyChain.hasSecretKey{
+	if len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0 || !keyChain.hasSecretKey {
 		panic("Missing secret key or public key")
 	}
 
@@ -387,7 +387,6 @@ func check(err error) {
 	}
 }
 
-
 func (u Utils) GenerateRandomFloatArray(length int, lowerBound float64, upperBound float64) []float64 {
 
 	randomArr := make([]float64, u.Params.Slots())
@@ -408,7 +407,7 @@ func (u Utils) GenerateRandomArray(lowerBound float64, upperBound float64, lengt
 	if lowerBound >= upperBound {
 		panic("Lower bound must be higher than upper bound")
 	}
-	
+
 	randomArr := make([]float64, u.Params.Slots())
 
 	for i := 0; i < length; i++ {
@@ -418,7 +417,6 @@ func (u Utils) GenerateRandomArray(lowerBound float64, upperBound float64, lengt
 	return randomArr
 
 }
-
 
 // Encode into complex value
 func (u Utils) Encode(value []float64) ckks.Plaintext {

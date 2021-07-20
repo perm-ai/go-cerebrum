@@ -1,4 +1,4 @@
-module github.com/perm-ai/GO-HEML-prototype
+module github.com/perm-ai/go-cerebrum
 
 go 1.16
 
