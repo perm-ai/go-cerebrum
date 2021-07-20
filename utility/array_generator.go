@@ -1,34 +1,17 @@
 package utility
 
 import (
-	"math"
+
 	"math/rand"
-	"sort"
 	"time"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/ldsec/lattigo/v2/rlwe"
 )
 
-func getSumElementsKs(logSlots int) []int {
-
-	ks := []int{}
-
-	for i := 0; i <= logSlots; i++{
-		positive := int(math.Pow(2, float64(i)))
-		ks = append(ks, positive)
-		ks = append(ks, (-1 * positive))
-	}
-
-	sort.Ints(ks[:])
-
-	return ks
-
-}
-
 func (u Utils) Get2PowRotationEvaluator() ckks.Evaluator {
 
-	return u.Evaluator.WithKey(rlwe.EvaluationKey{Rlk: &u.RelinKey, Rtks: &u.GaloisKey})
+	return u.Evaluator.WithKey(rlwe.EvaluationKey{Rlk: u.KeyChain.RelinKey, Rtks: u.KeyChain.GaloisKey})
 
 }
 

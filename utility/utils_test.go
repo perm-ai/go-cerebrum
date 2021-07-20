@@ -10,9 +10,11 @@ import (
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/key"
 )
 
-var utils = NewUtils(math.Pow(2, 35), 100, false, true)
+var keyChain = key.GenerateKeys(0, false, true)
+var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -509,13 +511,13 @@ func TestKeyDumpAndLoad(t *testing.T) {
 	filename := "keychain"
 
 	log.Log("Dumping")
-	utils.DumpKeys(filename)
+	keyChain.DumpKeys(filename, true, true, true, true, true)
 
 	log.Log("Loading")
-	keyChain := LoadKey(filename)
+	loadedKeys := key.LoadKeys(filename, 0, true, true, true, true, true)
 
 	log.Log("Generating new utils")
-	newUtils := NewUtilsFromKeyChain(keyChain, math.Pow(2, 35), 0, true)
+	newUtils := NewUtils(loadedKeys, math.Pow(2, 35), 0, true)
 
 	log.Log("Testing")
 	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log) {
@@ -557,13 +559,14 @@ func TestKeyPairDumpAndLoad(t *testing.T) {
 	filename += "keychain"
 
 	log.Log("Dumping")
-	utils.DumpKeyPair(filename)
+	keyChain.DumpKeys(filename, true, true, false, false, false)
 
 	log.Log("Loading")
-	keyChain := LoadKeyPair(filename)
+	loadedKeys := key.LoadKeys(filename, 0, true, true, false, false, false)
+	loadedKeys = key.GenerateKeysFromKeyPair(0, loadedKeys.SecretKey, loadedKeys.PublicKey, false, true)
 
 	log.Log("Generating new utils")
-	newUtils := NewUtilsFromKeyPair(keyChain, math.Pow(2, 35), 0, true, true)
+	newUtils := NewUtils(loadedKeys, math.Pow(2, 35), 0, true)
 
 	log.Log("Testing")
 	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
@@ -18,373 +19,83 @@ type Utils struct {
 
 	BootstrappingParams ckks.BootstrappingParameters
 	Params              ckks.Parameters
-	secretKey           rlwe.SecretKey
-	PublicKey           rlwe.PublicKey
-	RelinKey            rlwe.RelinearizationKey
-	GaloisKey           rlwe.RotationKeySet
-	BtspGaloisKey       rlwe.RotationKeySet
+	KeyChain			key.KeyChain
 
-	Bootstrapper *ckks.Bootstrapper
-	Encoder      ckks.Encoder
-	Evaluator    ckks.Evaluator
-	Encryptor    ckks.Encryptor
-	Decryptor    ckks.Decryptor
+	Bootstrapper 	*ckks.Bootstrapper
+	Encoder      	ckks.Encoder
+	Evaluator    	ckks.Evaluator
+	Encryptor    	ckks.Encryptor
+	Decryptor		ckks.Decryptor
 
 	Filters []ckks.Plaintext
 	Scale   float64
 	log     logger.Logger
 }
 
-func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
+func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnabled bool) Utils {
 
+	if keyChain.RelinKey == nil || keyChain.GaloisKey == nil {
+		panic("Missing keys must have both relinearlize keys and galois keys in keychain to generate new utils")
+	}
+
+	bootstrapEnabled := keyChain.BtspGalKey != nil
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[0]
+	bootstrappingParams := ckks.DefaultBootstrapParams[keyChain.ParamsIndex]
 	Params, _ := bootstrappingParams.Params()
 
-	log.Log("Util Initialization: Generating key generator")
-	keyGenerator := ckks.NewKeyGenerator(Params)
-
-	log.Log("Util Initialization: Generating private / public key pair")
-	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
-
-	log.Log("Util Initialization: Generating relin key")
-	relinKey := keyGenerator.GenRelinearizationKey(secretKey, 2)
-
-	log.Log("Util Initialization: Generating galois keys")
-	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
-
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
-	Encoder := ckks.NewEncoder(Params)
-	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
-	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
-	Decryptor := ckks.NewDecryptor(Params, secretKey)
+	encoder := ckks.NewEncoder(Params)
+	evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: keyChain.RelinKey})
+	encryptor := ckks.NewFastEncryptor(Params, keyChain.PublicKey)
+	
+	var decryptor ckks.Decryptor
+	decryptor = nil
+
+	if keyChain.SecretKey != nil {
+		decryptor = ckks.NewDecryptor(Params, keyChain.SecretKey)
+	}
 
 	filters := make([]ckks.Plaintext, filtersAmount)
 
 	for i := range filters {
 		filter := make([]complex128, filtersAmount)
 		filter[i] = complex(1, 0)
-		filters[i] = *Encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
+		filters[i] = *encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
 	}
+
+	var bootstrapper *ckks.Bootstrapper
+	bootstrapper = nil
 
 	if bootstrapEnabled {
-		log.Log("Util Initialization: Generating bootstrapping key")
 
-		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
-		rotationKeys := keyGenerator.GenRotationKeysForRotations(rotations, true, secretKey)
-
-		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: rotationKeys}
+		bootstrappingKey := ckks.BootstrappingKey{Rlk: keyChain.RelinKey, Rtks: keyChain.BtspGalKey}
 
 		var err error
-		var bootstrapper *ckks.Bootstrapper
-
 		log.Log("Util Initialization: Generating bootstrapper")
 		bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
 
 		if err != nil {
 			panic("BOOTSTRAPPER GENERATION ERROR")
 		}
-
-		return Utils{
-			true,
-			bootstrapEnabled,
-			*bootstrappingParams,
-			Params,
-			*secretKey,
-			*publicKey,
-			*relinKey,
-			*galoisKey,
-			*rotationKeys,
-			bootstrapper,
-			Encoder,
-			Evaluator,
-			Encryptor,
-			Decryptor,
-			filters,
-			scale,
-			log,
-		}
-	} else {
-		return Utils{
-			true,
-			bootstrapEnabled,
-			*bootstrappingParams,
-			Params,
-			*secretKey,
-			*publicKey,
-			*relinKey,
-			*galoisKey,
-			rlwe.RotationKeySet{},
-			&ckks.Bootstrapper{},
-			Encoder,
-			Evaluator,
-			Encryptor,
-			Decryptor,
-			filters,
-			scale,
-			log,
-		}
-	}
-
-}
-
-func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, logEnabled bool) Utils {
-
-	log := logger.NewLogger(logEnabled)
-
-	bootstrappingParams := ckks.DefaultBootstrapParams[0]
-	Params, _ := bootstrappingParams.Params()
-
-	log.Log("Util Initialization: Loading private / public key pair")
-	secretKey := rlwe.NewSecretKey(Params.Parameters)
-
-	if len(keyChain.secretKey) != 0 {
-		secretKey.UnmarshalBinary(keyChain.secretKey)
-	}
-
-	publicKey := rlwe.NewPublicKey(Params.Parameters)
-	publicKey.UnmarshalBinary(keyChain.PublicKey)
-
-	log.Log("Util Initialization: Loading relin key")
-	relinKey := ckks.NewRelinearizationKey(Params)
-	relinKey.UnmarshalBinary(keyChain.RelinKey)
-
-	log.Log("Util Initialization: Loading galois keys")
-
-	ks := getSumElementsKs(Params.LogSlots())
-	galEl := make([]uint64, len(ks)+1)
-
-	for i := range galEl {
-		if i == 0 {
-			galEl[i] = Params.GaloisElementForRowRotation()
-		} else {
-			galEl[i] = Params.GaloisElementForColumnRotationBy(i)
-		}
-	}
-
-	galoisKey := ckks.NewRotationKeySet(Params, galEl)
-	galoisKey.UnmarshalBinary(keyChain.GaloisKey)
-
-	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
-	Encoder := ckks.NewEncoder(Params)
-	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
-	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
-	Decryptor := ckks.NewDecryptor(Params, secretKey)
-
-	filters := make([]ckks.Plaintext, filtersAmount)
-
-	for i := range filters {
-		filter := make([]complex128, filtersAmount)
-		filter[i] = complex(1, 0)
-		filters[i] = *Encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
-	}
-
-	if keyChain.bootstrapEnabled {
-
-		log.Log("Util Initialization: Generating bootstrapping key")
-
-		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
-		btpGalEl := make([]uint64, len(rotations)+1)
-
-		for i := range btpGalEl {
-			if i == 0 {
-				btpGalEl[i] = Params.GaloisElementForRowRotation()
-			} else {
-				btpGalEl[i] = Params.GaloisElementForColumnRotationBy(rotations[i-1])
-			}
-		}
-
-		rotationKeys := ckks.NewRotationKeySet(Params, btpGalEl)
-		rotationKeys.UnmarshalBinary(keyChain.BootstrapGaloisKey)
-
-		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: rotationKeys}
-
-		var err error
-		var bootstrapper *ckks.Bootstrapper
-
-		log.Log("Util Initialization: Generating bootstrapper")
-		bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
-
-		if err != nil {
-			panic("BOOTSTRAPPER GENERATION ERROR")
-		}
-
-		return Utils{
-			keyChain.hasSecretKey,
-			keyChain.bootstrapEnabled,
-			*bootstrappingParams,
-			Params,
-			*secretKey,
-			*publicKey,
-			*relinKey,
-			*galoisKey,
-			*rotationKeys,
-			bootstrapper,
-			Encoder,
-			Evaluator,
-			Encryptor,
-			Decryptor,
-			filters,
-			scale,
-			log,
-		}
-	} else {
-		return Utils{
-			keyChain.hasSecretKey,
-			keyChain.bootstrapEnabled,
-			*bootstrappingParams,
-			Params,
-			*secretKey,
-			*publicKey,
-			*relinKey,
-			*galoisKey,
-			rlwe.RotationKeySet{},
-			&ckks.Bootstrapper{},
-			Encoder,
-			Evaluator,
-			Encryptor,
-			Decryptor,
-			filters,
-			scale,
-			log,
-		}
-	}
-}
-
-func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bootstrapEnabled bool, logEnabled bool) Utils {
-
-	if !keyChain.hasSecretKey || len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0 {
-		panic("No secret key binary provided")
-	}
-
-	log := logger.NewLogger(logEnabled)
-
-	bootstrappingParams := ckks.DefaultBootstrapParams[0]
-	Params, _ := bootstrappingParams.Params()
-
-	log.Log("Util Initialization: Generating key generator")
-	keyGenerator := ckks.NewKeyGenerator(Params)
-
-	log.Log("Util Initialization: Loading private / public key pair")
-	secretKey := rlwe.NewSecretKey(Params.Parameters)
-	secretKey.UnmarshalBinary(keyChain.secretKey)
-
-	publicKey := rlwe.NewPublicKey(Params.Parameters)
-	publicKey.UnmarshalBinary(keyChain.PublicKey)
-
-	log.Log("Util Initialization: Generating relin key")
-	relinKey := keyGenerator.GenRelinearizationKey(secretKey, 2)
-
-	log.Log("Util Initialization: Generating galois keys")
-	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
-
-	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
-	Encoder := ckks.NewEncoder(Params)
-	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
-	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
-	Decryptor := ckks.NewDecryptor(Params, secretKey)
-
-	filters := make([]ckks.Plaintext, filtersAmount)
-
-	for i := range filters {
-		filter := make([]complex128, filtersAmount)
-		filter[i] = complex(1, 0)
-		filters[i] = *Encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
-	}
-
-	btpRotKey := &rlwe.RotationKeySet{}
-	bootstrapper := &ckks.Bootstrapper{}
-
-	if bootstrapEnabled {
-		log.Log("Util Initialization: Generating bootstrapping key")
-
-		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
-		btpRotKey = keyGenerator.GenRotationKeysForRotations(rotations, true, secretKey)
-
-		bootstrappingKey := ckks.BootstrappingKey{Rlk: relinKey, Rtks: btpRotKey}
-
-		var err error
-
-		log.Log("Util Initialization: Generating bootstrapper")
-		bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
-
-		if err != nil {
-			panic("BOOTSTRAPPER GENERATION ERROR")
-		}
-	}
+	} 
 
 	return Utils{
 		true,
 		bootstrapEnabled,
 		*bootstrappingParams,
 		Params,
-		*secretKey,
-		*publicKey,
-		*relinKey,
-		*galoisKey,
-		*btpRotKey,
+		keyChain,
 		bootstrapper,
-		Encoder,
-		Evaluator,
-		Encryptor,
-		Decryptor,
+		encoder,
+		evaluator,
+		encryptor,
+		decryptor,
 		filters,
 		scale,
 		log,
 	}
 
-}
-
-func NewDecryptionUtils(keyChain KeyChain, logEnabled bool) Utils {
-
-	if len(keyChain.secretKey) == 0 || len(keyChain.PublicKey) == 0 || !keyChain.hasSecretKey {
-		panic("Missing secret key or public key")
-	}
-
-	log := logger.NewLogger(logEnabled)
-
-	bootstrappingParams := ckks.DefaultBootstrapParams[0]
-	Params, _ := bootstrappingParams.Params()
-
-	log.Log("Util Initialization: Loading private / public key pair")
-	secretKey := rlwe.NewSecretKey(Params.Parameters)
-	secretKey.UnmarshalBinary(keyChain.secretKey)
-
-	publicKey := rlwe.NewPublicKey(Params.Parameters)
-	publicKey.UnmarshalBinary(keyChain.PublicKey)
-
-	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
-	Encoder := ckks.NewEncoder(Params)
-	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
-	Decryptor := ckks.NewDecryptor(Params, secretKey)
-
-	return Utils{
-		true,
-		false,
-		*bootstrappingParams,
-		Params,
-		*secretKey,
-		*publicKey,
-		rlwe.RelinearizationKey{},
-		rlwe.RotationKeySet{},
-		rlwe.RotationKeySet{},
-		nil,
-		Encoder,
-		nil,
-		Encryptor,
-		Decryptor,
-		nil,
-		Params.Scale(),
-		log,
-	}
-
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (u Utils) GenerateRandomFloatArray(length int, lowerBound float64, upperBound float64) []float64 {
@@ -494,6 +205,10 @@ func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
 }
 
 func (u Utils) Decrypt(ciphertext *ckks.Ciphertext) []float64 {
+
+	if u.Decryptor == nil {
+		panic("Unable to decrypt due to lack of decryptor")
+	}
 
 	decrypted := u.Decryptor.DecryptNew(ciphertext)
 
