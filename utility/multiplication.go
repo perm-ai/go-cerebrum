@@ -12,7 +12,7 @@ var RESCALE_THRESHOLD = math.Pow(2.0, 40.0)
 func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
 	u.SwitchToSameModCoeff(&a, &b)
-	u.Evaluator.MulRelin(a, b, destination)
+	u.Evaluator.MulRelin(&a, &b, destination)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
@@ -27,7 +27,7 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, bootstrap bool) ckks.Ciphertext {
 
 	u.SwitchToSameModCoeff(&a, &b)
-	result := u.Evaluator.MulRelinNew(a, b)
+	result := u.Evaluator.MulRelinNew(&a, &b)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(result)
@@ -93,7 +93,7 @@ func (u Utils) MultiplyConstArrayNew(a ckks.Ciphertext, b []float64, rescale boo
 
 	cmplx := u.Float64ToComplex128(b)
 	encoded := u.Encoder.EncodeNTTAtLvlNew(a.Level(), cmplx, u.Params.LogSlots())
-	result := u.Evaluator.MulRelinNew(a, encoded)
+	result := u.Evaluator.MulRelinNew(&a, encoded)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(result)
@@ -142,7 +142,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b float64, destination *ckks.Ci
 
 func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b float64, rescale bool, bootstrap bool) ckks.Ciphertext {
 
-	destination := ckks.NewCiphertext(u.Params, a.Degree(), a.Level(), a.Scale())
+	destination := ckks.NewCiphertext(u.Params, a.Degree(), a.Level(), a.Scale)
 	u.MultiplyConst(a, b, destination, rescale, bootstrap)
 
 	return *destination
@@ -167,7 +167,7 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 	var err error
 	var result *ckks.Ciphertext
 
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale); err != nil {
 		panic(err)
 	}
 
@@ -207,7 +207,7 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float6
 	var err error
 	var result *ckks.Ciphertext
 
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale()); err != nil {
+	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale); err != nil {
 		panic(err)
 	}
 
@@ -238,7 +238,7 @@ func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64) c
 
 func (u Utils) ReEncodeAsNTT(a *ckks.Plaintext) {
 
-	if !a.IsNTT() {
+	if !a.Value.IsNTT {
 
 		// Reencode as ntt
 		data := u.Encoder.Decode(a, u.Params.LogSlots())

@@ -49,7 +49,7 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
 
 	log.Log("Util Initialization: Generating relin key")
-	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
+	relinKey := keyGenerator.GenRelinearizationKey(secretKey, 2)
 
 	log.Log("Util Initialization: Generating galois keys")
 	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
@@ -57,7 +57,7 @@ func NewUtils(scale float64, filtersAmount int, bootstrapEnabled bool, logEnable
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
 	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
-	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
+	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
 	filters := make([]ckks.Plaintext, filtersAmount)
@@ -169,7 +169,7 @@ func NewUtilsFromKeyChain(keyChain KeyChain, scale float64, filtersAmount int, l
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
 	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
-	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
+	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
 	filters := make([]ckks.Plaintext, filtersAmount)
@@ -274,7 +274,7 @@ func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bo
 	publicKey.UnmarshalBinary(keyChain.PublicKey)
 
 	log.Log("Util Initialization: Generating relin key")
-	relinKey := keyGenerator.GenRelinearizationKey(secretKey)
+	relinKey := keyGenerator.GenRelinearizationKey(secretKey, 2)
 
 	log.Log("Util Initialization: Generating galois keys")
 	galoisKey := keyGenerator.GenRotationKeysForRotations(getSumElementsKs(Params.LogSlots()), true, secretKey)
@@ -282,7 +282,7 @@ func NewUtilsFromKeyPair(keyChain KeyChain, scale float64, filtersAmount int, bo
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
 	Evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: relinKey})
-	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
+	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
 	filters := make([]ckks.Plaintext, filtersAmount)
@@ -356,7 +356,7 @@ func NewDecryptionUtils(keyChain KeyChain, logEnabled bool) Utils {
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	Encoder := ckks.NewEncoder(Params)
-	Encryptor := ckks.NewEncryptorFromPk(Params, publicKey)
+	Encryptor := ckks.NewFastEncryptor(Params, publicKey)
 	Decryptor := ckks.NewDecryptor(Params, secretKey)
 
 	return Utils{
@@ -475,7 +475,7 @@ func (u Utils) Encrypt(value []float64) ckks.Ciphertext {
 	plaintext := u.EncodeToScale(value, u.Scale)
 
 	// Encrypt value
-	ciphertext := u.Encryptor.EncryptFastNew(&plaintext)
+	ciphertext := u.Encryptor.EncryptNew(&plaintext)
 
 	return *ciphertext
 
@@ -487,7 +487,7 @@ func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
 	plaintext := u.EncodeToScale(value, scale)
 
 	// Encrypt value
-	ciphertext := u.Encryptor.EncryptFastNew(&plaintext)
+	ciphertext := u.Encryptor.EncryptNew(&plaintext)
 
 	return *ciphertext
 

@@ -38,6 +38,8 @@ github.com/ldsec/lattigo/v2 v2.1.1 h1:UNcnYoYcTiUmrW4k00szP8Jo3/+E4GdyOqVtCB3CYm
 github.com/ldsec/lattigo/v2 v2.1.1/go.mod h1:MrSDX8/hcs/h++1E1kK0Kn7N5TgSl2om9kNwhx+VYcw=
 github.com/ldsec/lattigo/v2 v2.1.2-0.20210611151535-f43eec625b04 h1:/C+G64ValsOidLnzedlrrdw8fw7+XSCbZW3Hlffmvn8=
 github.com/ldsec/lattigo/v2 v2.1.2-0.20210611151535-f43eec625b04/go.mod h1:SRD19FRy5S8KWCHMjQCSac6wp7BHD65D0IaMFAysY2Q=
+github.com/ldsec/lattigo/v2 v2.2.0 h1:Nz+EbDCZiTJwTTm1A0W8AQfh0n8o0GtiviRprnk2oIA=
+github.com/ldsec/lattigo/v2 v2.2.0/go.mod h1:SRD19FRy5S8KWCHMjQCSac6wp7BHD65D0IaMFAysY2Q=
 github.com/phpdave11/gofpdf v1.4.2 h1:KPKiIbfwbvC/wOncwhrpRdXVj2CZTCFlw4wnoyjtHfQ=
 github.com/phpdave11/gofpdf v1.4.2/go.mod h1:zpO6xFn9yxo3YLyMvW8HcKWVdbNqgIfOOp2dXMnm1mY=
 github.com/phpdave11/gofpdi v1.0.12/go.mod h1:vBmVV0Do6hSBHC8uKUQ71JGW+ZGQq74llk/7bXwjDoI=

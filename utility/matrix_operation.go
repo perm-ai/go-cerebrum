@@ -32,7 +32,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 	for c := 0; c < column; c++ {
 
-		newRow := ckks.NewCiphertext(u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale())
+		newRow := ckks.NewCiphertext(u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale)
 
 		// Zero out non-target slot and add
 		// [ E(x11,  0 ,  0 ,  0 ),

@@ -52,8 +52,8 @@ func GenerateTestCases(u Utils) [4]TestCase {
 	// Ct with different scale, same level
 	t2d1encd := u.EncodeToScale(random1, math.Pow(2, 30))
 	t2d2encd := u.EncodeToScale(random2, math.Pow(2, 60))
-	t2d1enct := u.Encryptor.EncryptFastNew(&t2d1encd)
-	t2d2enct := u.Encryptor.EncryptFastNew(&t2d2encd)
+	t2d1enct := u.Encryptor.EncryptNew(&t2d1encd)
+	t2d2enct := u.Encryptor.EncryptNew(&t2d2encd)
 	t2 := TestCase{*t2d1enct, *t2d2enct, random1, random2, randomAdd, randomSub, randomMul, randomDot}
 
 	// Ct with different level, same scale
@@ -65,8 +65,8 @@ func GenerateTestCases(u Utils) [4]TestCase {
 	// Ct with different scale, different level
 	t4d1encd := u.EncodeToScale(random1, math.Pow(2, 30))
 	t4d2encd := u.EncodeToScale(random2, math.Pow(2, 60))
-	t4d1enct := u.Encryptor.EncryptFastNew(&t4d1encd)
-	t4d2enct := u.Encryptor.EncryptFastNew(&t4d2encd)
+	t4d1enct := u.Encryptor.EncryptNew(&t4d1encd)
+	t4d2enct := u.Encryptor.EncryptNew(&t4d2encd)
 	u.Evaluator.DropLevel(t4d2enct, 3)
 	t4 := TestCase{*t4d1enct, *t4d2enct, random1, random2, randomAdd, randomSub, randomMul, randomDot}
 
@@ -188,7 +188,7 @@ func TestAddition(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		fmt.Println(utils.Decrypt(&testCases[i].data1)[0], utils.Decrypt(&testCases[i].data2)[0], testCases[i].data1.Scale(), testCases[i].data2.Scale())
+		fmt.Println(utils.Decrypt(&testCases[i].data1)[0], utils.Decrypt(&testCases[i].data2)[0], testCases[i].data1.Scale, testCases[i].data2.Scale)
 		fmt.Println(testCases[i].rawData1[0], testCases[i].rawData2[0])
 
 		sum := utils.AddNew(ct1, ct2)
@@ -265,7 +265,7 @@ func TestMultiplication(t *testing.T) {
 		mulNewRes := utils.MultiplyNew(ct1, ct2, true, true)
 		mulNewResD := utils.Decrypt(&mulNewRes)
 
-		if !ValidateResult(mulNewResD, testCases[i].mulExpected, false, 1, log) && mulNewRes.Scale() != ct1.Scale()*ct2.Scale() {
+		if !ValidateResult(mulNewResD, testCases[i].mulExpected, false, 1, log) && mulNewRes.Scale != ct1.Scale*ct2.Scale {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescaleNew)")
 		}
 
@@ -273,7 +273,7 @@ func TestMultiplication(t *testing.T) {
 		utils.Multiply(ct1, ct2, newCiphertext2, true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 
-		if !ValidateResult(mulResD, testCases[i].mulExpected, false, 1, log) && newCiphertext2.Scale() != ct1.Scale()*ct2.Scale() {
+		if !ValidateResult(mulResD, testCases[i].mulExpected, false, 1, log) && newCiphertext2.Scale != ct1.Scale*ct2.Scale {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescale)")
 		}
 
@@ -367,6 +367,10 @@ func TestDotProduct(t *testing.T) {
 }
 
 func TestBootstrapping(t *testing.T) {
+
+	if !utils.bootstrapEnabled {
+		t.Error("Bootstrapping isn't enabled")
+	}
 
 	ct := utils.Encrypt(utils.GenerateFilledArray(3.12))
 	maxLevel := ct.Level()
