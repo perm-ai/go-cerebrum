@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/key"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
-var keyChain = key.GenerateKeys(0, false, true)
+var keyChain = key.GenerateKeys(0, true, true)
 var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 
