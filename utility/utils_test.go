@@ -508,7 +508,7 @@ func TestKeyDumpAndLoad(t *testing.T) {
 	data[1] = 0
 	ct := utils.Encrypt(data)
 
-	filename := "keychain"
+	filename := "/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain"
 
 	log.Log("Dumping")
 	keyChain.DumpKeys(filename, true, true, true, true, true)
@@ -555,7 +555,7 @@ func TestKeyPairDumpAndLoad(t *testing.T) {
 	data[1] = 0
 	ct := utils.Encrypt(data)
 
-	filename := "/usr/local/go/src/github.com/perm-ai/GO-HEML-prototype/"
+	filename := "/usr/local/go/src/github.com/perm-ai/go-cerebrum/"
 	filename += "keychain"
 
 	log.Log("Dumping")
