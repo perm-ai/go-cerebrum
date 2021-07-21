@@ -44,7 +44,7 @@ func (s Softmax) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 	// Exponentiate input
 	exp := s.U.ExpNew(&input) // Level input - 2
 
-	if exp.Scale() > math.Pow(2, 40.1) && exp.Level() == 6 {
+	if exp.Scale > math.Pow(2, 40.1) && exp.Level() == 6 {
 		s.U.Evaluator.Rescale(exp, math.Pow(2, 35), exp)
 	}
 

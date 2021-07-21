@@ -12,40 +12,6 @@ import (
 	"github.com/perm-ai/go-cerebrum/losses"
 )
 
-//=================================================
-//			  NEURAL NETWORK GRADIENT
-//=================================================
-
-type NeuralNetworkGradient struct {
-	BiasGradient   ckks.Ciphertext
-	WeightGradient []ckks.Ciphertext
-}
-
-func (n NeuralNetworkGradient) GroupGradients(utils utility.Utils, weightLength int, biasLenght int) utility.CiphertextGroup {
-
-	ctData := make([]utility.CiphertextData, len(n.WeightGradient)+1)
-
-	for i := range n.WeightGradient {
-
-		ctData[i] = utility.CiphertextData{Ciphertext: n.WeightGradient[i], Length: weightLength}
-
-	}
-
-	ctData[len(n.WeightGradient)] = utility.CiphertextData{Ciphertext: n.BiasGradient, Length: biasLenght}
-
-	return utility.NewCiphertextGroup(ctData, utils)
-
-}
-
-func (n *NeuralNetworkGradient) LoadFromGroup(group utility.CiphertextGroup, rescale bool) {
-
-	ct := group.BreakGroup(rescale)
-
-	n.WeightGradient = ct[0 : len(ct)-1]
-	n.BiasGradient = ct[len(ct)-1]
-
-}
-
 
 //=================================================
 //						MODEL
@@ -98,13 +64,13 @@ func (m Model) Forward(input ckks.Ciphertext) map[string]*ckks.Ciphertext {
 
 }
 
-func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, lr float64, batchNumber int) []NeuralNetworkGradient {
+func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, lr float64, batchNumber int) []layers.NeuralNetworkGradient {
 
 	// Calculate gradient from loss function
 	gradient := m.Loss.Backward(*outputs["A3"], y, m.Layers[2].OutputUnit)
 
 	// Create array to store gradients of each layer
-	denseGradients := make([]NeuralNetworkGradient, len(m.Layers))
+	denseGradients := make([]layers.NeuralNetworkGradient, len(m.Layers))
 
 	// Create empty ciphertext array for last layer that doesn't need next layer's transposed weight
 	empty := []ckks.Ciphertext{}
@@ -146,7 +112,7 @@ func (m Model) Backward(outputs map[string]*ckks.Ciphertext, y ckks.Ciphertext, 
 
 }
 
-func (m *Model) UpdateGradient(gradients []NeuralNetworkGradient) {
+func (m *Model) UpdateGradient(gradients []layers.NeuralNetworkGradient) {
 
 	for i, layer := range m.Layers {
 
@@ -174,13 +140,13 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 
 			batchData := dataLoader.GetDataAsBatch(batch, batchSize)
 			totalMiniBatches := batchSize / miniBatchSize
-			miniBatchGradient := make([][]NeuralNetworkGradient, totalMiniBatches)
+			miniBatchGradient := make([][]layers.NeuralNetworkGradient, totalMiniBatches)
 
 			// Loop through each mini bacth
 			for miniBatch := 0; miniBatch < totalMiniBatches; miniBatch++ {
 
 				// Store the sum of neural netowrk gradient
-				backwardGradients := make([][]NeuralNetworkGradient, miniBatchSize)
+				backwardGradients := make([][]layers.NeuralNetworkGradient, miniBatchSize)
 
 				// Loop through each data in mini batch
 				for i, data := range batchData[(miniBatch * miniBatchSize):(miniBatch + miniBatchSize)] {
@@ -241,9 +207,9 @@ func (m Model) Train(dataLoader importer.MnistDataLoader, learningRate float64, 
 
 }
 
-func (m Model) AverageNeuralNetworkGradients(gradients [][]NeuralNetworkGradient, rescale bool) []NeuralNetworkGradient {
+func (m Model) AverageNeuralNetworkGradients(gradients [][]layers.NeuralNetworkGradient, rescale bool) []layers.NeuralNetworkGradient {
 
-	var result []NeuralNetworkGradient
+	var result []layers.NeuralNetworkGradient
 
 	for i, gradient := range gradients {
 

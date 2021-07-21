@@ -1,5 +1,44 @@
 package layers
 
+import (
+	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/activations"
+	"github.com/perm-ai/go-cerebrum/utility"
+)
+
+//=================================================
+//			  NEURAL NETWORK GRADIENT
+//=================================================
+
+type NeuralNetworkGradient struct {
+	BiasGradient   ckks.Ciphertext
+	WeightGradient []ckks.Ciphertext
+}
+
+func (n NeuralNetworkGradient) GroupGradients(utils utility.Utils, weightLength int, biasLenght int) utility.CiphertextGroup {
+
+	ctData := make([]utility.CiphertextData, len(n.WeightGradient)+1)
+
+	for i := range n.WeightGradient {
+
+		ctData[i] = utility.CiphertextData{Ciphertext: n.WeightGradient[i], Length: weightLength}
+
+	}
+
+	ctData[len(n.WeightGradient)] = utility.CiphertextData{Ciphertext: n.BiasGradient, Length: biasLenght}
+
+	return utility.NewCiphertextGroup(ctData, utils)
+
+}
+
+func (n *NeuralNetworkGradient) LoadFromGroup(group utility.CiphertextGroup, rescale bool) {
+
+	ct := group.BreakGroup(rescale)
+
+	n.WeightGradient = ct[0 : len(ct)-1]
+	n.BiasGradient = ct[len(ct)-1]
+
+}
 
 //=================================================
 //					DENSE LAYER
@@ -10,14 +49,14 @@ type Dense struct {
 	OutputUnit    int
 	Weights       []ckks.Ciphertext
 	Bias          ckks.Ciphertext
-	Activation    Activation
+	Activation    activations.Activation
 	UseActivation bool
 	utils         utility.Utils
 
 	Declared bool
 }
 
-func NewDense(inputUnit int, outputUnit int, activation Activation, useActivation bool, utils utility.Utils) Dense {
+func NewDense(inputUnit int, outputUnit int, activation activations.Activation, useActivation bool, utils utility.Utils) Dense {
 
 	weights := make([]ckks.Ciphertext, outputUnit)
 

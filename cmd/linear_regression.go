@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/perm-ai/go-cerebrum/importer"
+	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/regression"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -17,16 +18,18 @@ func check(err error) {
 	}
 }
 
-func LinearRegression(key string, csv string, x int, y int, lr float64, epoch int, dest string) {
+func LinearRegression(keyPath string, csv string, x int, y int, lr float64, epoch int, dest string) {
 
 	log := logger.NewLogger(true)
 	utils := utility.Utils{}
 
-	if key == "" {
-		utils = utility.NewUtils(math.Pow(2, 35), 0, true, true)
+	if keyPath == "" {
+		keysChain := key.GenerateKeys(0, true, true)
+		utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
 	} else {
-		keys := utility.LoadKeyPair(key)
-		utils = utility.NewUtilsFromKeyPair(keys, math.Pow(2, 35), 0, true, true)
+		keypair := key.LoadKeys(keyPath, 0, true, true, false, false, false)
+		keys := key.GenerateKeysFromKeyPair(0, keypair.SecretKey, keypair.PublicKey, true, true)
+		utils = utility.NewUtils(keys, math.Pow(2, 35), 0, true)
 	}
 
 	if csv == "" {

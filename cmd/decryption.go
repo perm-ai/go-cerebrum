@@ -2,26 +2,28 @@ package cmd
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-func Decrypt(key string, data string) {
+func Decrypt(keyPath string, data string) {
 
 	log := logger.NewLogger(true)
 
-	if key == "" {
+	if keyPath == "" {
 		panic("No key path provided")
 	}
 
 	log.Log("Loading Keys")
-	keys := utility.LoadKeyPair(key)
+	keys := key.LoadKeys(keyPath, 0, true, true, false, false, false)
 
 	log.Log("Generating Utils")
-	utils := utility.NewDecryptionUtils(keys, true)
+	utils := utility.NewUtils(keys, math.Pow(2,35), 0, true)
 
 	log.Log("Reading binary file")
 	ctBin, readErr := os.ReadFile(data)

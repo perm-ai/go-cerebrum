@@ -5,12 +5,14 @@ import (
 	"math"
 	"testing"
 
+	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 var log = logger.NewLogger(true)
-var utils = utility.NewUtils(math.Pow(2, 35), 100, false, true)
+var keyChain = key.GenerateKeys(0, false, true)
+var utils = utility.NewUtils(keyChain, math.Pow(2, 35), 100, true)
 
 func TestSigmoid(t *testing.T) {
 
