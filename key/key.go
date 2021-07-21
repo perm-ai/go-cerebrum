@@ -157,10 +157,12 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 
 func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool, btpGalK bool){
 
+	log := logger.NewLogger(true)
 	toSave := [5]bool{sk, pk, rlk, galk, btpGalK}
 
 	if !fileExist(dirName){
-		os.Mkdir(dirName, 0777)
+		e := os.Mkdir(dirName, 0777)
+		check(e)
 	}
 
 	if sk && k.SecretKey == nil{
@@ -188,31 +190,41 @@ func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool
 		var byteErr error
 		var name string
 
-		switch i{
-		case 0:
-			name = "secret_key"
-			byteArr, byteErr = k.SecretKey.MarshalBinary()
-		case 1:
-			name = "public_key"
-			byteArr, byteErr = k.PublicKey.MarshalBinary()
-		case 2:
-			name = "relin_keys"
-			byteArr, byteErr = k.RelinKey.MarshalBinary()
-		case 3:
-			name = "galois_keys"
-			byteArr, byteErr = k.GaloisKey.MarshalBinary()
-		case 4:
-			name = "bootstrap_galois_keys"
-			byteArr, byteErr = k.BtspGalKey.MarshalBinary()
+		if toSave[i] {
+
+			switch i{
+			case 0:
+				name = "secret_key"
+				log.Log("Marshalling " + name)
+				byteArr, byteErr = k.SecretKey.MarshalBinary()
+			case 1:
+				name = "public_key"
+				log.Log("Marshalling " + name)
+				byteArr, byteErr = k.PublicKey.MarshalBinary()
+			case 2:
+				name = "relin_keys"
+				log.Log("Marshalling " + name)
+				byteArr, byteErr = k.RelinKey.MarshalBinary()
+			case 3:
+				name = "galois_keys"
+				log.Log("Marshalling " + name)
+				byteArr, byteErr = k.GaloisKey.MarshalBinary()
+			case 4:
+				name = "bootstrap_galois_keys"
+				log.Log("Marshalling " + name)
+				byteArr, byteErr = k.BtspGalKey.MarshalBinary()
+			}
+	
+			check(byteErr)
+	
+			f, e := os.Create(dirName + "/" + name)
+			check(e)
+	
+			log.Log("Saving " + name)
+			_, e = f.Write(byteArr)
+			check(e)
+
 		}
-
-		check(byteErr)
-
-		f, e := os.Create(dirName + "/" + name)
-		check(e)
-
-		_, e = f.Write(byteArr)
-		check(e)
 
 	}
 
