@@ -10,20 +10,23 @@ import (
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
+
 type KeyChain struct {
+
 	ParamsIndex int
-	SecretKey   *rlwe.SecretKey
-	PublicKey   *rlwe.PublicKey
-	RelinKey    *rlwe.RelinearizationKey
-	GaloisKey   *rlwe.RotationKeySet
-	BtspGalKey  *rlwe.RotationKeySet
+	SecretKey	*rlwe.SecretKey
+	PublicKey	*rlwe.PublicKey
+	RelinKey	*rlwe.RelinearizationKey
+	GaloisKey	*rlwe.RotationKeySet
+	BtspGalKey	*rlwe.RotationKeySet
+
 }
 
 func getPow2K(logSlots int) []int {
 
 	ks := []int{}
 
-	for i := 0; i <= logSlots; i++ {
+	for i := 0; i <= logSlots; i++{
 		positive := int(math.Pow(2, float64(i)))
 		ks = append(ks, positive)
 		ks = append(ks, (-1 * positive))
@@ -81,7 +84,7 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 		btpRotationKeys = keyGenerator.GenRotationKeysForRotations(rotations, true, sk)
 	}
 
-	return KeyChain{paramsIndex, sk, publicKey, relinKey, galoisKey, btpRotationKeys}
+	return KeyChain{paramsIndex, sk, publicKey, relinKey, galoisKey, btpRotationKeys,}
 
 }
 
@@ -104,11 +107,11 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 	fileNames := [5]string{"secret_key", "public_key", "relin_keys", "galois_keys", "bootstrap_galois_keys"}
 
 	for i := range toLoad {
-		if toLoad[i] && !fileExist(dirName+"/"+fileNames[i]) {
+		if toLoad[i] && !fileExist(dirName + "/" + fileNames[i]){
 			panic("File '" + dirName + "/" + fileNames[i] + "' does not exist")
 		}
 	}
-
+	
 	var skey *rlwe.SecretKey
 	var pkey *rlwe.PublicKey
 	var rlkey *rlwe.RelinearizationKey
@@ -125,7 +128,7 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 			byteArr, err = os.ReadFile(dirName + "/" + fileNames[i])
 			check(err)
 
-			switch i {
+			switch i{
 			case 0:
 				skey = &rlwe.SecretKey{}
 				err = skey.UnmarshalBinary(byteArr)
@@ -145,51 +148,51 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 			check(err)
 
 		}
-
+		
 	}
 
 	return KeyChain{paramsIndex, skey, pkey, rlkey, galkey, btpRotKey}
 
 }
 
-func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool, btpGalK bool) {
+func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool, btpGalK bool){
 
 	log := logger.NewLogger(true)
 	toSave := [5]bool{sk, pk, rlk, galk, btpGalK}
 
-	if !fileExist(dirName) {
+	if !fileExist(dirName){
 		e := os.Mkdir(dirName, 0777)
 		check(e)
 	}
 
-	if sk && k.SecretKey == nil {
+	if sk && k.SecretKey == nil{
 		panic("Keychain doesn't have secret keys")
 	}
 
-	if pk && k.PublicKey == nil {
+	if pk && k.PublicKey == nil{
 		panic("Keychain doesn't have public keys")
 	}
 
-	if rlk && k.RelinKey == nil {
+	if rlk && k.RelinKey == nil{
 		panic("Keychain doesn't have relinearlize keys")
 	}
 
-	if galk && k.GaloisKey == nil {
+	if galk && k.GaloisKey == nil{
 		panic("Keychain doesn't have galois keys")
 	}
 
-	if btpGalK && k.BtspGalKey == nil {
+	if btpGalK && k.BtspGalKey == nil{
 		panic("Keychain doesn't have bootstrapping galois keys")
 	}
 
-	for i := range toSave {
+	for i := range toSave{
 		var byteArr []byte
 		var byteErr error
 		var name string
 
 		if toSave[i] {
 
-			switch i {
+			switch i{
 			case 0:
 				name = "secret_key"
 				log.Log("Marshalling " + name)
@@ -205,18 +208,18 @@ func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool
 			case 3:
 				name = "galois_keys"
 				log.Log("Marshalling " + name)
-				byteArr, byteErr = MarshalBinary(k.GaloisKey)
+				byteArr, byteErr = k.GaloisKey.MarshalBinary()
 			case 4:
 				name = "bootstrap_galois_keys"
 				log.Log("Marshalling " + name)
 				byteArr, byteErr = k.BtspGalKey.MarshalBinary()
 			}
-
+	
 			check(byteErr)
-
+	
 			f, e := os.Create(dirName + "/" + name)
 			check(e)
-
+	
 			log.Log("Saving " + name)
 			_, e = f.Write(byteArr)
 			check(e)
@@ -234,7 +237,7 @@ func fileExist(dirName string) bool {
 	return true
 }
 
-func check(err error) {
+func check(err error){
 	if err != nil {
 		panic(err)
 	}
