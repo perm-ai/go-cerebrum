@@ -130,9 +130,9 @@ func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, t
 		model.UpdateGradient(fwd)
 
 		fmt.Println("Finished Training the epoch number " + strconv.Itoa(i+1))
-		fmt.Printf("b0 scale and level is %f and %d \n", model.b0.Scale(), model.b0.Level())
-		fmt.Printf("b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
-		fmt.Printf("b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
+		fmt.Printf("b0 scale and level is %f and %d \n", model.b0.Scale, model.b0.Level())
+		fmt.Printf("b1 scale and level is %f and %d \n", model.b1.Scale, model.b1.Level())
+		fmt.Printf("b2 scale and level is %f and %d \n", model.b2.Scale, model.b2.Level())
 
 		if model.b0.Level() < 7 || model.b1.Level() < 7 || model.b2.Level() < 7 {
 			fmt.Println("Bootstrapping gradient")
@@ -143,9 +143,9 @@ func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, t
 			model.utils.BootstrapInPlace(&model.b1)
 			model.utils.BootstrapInPlace(&model.b2)
 
-			fmt.Printf("NEW b0 scale and level is %f and %d \n", model.b0.Scale(), model.b0.Level())
-			fmt.Printf("NEW b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
-			fmt.Printf("NEW b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
+			fmt.Printf("NEW b0 scale and level is %f and %d \n", model.b0.Scale, model.b0.Level())
+			fmt.Printf("NEW b1 scale and level is %f and %d \n", model.b1.Scale, model.b1.Level())
+			fmt.Printf("NEW b2 scale and level is %f and %d \n", model.b2.Scale, model.b2.Level())
 
 		}
 
