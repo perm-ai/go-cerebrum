@@ -9,5 +9,5 @@ require (
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
 	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-	gonum.org/v1/plot v0.9.0
+	gonum.org/v1/plot v0.9.0 // indirect
 )
