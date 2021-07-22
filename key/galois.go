@@ -2,13 +2,17 @@ package key
 
 import (
 	"encoding/binary"
+	"fmt"
+	"os"
+
+	"bufio"
+	"unsafe"
 
 	"github.com/ldsec/lattigo/v2/ring"
 	"github.com/ldsec/lattigo/v2/rlwe"
-	"unsafe"
 )
 
-func encode(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
+func Encode(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
 
 	var err error
 	var inc int
@@ -35,10 +39,9 @@ func encode(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
 	return pointer, nil
 }
 
-func decode(swk *rlwe.SwitchingKey, data []byte) (pointer int, err error) {
+func GaloisDecode(swk *rlwe.SwitchingKey, data []byte) (pointer int, err error) {
 
 	decomposition := int(data[0])
-
 	pointer = 1
 
 	swk.Value = make([][2]*ring.Poly, decomposition)
@@ -75,7 +78,7 @@ func MarshalBinary(rtks *rlwe.RotationKeySet) (data []byte, err error) {
 		binary.BigEndian.PutUint32(data[pointer:pointer+4], uint32(galEL))
 		pointer += 4
 
-		if pointer, err = encode(key, pointer, data); err != nil {
+		if pointer, err = Encode(key, pointer, data); err != nil {
 			return nil, err
 		}
 	}
@@ -83,34 +86,72 @@ func MarshalBinary(rtks *rlwe.RotationKeySet) (data []byte, err error) {
 	return data, nil
 }
 
-func UnmarshalBinary(rtks *rlwe.RotationKeySet, data []byte) (err error) {
+func UnmarshalBinaryBatch(rtks *rlwe.RotationKeySet, keyFile *os.File) (err error) {
 
 	rtks.Keys = make(map[uint64]*rlwe.SwitchingKey)
+
+	fileInfo, e := keyFile.Stat()
+	check(e)
+
+	fileLen := fileInfo.Size()
+	keyLen := 0
+	pointer := 0
+	r4 := bufio.NewReaderSize(keyFile, 1073741824)
+	data, err := r4.Peek(1073741824)
+	check(err)
 
 	for len(data) > 0 {
 
 		galEl := uint64(binary.BigEndian.Uint32(data))
+		fmt.Println(galEl)
 		data = data[4:]
-
+		// cut data by 4?
 		swk := new(rlwe.SwitchingKey)
 		var inc int
-		if inc, err = decode(swk, data); err != nil {
+		if inc, err = GaloisDecode(swk, data); err != nil {
 			return err
 		}
+
+		if keyLen == 0 {
+			keyLen = 4 + inc
+		}
+
 		data = data[inc:]
 		rtks.Keys[galEl] = swk
+		pointer += 4 + inc
 
+		if len(data) < keyLen {
+			if (int(fileLen) - pointer) < 1073741824 {
+
+				data = ReadFromDesinatedPointer(pointer, (int(fileLen) - pointer), keyFile)
+				continue
+			}
+
+			data = ReadFromDesinatedPointer(pointer, 1073741824, keyFile)
+		}
 	}
 
 	return nil
 }
 
+func ReadFromDesinatedPointer(pointer int, size int, keyFile *os.File) []byte {
+
+	// continue reading from "pointer" till "pointer + size"
+
+	_, err := keyFile.Seek(int64(pointer), 0)
+	check(err)
+	r4 := bufio.NewReaderSize(keyFile, size)
+	data, err := r4.Peek(size)
+	check(err)
+	return data
+}
+
 func IntToByteArray(num int64) []byte {
-    size := int(unsafe.Sizeof(num))
-    arr := make([]byte, size)
-    for i := 0 ; i < size ; i++ {
-        byt := *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&num)) + uintptr(i)))
-        arr[i] = byt
-    }
-    return arr
+	size := int(unsafe.Sizeof(num))
+	arr := make([]byte, size)
+	for i := 0; i < size; i++ {
+		byt := *(*uint8)(unsafe.Pointer(uintptr(unsafe.Pointer(&num)) + uintptr(i)))
+		arr[i] = byt
+	}
+	return arr
 }
