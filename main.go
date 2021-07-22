@@ -1,9 +1,16 @@
 package main
 
 import (
-	"github.com/perm-ai/go-cerebrum/cmd"
+	"github.com/ldsec/lattigo/v2/rlwe"
+	"os"
 )
 
 func main() {
-	cmd.Execute()
+
+	galoisKey, _ := os.ReadFile("keyChain/galois_keys")
+	
+	var galkey *rlwe.RotationKeySet
+	galkey = &rlwe.RotationKeySet{}
+	UnmarshalBinary(galKey, galoisKey)
+	
 }
