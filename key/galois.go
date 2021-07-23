@@ -145,11 +145,16 @@ func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client 
 	}
 
 	headObject, s3HeadErr := s3Client.HeadObject(context.TODO(), headParams)
-	check(s3HeadErr)
+	if s3HeadErr != nil {
+		return s3HeadErr
+	}
 
 	fileLen := headObject.ContentLength
 
-	data := requestBytesFromS3(s3Client, bucketName, keyS3key, 0, 1073741824, int(fileLen))
+	data, reqByteErr := requestBytesFromS3(s3Client, bucketName, keyS3key, 0, 1073741824, int(fileLen))
+	if reqByteErr != nil {
+		return reqByteErr
+	}
 
 	keyLen := 0
 	pointer := 0
@@ -157,7 +162,7 @@ func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client 
 	for len(data) > 0 {
 
 		galEl := uint64(binary.BigEndian.Uint32(data))
-		fmt.Println(galEl)
+
 		data = data[4:]
 		swk := new(rlwe.SwitchingKey)
 		var inc int
@@ -174,7 +179,10 @@ func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client 
 		pointer += 4 + inc
 
 		if len(data) < keyLen {
-			data = requestBytesFromS3(s3Client, bucketName, keyS3key, pointer, 1073741824, int(fileLen))
+			data, reqByteErr = requestBytesFromS3(s3Client, bucketName, keyS3key, pointer, 1073741824, int(fileLen))
+			if reqByteErr != nil {
+				return reqByteErr
+			}
 		}
 	}
 
@@ -182,7 +190,7 @@ func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client 
 }
 
 
-func requestBytesFromS3(s3Client *s3.Client, bucketName string, key string, start int, getLen int, fileLength int) []byte {
+func requestBytesFromS3(s3Client *s3.Client, bucketName string, key string, start int, getLen int, fileLength int) ([]byte, error) {
 
 	var byteRange string
 
@@ -199,12 +207,18 @@ func requestBytesFromS3(s3Client *s3.Client, bucketName string, key string, star
 	}
 
 	s3Object, err:= s3Client.GetObject(context.TODO(), getParams)
-	check(err)
+	if err != nil {
+		return nil, err
+	}
 
 	data, readErr := ioutil.ReadAll(s3Object.Body)
-	check(readErr)
+	if readErr != nil {
+		return nil, readErr
+	}
 
-	return data
+	s3Object.Body.Close()
+
+	return data, nil
 
 }
 
