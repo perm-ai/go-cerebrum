@@ -1,13 +1,16 @@
 package key
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"bufio"
 	"unsafe"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/ldsec/lattigo/v2/ring"
 	"github.com/ldsec/lattigo/v2/rlwe"
 )
@@ -133,6 +136,78 @@ func UnmarshalBinaryBatch(rtks *rlwe.RotationKeySet, keyFile *os.File) (err erro
 
 	return nil
 }
+
+func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client *s3.Client, bucketName string) (err error) {
+
+	headParams := &s3.HeadObjectInput{
+		Bucket: &bucketName,
+		Key: &keyS3key,
+	}
+
+	headObject, s3HeadErr := s3Client.HeadObject(context.TODO(), headParams)
+	check(s3HeadErr)
+
+	fileLen := headObject.ContentLength
+
+	data := requestBytesFromS3(s3Client, bucketName, keyS3key, 0, 1073741824, int(fileLen))
+
+	keyLen := 0
+	pointer := 0
+
+	for len(data) > 0 {
+
+		galEl := uint64(binary.BigEndian.Uint32(data))
+		fmt.Println(galEl)
+		data = data[4:]
+		swk := new(rlwe.SwitchingKey)
+		var inc int
+		if inc, err = GaloisDecode(swk, data); err != nil {
+			return err
+		}
+
+		if keyLen == 0 {
+			keyLen = 4 + inc
+		}
+
+		data = data[inc:]
+		rtks.Keys[galEl] = swk
+		pointer += 4 + inc
+
+		if len(data) < keyLen {
+			data = requestBytesFromS3(s3Client, bucketName, keyS3key, pointer, 1073741824, int(fileLen))
+		}
+	}
+
+	return nil
+}
+
+
+func requestBytesFromS3(s3Client *s3.Client, bucketName string, key string, start int, getLen int, fileLength int) []byte {
+
+	var byteRange string
+
+	if start + 1073741824 < fileLength{
+		byteRange = fmt.Sprintf("%d-%d", start, start + getLen)
+	} else {
+		byteRange = fmt.Sprintf("%d-%d", start, fileLength)
+	}
+
+	getParams := &s3.GetObjectInput{
+		Bucket: &bucketName,
+		Key: &key,
+		Range: &byteRange,
+	}
+
+	s3Object, err:= s3Client.GetObject(context.TODO(), getParams)
+	check(err)
+
+	data, readErr := ioutil.ReadAll(s3Object.Body)
+	check(readErr)
+
+	return data
+
+}
+
 
 func ReadFromDesinatedPointer(pointer int, size int, keyFile *os.File) []byte {
 
