@@ -23,7 +23,7 @@ func Decrypt(keyPath string, data string) {
 	keys := key.LoadKeys(keyPath, 0, true, true, false, false, false)
 
 	log.Log("Generating Utils")
-	utils := utility.NewUtils(keys, math.Pow(2,35), 0, true)
+	utils := utility.NewDecryptionUtils(keys, math.Pow(2, 35), true)
 
 	log.Log("Reading binary file")
 	ctBin, readErr := os.ReadFile(data)

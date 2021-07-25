@@ -25,6 +25,7 @@ func LinearRegression(keyPath string, csv string, x int, y int, lr float64, epoc
 
 	if keyPath == "" {
 		keysChain := key.GenerateKeys(0, true, true)
+		keysChain.DumpKeys("keychain", true, true, false, false, false)
 		utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
 	} else {
 		keypair := key.LoadKeys(keyPath, 0, true, true, false, false, false)

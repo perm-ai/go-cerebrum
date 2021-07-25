@@ -13,7 +13,7 @@ import (
 	"github.com/perm-ai/go-cerebrum/key"
 )
 
-var keyChain = key.GenerateKeys(0, false, true)
+var keyChain = key.GenerateKeys(0, true, true)
 var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 

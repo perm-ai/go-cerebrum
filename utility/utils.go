@@ -19,13 +19,13 @@ type Utils struct {
 
 	BootstrappingParams ckks.BootstrappingParameters
 	Params              ckks.Parameters
-	KeyChain			key.KeyChain
+	KeyChain            key.KeyChain
 
-	Bootstrapper 	*ckks.Bootstrapper
-	Encoder      	ckks.Encoder
-	Evaluator    	ckks.Evaluator
-	Encryptor    	ckks.Encryptor
-	Decryptor		ckks.Decryptor
+	Bootstrapper *ckks.Bootstrapper
+	Encoder      ckks.Encoder
+	Evaluator    ckks.Evaluator
+	Encryptor    ckks.Encryptor
+	Decryptor    ckks.Decryptor
 
 	Filters []ckks.Plaintext
 	Scale   float64
@@ -48,7 +48,7 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 	encoder := ckks.NewEncoder(Params)
 	evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: keyChain.RelinKey})
 	encryptor := ckks.NewFastEncryptor(Params, keyChain.PublicKey)
-	
+
 	var decryptor ckks.Decryptor
 	decryptor = nil
 
@@ -78,7 +78,7 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 		if err != nil {
 			panic("BOOTSTRAPPER GENERATION ERROR")
 		}
-	} 
+	}
 
 	return Utils{
 		true,
@@ -92,6 +92,33 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 		encryptor,
 		decryptor,
 		filters,
+		scale,
+		log,
+	}
+
+}
+
+func NewDecryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) Utils {
+	log := logger.NewLogger(logEnabled)
+
+	bootstrappingParams := ckks.DefaultBootstrapParams[keyChain.ParamsIndex]
+	Params, _ := bootstrappingParams.Params()
+	encoder := ckks.NewEncoder(Params)
+	encryptor := ckks.NewFastEncryptor(Params, keyChain.PublicKey)
+	decryptor := ckks.NewDecryptor(Params, keyChain.SecretKey)
+
+	return Utils{
+		true,
+		false,
+		*bootstrappingParams,
+		Params,
+		keyChain,
+		nil,
+		encoder,
+		nil,
+		encryptor,
+		decryptor,
+		nil,
 		scale,
 		log,
 	}
