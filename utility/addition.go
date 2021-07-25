@@ -1,15 +1,13 @@
 package utility
 
 import (
-	"math"
-
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
 func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
 	// Add two ciphertext together and save result to destination given
-	utils.EqualizeScale(&a, &b)
+	// utils.EqualizeScale(&a, &b)
 	utils.Evaluator.Add(&a, &b, destination)
 
 }
@@ -69,7 +67,7 @@ func (utils Utils) SubNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 
 	// Subtract two ciphertext together and return result as a new ciphertext
 
-	utils.EqualizeScale(&a, &b)
+	// utils.EqualizeScale(&a, &b)
 	ct := utils.Evaluator.SubNew(&a, &b)
 
 	return *ct
@@ -99,7 +97,7 @@ func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 	var higherScale *ckks.Ciphertext
 	var lowerScale *ckks.Ciphertext
 
-	if a.Scale != b.Scale && math.Abs(math.Log2(a.Scale)-math.Log2(b.Scale)) < 10 {
+	if a.Scale != b.Scale {
 
 		if a.Scale > b.Scale {
 			higherScale = a
