@@ -1,7 +1,6 @@
 package key
 
 import (
-	
 	"math"
 	"os"
 	"sort"
@@ -20,7 +19,7 @@ type KeyChain struct {
 	BtspGalKey  *rlwe.RotationKeySet
 }
 
-func getPow2K(logSlots int) []int {
+func GetPow2K(logSlots int) []int {
 
 	ks := []int{}
 
@@ -73,7 +72,7 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 	relinKey := keyGenerator.GenRelinearizationKey(sk, 2)
 
 	log.Log("Util Initialization: Generating galois keys")
-	galoisKey := keyGenerator.GenRotationKeysForRotations(getPow2K(Params.LogSlots()), true, sk)
+	galoisKey := keyGenerator.GenRotationKeysForRotations(GetPow2K(Params.LogSlots()), true, sk)
 
 	var btpRotationKeys *rlwe.RotationKeySet
 
