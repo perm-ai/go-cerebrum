@@ -1,14 +1,13 @@
 package utility
 
 import (
-
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
 func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
 	// Add two ciphertext together and save result to destination given
-	utils.EqualizeScale(&a, &b)
+	// utils.EqualizeScale(&a, &b)
 	utils.Evaluator.Add(&a, &b, destination)
 
 }
@@ -16,7 +15,7 @@ func (utils Utils) Add(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.C
 func (utils Utils) AddNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext {
 
 	// Add two ciphertext together and return result as a new ciphertext
-	utils.EqualizeScale(&a, &b)
+	// utils.EqualizeScale(&a, &b)
 	ct := utils.Evaluator.AddNew(&a, &b)
 
 	return *ct
@@ -59,7 +58,7 @@ func (utils Utils) AddConstNew(a *ckks.Ciphertext, b []float64) *ckks.Ciphertext
 func (utils Utils) Sub(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext) {
 
 	// Subtract two ciphertext together and save result to destination given
-	utils.EqualizeScale(&a, &b)
+	// utils.EqualizeScale(&a, &b)
 	utils.Evaluator.Sub(&a, &b, destination)
 
 }
@@ -68,7 +67,7 @@ func (utils Utils) SubNew(a ckks.Ciphertext, b ckks.Ciphertext) ckks.Ciphertext 
 
 	// Subtract two ciphertext together and return result as a new ciphertext
 
-	utils.EqualizeScale(&a, &b)
+	// utils.EqualizeScale(&a, &b)
 	ct := utils.Evaluator.SubNew(&a, &b)
 
 	return *ct
@@ -93,14 +92,14 @@ func (utils Utils) SubPlainNew(a ckks.Ciphertext, b ckks.Plaintext) ckks.Ciphert
 
 }
 
-func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext){
+func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 
 	var higherScale *ckks.Ciphertext
 	var lowerScale *ckks.Ciphertext
 
-	if a.Scale != b.Scale{
+	if a.Scale != b.Scale {
 
-		if a.Scale > b.Scale{
+		if a.Scale > b.Scale {
 			higherScale = a
 			lowerScale = b
 		} else {
@@ -108,7 +107,7 @@ func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext){
 			lowerScale = a
 		}
 
-		rescaler := ckks.NewPlaintext(utils.Params, higherScale.Level(), higherScale.Scale / lowerScale.Scale)
+		rescaler := ckks.NewPlaintext(utils.Params, higherScale.Level(), higherScale.Scale/lowerScale.Scale)
 		utils.Encoder.EncodeNTT(rescaler, utils.Float64ToComplex128(utils.GenerateFilledArray(1)), utils.Params.LogSlots())
 		utils.MultiplyPlain(lowerScale, rescaler, lowerScale, false, false)
 
