@@ -15,7 +15,7 @@ import (
 	"github.com/ldsec/lattigo/v2/rlwe"
 )
 
-func Encode(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
+func EncodeSwitchingKey(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
 
 	var err error
 	var inc int
@@ -42,7 +42,7 @@ func Encode(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
 	return pointer, nil
 }
 
-func GaloisDecode(swk *rlwe.SwitchingKey, data []byte) (pointer int, err error) {
+func DecodeSwitchingKey(swk *rlwe.SwitchingKey, data []byte) (pointer int, err error) {
 
 	decomposition := int(data[0])
 	pointer = 1
@@ -81,7 +81,7 @@ func MarshalBinary(rtks *rlwe.RotationKeySet) (data []byte, err error) {
 		binary.BigEndian.PutUint32(data[pointer:pointer+4], uint32(galEL))
 		pointer += 4
 
-		if pointer, err = Encode(key, pointer, data); err != nil {
+		if pointer, err = EncodeSwitchingKey(key, pointer, data); err != nil {
 			return nil, err
 		}
 	}
@@ -111,7 +111,7 @@ func UnmarshalBinaryBatch(rtks *rlwe.RotationKeySet, keyFile *os.File) (err erro
 		// cut data by 4?
 		swk := new(rlwe.SwitchingKey)
 		var inc int
-		if inc, err = GaloisDecode(swk, data); err != nil {
+		if inc, err = DecodeSwitchingKey(swk, data); err != nil {
 			return err
 		}
 
@@ -166,7 +166,7 @@ func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client 
 		data = data[4:]
 		swk := new(rlwe.SwitchingKey)
 		var inc int
-		if inc, err = GaloisDecode(swk, data); err != nil {
+		if inc, err = DecodeSwitchingKey(swk, data); err != nil {
 			return err
 		}
 
