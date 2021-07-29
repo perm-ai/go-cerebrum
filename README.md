@@ -25,7 +25,7 @@ package main
 
 import (
   "math/rand"
-  "github.com/perm-ai/GO-HEML-prototype/src/utility"
+  "github.com/perm-ai/go-cerebrum/utility"
   "fmt"
   "time"
 )

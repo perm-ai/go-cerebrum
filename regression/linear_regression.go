@@ -1,12 +1,12 @@
-package ml
+package regression
 
 import (
 	"fmt"
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/GO-HEML-prototype/src/logger"
-	"github.com/perm-ai/GO-HEML-prototype/src/utility"
+	"github.com/perm-ai/go-cerebrum/logger"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type LinearRegression struct {
@@ -32,16 +32,9 @@ func NewLinearRegression(u utility.Utils) LinearRegression {
 
 func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
-	fmt.Printf("(M * X) M level: %d, X level: %d\n", l.M.Level(), input.Level())
 	result := l.utils.MultiplyNew(*input, l.M, true, false)
 
-	sample1 := l.utils.Decrypt(&result)
-	fmt.Printf("M*X(FWD): %f\n", sample1[0])
-
 	l.utils.Add(result, l.B, &result)
-
-	sample2 := l.utils.Decrypt(&result)
-	fmt.Printf("Sum(FWD): %f\n", sample2[0])
 
 	return result
 
@@ -49,17 +42,18 @@ func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
 
-	err := l.utils.Evaluator.SubNew(y, output)
+	// Calculate backward gradient using the following equation
+	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
+	// dB = (-2/n) * sum(label - prediction) * learning_rate
 
-	fmt.Printf("(X * E) X level: %d, E level: %d\n", input.Level(), err.Level())
-	dM := l.utils.MultiplyNew(*input, *err, true, false)
+	err := l.utils.SubNew(*y, output)
+
+	dM := l.utils.MultiplyNew(*input, *err.CopyNew(), true, false)
 	l.utils.SumElementsInPlace(&dM)
-	fmt.Printf("(dM * Avg) dM level: %d\n", dM.Level())
-	l.utils.MultiplyConst(&dM, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dM, true, false)
+	l.utils.MultiplyConstArray(&dM, l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dM, true, false)
 
-	dB := l.utils.SumElementsNew(*err)
-	fmt.Printf("(dB * Avg) dM level: %d\n", dM.Level())
-	l.utils.MultiplyConst(&dB, l.utils.GenerateFilledArray((-2/float64(size))*learningRate), &dB, true, false)
+	dB := l.utils.SumElementsNew(err)
+	l.utils.MultiplyConstArray(&dB, l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dB, true, false)
 
 	return LinearRegressionGradient{dM, dB}
 
@@ -81,17 +75,19 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 	for i := 0; i < epoch; i++ {
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		fwd := model.Forward(x.CopyNew().Ciphertext())
-		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		grad := model.Backward(x.CopyNew().Ciphertext(), fwd, y, size, learningRate)
-		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		model.UpdateGradient(grad)
-		m := model.utils.Decrypt(&model.M)
-		b := model.utils.Decrypt(&model.B)
-		fmt.Printf("Result M: %f(scale: %f, level: %d) B: %f(scale: %f, level: %d)\n", m[0], model.M.Scale(), model.M.Level(), b[0], model.B.Scale(), model.B.Level())
+		fwd := model.Forward(x.CopyNew())
 
-		if model.M.Level() <= 4 || model.B.Level() <= 4 {
+		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		grad := model.Backward(x.CopyNew(), fwd, y, size, learningRate)
+
+		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
+		model.UpdateGradient(grad)
+
+		if model.M.Level() < 4 || model.B.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
+			if model.B.Level() != 1 {
+				model.utils.Evaluator.DropLevel(&model.B, model.B.Level()-1)
+			}
 			model.utils.BootstrapInPlace(&model.M)
 			model.utils.BootstrapInPlace(&model.B)
 		}

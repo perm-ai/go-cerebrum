@@ -1,0 +1,395 @@
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 5 (delta 4), reused 5 (delta 4), pack-reused 0
+Unpacking objects: 100% (5/5), done.
+From https://github.com/perm-ai/GO-HEML-prototype
+ * branch            staging    -> FETCH_HEAD
+   66cd3f0..8c3b4be  staging    -> origin/staging
+Updating 66cd3f0..8c3b4be
+Fast-forward
+ src/utility/multiplication.go | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+ubuntu@ip-172-31-33-85:/usr/local/go/src/github.com/perm-ai/GO-HEML-prototype$ go run src/main.go
+2021-07-03T08:47:34+0000	Util Initialization: Generating key generator
+2021-07-03T08:47:34+0000	Util Initialization: Generating keys
+2021-07-03T08:48:00+0000	Util Initialization: Generating encoder, evaluator, encryptor, decryptor
+2021-07-03T08:48:00+0000	Util Initialization: Generating bootstrapping key
+2021-07-03T08:49:25+0000	Util Initialization: Generating bootstrapper
+2021-07-03T08:49:40+0000	Starting Linear Regression Training on encrypted data
+2021-07-03T08:49:40+0000	Forward propagating 1/100
+2021-07-03T08:49:41+0000	Backward propagating 1/100
+2021-07-03T08:49:57+0000	Updating gradient 1/100
+2021-07-03T08:49:57+0000	Forward propagating 2/100
+2021-07-03T08:49:57+0000	Backward propagating 2/100
+2021-07-03T08:50:10+0000	Updating gradient 2/100
+2021-07-03T08:50:10+0000	Forward propagating 3/100
+2021-07-03T08:50:10+0000	Backward propagating 3/100
+2021-07-03T08:50:21+0000	Updating gradient 3/100
+2021-07-03T08:50:21+0000	Forward propagating 4/100
+2021-07-03T08:50:21+0000	Backward propagating 4/100
+2021-07-03T08:50:29+0000	Updating gradient 4/100
+2021-07-03T08:50:29+0000	Forward propagating 5/100
+2021-07-03T08:50:30+0000	Backward propagating 5/100
+2021-07-03T08:50:36+0000	Updating gradient 5/100
+2021-07-03T08:50:36+0000	Forward propagating 6/100
+2021-07-03T08:50:36+0000	Backward propagating 6/100
+2021-07-03T08:50:41+0000	Updating gradient 6/100
+2021-07-03T08:50:41+0000	Forward propagating 7/100
+2021-07-03T08:50:41+0000	Backward propagating 7/100
+2021-07-03T08:50:44+0000	Updating gradient 7/100
+2021-07-03T08:50:44+0000	Forward propagating 8/100
+2021-07-03T08:50:44+0000	Backward propagating 8/100
+2021-07-03T08:50:46+0000	Updating gradient 8/100
+Bootstrapping gradient
+2021-07-03T08:50:46+0000	Bootstrapping
+2021-07-03T08:51:13+0000	Bootstrapping
+Result Epoch 7 – M: 0.426231(scale: 1073741824.000000, level: 10) B: 0.128881(scale: 1073741824.000000, level: 10)
+2021-07-03T08:51:40+0000	Forward propagating 9/100
+2021-07-03T08:51:40+0000	Backward propagating 9/100
+2021-07-03T08:51:44+0000	Updating gradient 9/100
+2021-07-03T08:51:44+0000	Forward propagating 10/100
+2021-07-03T08:51:44+0000	Backward propagating 10/100
+2021-07-03T08:51:48+0000	Updating gradient 10/100
+2021-07-03T08:51:48+0000	Forward propagating 11/100
+2021-07-03T08:51:48+0000	Backward propagating 11/100
+2021-07-03T08:51:51+0000	Updating gradient 11/100
+2021-07-03T08:51:51+0000	Forward propagating 12/100
+2021-07-03T08:51:51+0000	Backward propagating 12/100
+2021-07-03T08:51:53+0000	Updating gradient 12/100
+Bootstrapping gradient
+2021-07-03T08:51:53+0000	Bootstrapping
+2021-07-03T08:52:18+0000	Bootstrapping
+Result Epoch 11 – M: 0.564765(scale: 1073741824.000000, level: 10) B: 0.115453(scale: 1073741824.000000, level: 10)
+2021-07-03T08:52:44+0000	Forward propagating 13/100
+2021-07-03T08:52:44+0000	Backward propagating 13/100
+2021-07-03T08:52:49+0000	Updating gradient 13/100
+2021-07-03T08:52:49+0000	Forward propagating 14/100
+2021-07-03T08:52:49+0000	Backward propagating 14/100
+2021-07-03T08:52:52+0000	Updating gradient 14/100
+2021-07-03T08:52:52+0000	Forward propagating 15/100
+2021-07-03T08:52:52+0000	Backward propagating 15/100
+2021-07-03T08:52:55+0000	Updating gradient 15/100
+2021-07-03T08:52:55+0000	Forward propagating 16/100
+2021-07-03T08:52:55+0000	Backward propagating 16/100
+2021-07-03T08:52:57+0000	Updating gradient 16/100
+Bootstrapping gradient
+2021-07-03T08:52:57+0000	Bootstrapping
+2021-07-03T08:53:25+0000	Bootstrapping
+Result Epoch 15 – M: 0.673331(scale: 1073741824.000000, level: 10) B: 0.098575(scale: 1073741824.000000, level: 10)
+2021-07-03T08:53:50+0000	Forward propagating 17/100
+2021-07-03T08:53:50+0000	Backward propagating 17/100
+2021-07-03T08:53:55+0000	Updating gradient 17/100
+2021-07-03T08:53:55+0000	Forward propagating 18/100
+2021-07-03T08:53:55+0000	Backward propagating 18/100
+2021-07-03T08:53:58+0000	Updating gradient 18/100
+2021-07-03T08:53:58+0000	Forward propagating 19/100
+2021-07-03T08:53:58+0000	Backward propagating 19/100
+2021-07-03T08:54:01+0000	Updating gradient 19/100
+2021-07-03T08:54:01+0000	Forward propagating 20/100
+2021-07-03T08:54:01+0000	Backward propagating 20/100
+2021-07-03T08:54:03+0000	Updating gradient 20/100
+Bootstrapping gradient
+2021-07-03T08:54:03+0000	Bootstrapping
+2021-07-03T08:54:29+0000	Bootstrapping
+Result Epoch 19 – M: 0.759009(scale: 1073741824.000000, level: 10) B: 0.083478(scale: 1073741824.000000, level: 10)
+2021-07-03T08:54:54+0000	Forward propagating 21/100
+2021-07-03T08:54:54+0000	Backward propagating 21/100
+2021-07-03T08:54:59+0000	Updating gradient 21/100
+2021-07-03T08:54:59+0000	Forward propagating 22/100
+2021-07-03T08:54:59+0000	Backward propagating 22/100
+2021-07-03T08:55:02+0000	Updating gradient 22/100
+2021-07-03T08:55:02+0000	Forward propagating 23/100
+2021-07-03T08:55:03+0000	Backward propagating 23/100
+2021-07-03T08:55:05+0000	Updating gradient 23/100
+2021-07-03T08:55:05+0000	Forward propagating 24/100
+2021-07-03T08:55:06+0000	Backward propagating 24/100
+2021-07-03T08:55:07+0000	Updating gradient 24/100
+Bootstrapping gradient
+2021-07-03T08:55:07+0000	Bootstrapping
+2021-07-03T08:55:33+0000	Bootstrapping
+Result Epoch 23 – M: 0.826790(scale: 1073741824.000000, level: 10) B: 0.071037(scale: 1073741824.000000, level: 10)
+2021-07-03T08:55:58+0000	Forward propagating 25/100
+2021-07-03T08:55:59+0000	Backward propagating 25/100
+2021-07-03T08:56:03+0000	Updating gradient 25/100
+2021-07-03T08:56:03+0000	Forward propagating 26/100
+2021-07-03T08:56:03+0000	Backward propagating 26/100
+2021-07-03T08:56:07+0000	Updating gradient 26/100
+2021-07-03T08:56:07+0000	Forward propagating 27/100
+2021-07-03T08:56:07+0000	Backward propagating 27/100
+2021-07-03T08:56:10+0000	Updating gradient 27/100
+2021-07-03T08:56:10+0000	Forward propagating 28/100
+2021-07-03T08:56:10+0000	Backward propagating 28/100
+2021-07-03T08:56:12+0000	Updating gradient 28/100
+Bootstrapping gradient
+2021-07-03T08:56:12+0000	Bootstrapping
+2021-07-03T08:56:37+0000	Bootstrapping
+Result Epoch 27 – M: 0.880457(scale: 1073741824.000000, level: 10) B: 0.061053(scale: 1073741824.000000, level: 10)
+2021-07-03T08:57:02+0000	Forward propagating 29/100
+2021-07-03T08:57:03+0000	Backward propagating 29/100
+2021-07-03T08:57:07+0000	Updating gradient 29/100
+2021-07-03T08:57:07+0000	Forward propagating 30/100
+2021-07-03T08:57:07+0000	Backward propagating 30/100
+2021-07-03T08:57:11+0000	Updating gradient 30/100
+2021-07-03T08:57:11+0000	Forward propagating 31/100
+2021-07-03T08:57:11+0000	Backward propagating 31/100
+2021-07-03T08:57:14+0000	Updating gradient 31/100
+2021-07-03T08:57:14+0000	Forward propagating 32/100
+2021-07-03T08:57:14+0000	Backward propagating 32/100
+2021-07-03T08:57:16+0000	Updating gradient 32/100
+Bootstrapping gradient
+2021-07-03T08:57:16+0000	Bootstrapping
+2021-07-03T08:57:42+0000	Bootstrapping
+Result Epoch 31 – M: 0.922961(scale: 1073741824.000000, level: 10) B: 0.053105(scale: 1073741824.000000, level: 10)
+2021-07-03T08:58:07+0000	Forward propagating 33/100
+2021-07-03T08:58:07+0000	Backward propagating 33/100
+2021-07-03T08:58:12+0000	Updating gradient 33/100
+2021-07-03T08:58:12+0000	Forward propagating 34/100
+2021-07-03T08:58:12+0000	Backward propagating 34/100
+2021-07-03T08:58:15+0000	Updating gradient 34/100
+2021-07-03T08:58:15+0000	Forward propagating 35/100
+2021-07-03T08:58:16+0000	Backward propagating 35/100
+2021-07-03T08:58:18+0000	Updating gradient 35/100
+2021-07-03T08:58:18+0000	Forward propagating 36/100
+2021-07-03T08:58:19+0000	Backward propagating 36/100
+2021-07-03T08:58:20+0000	Updating gradient 36/100
+Bootstrapping gradient
+2021-07-03T08:58:20+0000	Bootstrapping
+2021-07-03T08:58:46+0000	Bootstrapping
+Result Epoch 35 – M: 0.956635(scale: 1073741824.000000, level: 10) B: 0.046800(scale: 1073741824.000000, level: 10)
+2021-07-03T08:59:11+0000	Forward propagating 37/100
+2021-07-03T08:59:11+0000	Backward propagating 37/100
+2021-07-03T08:59:16+0000	Updating gradient 37/100
+2021-07-03T08:59:16+0000	Forward propagating 38/100
+2021-07-03T08:59:16+0000	Backward propagating 38/100
+2021-07-03T08:59:20+0000	Updating gradient 38/100
+2021-07-03T08:59:20+0000	Forward propagating 39/100
+2021-07-03T08:59:20+0000	Backward propagating 39/100
+2021-07-03T08:59:23+0000	Updating gradient 39/100
+2021-07-03T08:59:23+0000	Forward propagating 40/100
+2021-07-03T08:59:23+0000	Backward propagating 40/100
+2021-07-03T08:59:25+0000	Updating gradient 40/100
+Bootstrapping gradient
+2021-07-03T08:59:25+0000	Bootstrapping
+2021-07-03T08:59:50+0000	Bootstrapping
+Result Epoch 39 – M: 0.983309(scale: 1073741824.000000, level: 10) B: 0.041805(scale: 1073741824.000000, level: 10)
+2021-07-03T09:00:16+0000	Forward propagating 41/100
+2021-07-03T09:00:16+0000	Backward propagating 41/100
+2021-07-03T09:00:20+0000	Updating gradient 41/100
+2021-07-03T09:00:20+0000	Forward propagating 42/100
+2021-07-03T09:00:20+0000	Backward propagating 42/100
+2021-07-03T09:00:24+0000	Updating gradient 42/100
+2021-07-03T09:00:24+0000	Forward propagating 43/100
+2021-07-03T09:00:24+0000	Backward propagating 43/100
+2021-07-03T09:00:27+0000	Updating gradient 43/100
+2021-07-03T09:00:27+0000	Forward propagating 44/100
+2021-07-03T09:00:27+0000	Backward propagating 44/100
+2021-07-03T09:00:29+0000	Updating gradient 44/100
+Bootstrapping gradient
+2021-07-03T09:00:29+0000	Bootstrapping
+2021-07-03T09:00:54+0000	Bootstrapping
+Result Epoch 43 – M: 1.004441(scale: 1073741824.000000, level: 10) B: 0.037846(scale: 1073741824.000000, level: 10)
+2021-07-03T09:01:20+0000	Forward propagating 45/100
+2021-07-03T09:01:20+0000	Backward propagating 45/100
+2021-07-03T09:01:24+0000	Updating gradient 45/100
+2021-07-03T09:01:25+0000	Forward propagating 46/100
+2021-07-03T09:01:25+0000	Backward propagating 46/100
+2021-07-03T09:01:28+0000	Updating gradient 46/100
+2021-07-03T09:01:28+0000	Forward propagating 47/100
+2021-07-03T09:01:28+0000	Backward propagating 47/100
+2021-07-03T09:01:31+0000	Updating gradient 47/100
+2021-07-03T09:01:31+0000	Forward propagating 48/100
+2021-07-03T09:01:31+0000	Backward propagating 48/100
+2021-07-03T09:01:33+0000	Updating gradient 48/100
+Bootstrapping gradient
+2021-07-03T09:01:33+0000	Bootstrapping
+2021-07-03T09:01:59+0000	Bootstrapping
+Result Epoch 47 – M: 1.021181(scale: 1073741824.000000, level: 10) B: 0.034714(scale: 1073741824.000000, level: 10)
+2021-07-03T09:02:24+0000	Forward propagating 49/100
+2021-07-03T09:02:24+0000	Backward propagating 49/100
+2021-07-03T09:02:29+0000	Updating gradient 49/100
+2021-07-03T09:02:29+0000	Forward propagating 50/100
+2021-07-03T09:02:29+0000	Backward propagating 50/100
+2021-07-03T09:02:32+0000	Updating gradient 50/100
+2021-07-03T09:02:32+0000	Forward propagating 51/100
+2021-07-03T09:02:33+0000	Backward propagating 51/100
+2021-07-03T09:02:35+0000	Updating gradient 51/100
+2021-07-03T09:02:35+0000	Forward propagating 52/100
+2021-07-03T09:02:35+0000	Backward propagating 52/100
+2021-07-03T09:02:37+0000	Updating gradient 52/100
+Bootstrapping gradient
+2021-07-03T09:02:37+0000	Bootstrapping
+2021-07-03T09:03:03+0000	Bootstrapping
+Result Epoch 51 – M: 1.034444(scale: 1073741824.000000, level: 10) B: 0.032227(scale: 1073741824.000000, level: 10)
+2021-07-03T09:03:28+0000	Forward propagating 53/100
+2021-07-03T09:03:28+0000	Backward propagating 53/100
+2021-07-03T09:03:33+0000	Updating gradient 53/100
+2021-07-03T09:03:33+0000	Forward propagating 54/100
+2021-07-03T09:03:33+0000	Backward propagating 54/100
+2021-07-03T09:03:37+0000	Updating gradient 54/100
+2021-07-03T09:03:37+0000	Forward propagating 55/100
+2021-07-03T09:03:37+0000	Backward propagating 55/100
+2021-07-03T09:03:40+0000	Updating gradient 55/100
+2021-07-03T09:03:40+0000	Forward propagating 56/100
+2021-07-03T09:03:40+0000	Backward propagating 56/100
+2021-07-03T09:03:42+0000	Updating gradient 56/100
+Bootstrapping gradient
+2021-07-03T09:03:42+0000	Bootstrapping
+2021-07-03T09:04:07+0000	Bootstrapping
+Result Epoch 55 – M: 1.044951(scale: 1073741824.000000, level: 10) B: 0.030258(scale: 1073741824.000000, level: 10)
+2021-07-03T09:04:32+0000	Forward propagating 57/100
+2021-07-03T09:04:32+0000	Backward propagating 57/100
+2021-07-03T09:04:37+0000	Updating gradient 57/100
+2021-07-03T09:04:37+0000	Forward propagating 58/100
+2021-07-03T09:04:37+0000	Backward propagating 58/100
+2021-07-03T09:04:41+0000	Updating gradient 58/100
+2021-07-03T09:04:41+0000	Forward propagating 59/100
+2021-07-03T09:04:41+0000	Backward propagating 59/100
+2021-07-03T09:04:44+0000	Updating gradient 59/100
+2021-07-03T09:04:44+0000	Forward propagating 60/100
+2021-07-03T09:04:44+0000	Backward propagating 60/100
+2021-07-03T09:04:45+0000	Updating gradient 60/100
+Bootstrapping gradient
+2021-07-03T09:04:45+0000	Bootstrapping
+2021-07-03T09:05:11+0000	Bootstrapping
+Result Epoch 59 – M: 1.053275(scale: 1073741824.000000, level: 10) B: 0.028697(scale: 1073741824.000000, level: 10)
+2021-07-03T09:05:36+0000	Forward propagating 61/100
+2021-07-03T09:05:36+0000	Backward propagating 61/100
+2021-07-03T09:05:41+0000	Updating gradient 61/100
+2021-07-03T09:05:41+0000	Forward propagating 62/100
+2021-07-03T09:05:41+0000	Backward propagating 62/100
+2021-07-03T09:05:45+0000	Updating gradient 62/100
+2021-07-03T09:05:45+0000	Forward propagating 63/100
+2021-07-03T09:05:45+0000	Backward propagating 63/100
+2021-07-03T09:05:48+0000	Updating gradient 63/100
+2021-07-03T09:05:48+0000	Forward propagating 64/100
+2021-07-03T09:05:48+0000	Backward propagating 64/100
+2021-07-03T09:05:49+0000	Updating gradient 64/100
+Bootstrapping gradient
+2021-07-03T09:05:50+0000	Bootstrapping
+2021-07-03T09:06:15+0000	Bootstrapping
+Result Epoch 63 – M: 1.059870(scale: 1073741824.000000, level: 10) B: 0.027461(scale: 1073741824.000000, level: 10)
+2021-07-03T09:06:40+0000	Forward propagating 65/100
+2021-07-03T09:06:40+0000	Backward propagating 65/100
+2021-07-03T09:06:45+0000	Updating gradient 65/100
+2021-07-03T09:06:45+0000	Forward propagating 66/100
+2021-07-03T09:06:45+0000	Backward propagating 66/100
+2021-07-03T09:06:48+0000	Updating gradient 66/100
+2021-07-03T09:06:48+0000	Forward propagating 67/100
+2021-07-03T09:06:49+0000	Backward propagating 67/100
+2021-07-03T09:06:51+0000	Updating gradient 67/100
+2021-07-03T09:06:51+0000	Forward propagating 68/100
+2021-07-03T09:06:51+0000	Backward propagating 68/100
+2021-07-03T09:06:53+0000	Updating gradient 68/100
+Bootstrapping gradient
+2021-07-03T09:06:53+0000	Bootstrapping
+2021-07-03T09:07:19+0000	Bootstrapping
+Result Epoch 67 – M: 1.065099(scale: 1073741824.000000, level: 10) B: 0.026485(scale: 1073741824.000000, level: 10)
+2021-07-03T09:07:44+0000	Forward propagating 69/100
+2021-07-03T09:07:44+0000	Backward propagating 69/100
+2021-07-03T09:07:48+0000	Updating gradient 69/100
+2021-07-03T09:07:49+0000	Forward propagating 70/100
+2021-07-03T09:07:49+0000	Backward propagating 70/100
+2021-07-03T09:07:52+0000	Updating gradient 70/100
+2021-07-03T09:07:52+0000	Forward propagating 71/100
+2021-07-03T09:07:52+0000	Backward propagating 71/100
+2021-07-03T09:07:55+0000	Updating gradient 71/100
+2021-07-03T09:07:55+0000	Forward propagating 72/100
+2021-07-03T09:07:55+0000	Backward propagating 72/100
+2021-07-03T09:07:57+0000	Updating gradient 72/100
+Bootstrapping gradient
+2021-07-03T09:07:57+0000	Bootstrapping
+2021-07-03T09:08:22+0000	Bootstrapping
+Result Epoch 71 – M: 1.069240(scale: 1073741824.000000, level: 10) B: 0.025713(scale: 1073741824.000000, level: 10)
+2021-07-03T09:08:48+0000	Forward propagating 73/100
+2021-07-03T09:08:48+0000	Backward propagating 73/100
+2021-07-03T09:08:52+0000	Updating gradient 73/100
+2021-07-03T09:08:52+0000	Forward propagating 74/100
+2021-07-03T09:08:53+0000	Backward propagating 74/100
+2021-07-03T09:08:56+0000	Updating gradient 74/100
+2021-07-03T09:08:56+0000	Forward propagating 75/100
+2021-07-03T09:08:56+0000	Backward propagating 75/100
+2021-07-03T09:08:59+0000	Updating gradient 75/100
+2021-07-03T09:08:59+0000	Forward propagating 76/100
+2021-07-03T09:08:59+0000	Backward propagating 76/100
+2021-07-03T09:09:01+0000	Updating gradient 76/100
+Bootstrapping gradient
+2021-07-03T09:09:01+0000	Bootstrapping
+2021-07-03T09:09:26+0000	Bootstrapping
+Result Epoch 75 – M: 1.072523(scale: 1073741824.000000, level: 10) B: 0.025100(scale: 1073741824.000000, level: 10)
+2021-07-03T09:09:52+0000	Forward propagating 77/100
+2021-07-03T09:09:52+0000	Backward propagating 77/100
+2021-07-03T09:09:56+0000	Updating gradient 77/100
+2021-07-03T09:09:56+0000	Forward propagating 78/100
+2021-07-03T09:09:57+0000	Backward propagating 78/100
+2021-07-03T09:10:00+0000	Updating gradient 78/100
+2021-07-03T09:10:00+0000	Forward propagating 79/100
+2021-07-03T09:10:00+0000	Backward propagating 79/100
+2021-07-03T09:10:03+0000	Updating gradient 79/100
+2021-07-03T09:10:03+0000	Forward propagating 80/100
+2021-07-03T09:10:03+0000	Backward propagating 80/100
+2021-07-03T09:10:05+0000	Updating gradient 80/100
+Bootstrapping gradient
+2021-07-03T09:10:05+0000	Bootstrapping
+2021-07-03T09:10:30+0000	Bootstrapping
+Result Epoch 79 – M: 1.075128(scale: 1073741824.000000, level: 10) B: 0.024617(scale: 1073741824.000000, level: 10)
+2021-07-03T09:10:56+0000	Forward propagating 81/100
+2021-07-03T09:10:56+0000	Backward propagating 81/100
+2021-07-03T09:11:00+0000	Updating gradient 81/100
+2021-07-03T09:11:00+0000	Forward propagating 82/100
+2021-07-03T09:11:00+0000	Backward propagating 82/100
+2021-07-03T09:11:04+0000	Updating gradient 82/100
+2021-07-03T09:11:04+0000	Forward propagating 83/100
+2021-07-03T09:11:04+0000	Backward propagating 83/100
+2021-07-03T09:11:07+0000	Updating gradient 83/100
+2021-07-03T09:11:07+0000	Forward propagating 84/100
+2021-07-03T09:11:07+0000	Backward propagating 84/100
+2021-07-03T09:11:09+0000	Updating gradient 84/100
+Bootstrapping gradient
+2021-07-03T09:11:09+0000	Bootstrapping
+2021-07-03T09:11:34+0000	Bootstrapping
+Result Epoch 83 – M: -91.100192(scale: 1073741824.000000, level: 10) B: 0.024233(scale: 1073741824.000000, level: 10)
+2021-07-03T09:12:00+0000	Forward propagating 85/100
+2021-07-03T09:12:00+0000	Backward propagating 85/100
+2021-07-03T09:12:04+0000	Updating gradient 85/100
+2021-07-03T09:12:04+0000	Forward propagating 86/100
+2021-07-03T09:12:05+0000	Backward propagating 86/100
+2021-07-03T09:12:08+0000	Updating gradient 86/100
+2021-07-03T09:12:08+0000	Forward propagating 87/100
+2021-07-03T09:12:08+0000	Backward propagating 87/100
+2021-07-03T09:12:11+0000	Updating gradient 87/100
+2021-07-03T09:12:11+0000	Forward propagating 88/100
+2021-07-03T09:12:11+0000	Backward propagating 88/100
+2021-07-03T09:12:13+0000	Updating gradient 88/100
+Bootstrapping gradient
+2021-07-03T09:12:13+0000	Bootstrapping
+2021-07-03T09:12:39+0000	Bootstrapping
+Result Epoch 87 – M: -86.291162(scale: 1073741824.000000, level: 10) B: 0.026690(scale: 1073741824.000000, level: 10)
+2021-07-03T09:13:04+0000	Forward propagating 89/100
+2021-07-03T09:13:04+0000	Backward propagating 89/100
+2021-07-03T09:13:09+0000	Updating gradient 89/100
+2021-07-03T09:13:09+0000	Forward propagating 90/100
+2021-07-03T09:13:09+0000	Backward propagating 90/100
+2021-07-03T09:13:13+0000	Updating gradient 90/100
+2021-07-03T09:13:13+0000	Forward propagating 91/100
+2021-07-03T09:13:13+0000	Backward propagating 91/100
+2021-07-03T09:13:16+0000	Updating gradient 91/100
+2021-07-03T09:13:16+0000	Forward propagating 92/100
+2021-07-03T09:13:16+0000	Backward propagating 92/100
+2021-07-03T09:13:18+0000	Updating gradient 92/100
+Bootstrapping gradient
+2021-07-03T09:13:18+0000	Bootstrapping
+2021-07-03T09:13:43+0000	Bootstrapping
+Result Epoch 91 – M: -82.190048(scale: 1073741824.000000, level: 10) B: 0.030140(scale: 1073741824.000000, level: 10)
+2021-07-03T09:14:08+0000	Forward propagating 93/100
+2021-07-03T09:14:08+0000	Backward propagating 93/100
+2021-07-03T09:14:13+0000	Updating gradient 93/100
+2021-07-03T09:14:13+0000	Forward propagating 94/100
+2021-07-03T09:14:13+0000	Backward propagating 94/100
+2021-07-03T09:14:17+0000	Updating gradient 94/100
+2021-07-03T09:14:17+0000	Forward propagating 95/100
+2021-07-03T09:14:17+0000	Backward propagating 95/100
+2021-07-03T09:14:20+0000	Updating gradient 95/100
+2021-07-03T09:14:20+0000	Forward propagating 96/100
+2021-07-03T09:14:20+0000	Backward propagating 96/100
+2021-07-03T09:14:22+0000	Updating gradient 96/100
