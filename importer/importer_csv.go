@@ -61,7 +61,7 @@ func GetCSVNData(filepath string, colNum []int, normalize bool) [][]float64 {
 	csvFile, _ := os.Open(filepath)
 	reader := csv.NewReader(bufio.NewReader(csvFile))
 
-	var data [][]float64
+	data := make([][]float64, len(colNum))
 
 	reader.Read()
 
