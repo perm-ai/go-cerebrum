@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/key"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
-var keyChain = key.GenerateKeys(0, true, true)
+var keyChain = key.GenerateKeys(0, false, true)
 var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 
@@ -341,6 +341,33 @@ func TestInverse(t *testing.T) {
 	utils.MultiplyConstArray(inverseApprox, utils.GenerateFilledArray((float64(1) / float64(50))), inverseApprox, true, false)
 	if !ValidateResult(utils.Decrypt(inverseApprox)[0:100], expected[0:100], false, 1, log) {
 		t.Error("Inversed Approx ciphertext wasn't correctly calculated")
+	}
+
+}
+
+func TestSquareRoot(t *testing.T) {
+
+	testCase := utils.GenerateRandomFloatArray(100, 0.2, 2)
+	expect := make([]float64, 100)
+
+	for i := range expect {
+		expect[i] = math.Sqrt(testCase[i])
+	}
+
+	timer := logger.StartTimer("Square root")
+
+	ct := utils.Encrypt(testCase)
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 9)
+	result := utils.Sqrt(&ct, 3, 100)
+
+	timer.LogTimeTaken()
+
+	decryptedResult := utils.Decrypt(result)[0:100]
+
+	fmt.Printf("Before: %d, After: %d (took %d levels)", ct.Level(), result.Level(), (ct.Level() - result.Level()))
+
+	if !ValidateResult(decryptedResult, expect, false, 1, log) {
+		t.Error("Square root wasn't calculated correctly")
 	}
 
 }
