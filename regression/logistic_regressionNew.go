@@ -154,13 +154,13 @@ func (model Logisticmodel) LogTest(data DataPlain) {
 		if guess > 0.5 {
 			trueguess = 1
 		}
-		fmt.Println("(%f)Predicted : %d, Expected : %f", guess, trueguess, data.target[i])
+		fmt.Printf("(%f)Predicted : %d, Expected : %f", guess, trueguess, data.target[i])
 		if guess == data.target[i] {
 			correct++
 		}
 	}
 
 	acc := float64(correct) / float64(len(data.x1)) * 100.0
-	fmt.Println("Accuracy : %f", acc)
+	fmt.Printf("Accuracy : %f", acc)
 
 }

@@ -7,9 +7,10 @@ import (
 )
 
 type BreastCancer struct {
-	texture_mean   []float64
-	concavity_mean []float64
-	symmetry_mean  []float64
+	Texture_mean   []float64
+	Concavity_mean []float64
+	Symmetry_mean  []float64
+	Diagnosis      []float64
 }
 
 func GetBreastCancerData(filepath string) BreastCancer {

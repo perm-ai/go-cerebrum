@@ -12,7 +12,10 @@ type SVM struct {
 	weights []float64
 }
 
-
+func NewSVMModel() SVM {
+	weights := utility.GeneratePlainArray(0, 4)
+	return SVM{weights}
+}
 
 func (model *SVM) UpdateSVMGradients(ascend []float64, l_rate float64, numOfFeatures int) {
 	for i := 0; i < numOfFeatures; i++ {
@@ -32,19 +35,19 @@ func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfF
 		}
 		distance[i] = 1 - (target[i] * weightsDotData)
 	}
+	di := utility.GeneratePlainArray(0, 4)
 	for i, d := range distance {
-		di := utility.GeneratePlainArray(0, 4)
 		if math.Max(0, float64(d)) == 0 {
 			di = model.weights
 		} else {
-			offset := utility.MulConstantArrayNew(target[i], data[i]) // ans = ybatch * xbatch
+			offset := utility.MulConstantArrayNew(target[i], data[i])            // ans = ybatch * xbatch
 			offset = utility.MulConstantArrayNew(regularizationStrength, offset) // ans = ans * regularization strength
 			di = utility.SubtArraysNew(model.weights, offset)
 		}
 		dw = utility.MulArraysNew(dw, di)
 	}
-	
-	utility.MulConstantArrayNew(float64(1/numOfFeatures), dw)
+
+	dw = utility.MulConstantArrayNew(float64(1/numOfFeatures), dw)
 	return dw
 
 }
@@ -53,10 +56,8 @@ func (model *SVM) TrainSVM(data [][]float64, target []float64, epoch int, l_rate
 	weights := make([]float64, 4)
 	model.weights = weights
 	for i := 0; i < epoch; i++ {
-
 		ascent := model.ComputeCostGradient(data, target, numOfFeatures, regularizationStrength) // get dw
 		model.UpdateSVMGradients(ascent, l_rate, numOfFeatures)
-
 	}
 
 	return model.weights
