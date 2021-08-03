@@ -1,9 +1,9 @@
-package SVM
+package svm
 
 import (
 	"math"
 
-	"github.com/perm-ai/go-cerebrum/utility"
+	"github.com/perm-ai/go-cerebrum/array"
 )
 
 // NORMALIZE DATA BEFORE TRAINING
@@ -13,7 +13,7 @@ type SVM struct {
 }
 
 func NewSVMModel() SVM {
-	weights := utility.GeneratePlainArray(0, 4)
+	weights := array.GeneratePlainArray(0, 4)
 	return SVM{weights}
 }
 
@@ -35,19 +35,20 @@ func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfF
 		}
 		distance[i] = 1 - (target[i] * weightsDotData)
 	}
-	di := utility.GeneratePlainArray(0, 4)
+	
 	for i, d := range distance {
+		var di []float64
 		if math.Max(0, float64(d)) == 0 {
 			di = model.weights
 		} else {
-			offset := utility.MulConstantArrayNew(target[i], data[i])            // ans = ybatch * xbatch
-			offset = utility.MulConstantArrayNew(regularizationStrength, offset) // ans = ans * regularization strength
-			di = utility.SubtArraysNew(model.weights, offset)
+			offset := array.MulConstantArrayNew(target[i], data[i])            // ans = ybatch * xbatch
+			offset = array.MulConstantArrayNew(regularizationStrength, offset) // ans = ans * regularization strength
+			di = array.SubtArraysNew(model.weights, offset)
 		}
-		dw = utility.MulArraysNew(dw, di)
+		dw = array.MulArraysNew(dw, di)
 	}
 
-	dw = utility.MulConstantArrayNew(float64(1/numOfFeatures), dw)
+	dw = array.MulConstantArrayNew(float64(1/numOfFeatures), dw)
 	return dw
 
 }
