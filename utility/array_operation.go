@@ -121,3 +121,12 @@ func SigmoidArray(input []float64) []float64 {
 func Sigmoidfloat(input float64) float64 {
 	return 1 / (1 + math.Pow(math.E, -1*input))
 }
+
+//Create plain array with "value" as every value inside the array with specified length
+func GeneratePlainArray(value float64, length int) []float64 {
+	array := make([]float64, length)
+	for i := 0; i < length; i++ {
+		array[i] = value
+	}
+	return array
+}
