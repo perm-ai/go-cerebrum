@@ -1,0 +1,63 @@
+package SVM
+
+import (
+	"math"
+
+	"github.com/perm-ai/go-cerebrum/utility"
+)
+
+// NORMALIZE DATA BEFORE TRAINING
+
+type SVM struct {
+	weights []float64
+}
+
+
+
+func (model *SVM) UpdateSVMGradients(ascend []float64, l_rate float64, numOfFeatures int) {
+	for i := 0; i < numOfFeatures; i++ {
+		model.weights[i] = model.weights[i] - (ascend[i] * l_rate)
+	}
+}
+
+func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfFeatures int, regularizationStrength float64) []float64 {
+	dw := make([]float64, 4) // create weights array of [data1, data2, data3, intercept]
+	var distance []float64   // n # of training examples
+	// distance = 1-(y_batch * (x dot weights))
+	for i := 0; i < len(data); i++ {
+		// distance[i] = 1 - (target[i] * (model.weights[0]*data1[i]) + (model.weights[1]*data2[i]) + (model.weights[2]*data3[i]) + (model.weights[3]*1))
+		var weightsDotData float64 // for loop for all features
+		for k := 0; k < numOfFeatures; k++ {
+			weightsDotData += model.weights[k] * data[i][k]
+		}
+		distance[i] = 1 - (target[i] * weightsDotData)
+	}
+	for i, d := range distance {
+		di := utility.GeneratePlainArray(0, 4)
+		if math.Max(0, float64(d)) == 0 {
+			di = model.weights
+		} else {
+			offset := utility.MulConstantArrayNew(target[i], data[i]) // ans = ybatch * xbatch
+			offset = utility.MulConstantArrayNew(regularizationStrength, offset) // ans = ans * regularization strength
+			di = utility.SubtArraysNew(model.weights, offset)
+		}
+		dw = utility.MulArraysNew(dw, di)
+	}
+	
+	utility.MulConstantArrayNew(float64(1/numOfFeatures), dw)
+	return dw
+
+}
+
+func (model *SVM) TrainSVM(data [][]float64, target []float64, epoch int, l_rate float64, numOfFeatures int, regularizationStrength float64) []float64 {
+	weights := make([]float64, 4)
+	model.weights = weights
+	for i := 0; i < epoch; i++ {
+
+		ascent := model.ComputeCostGradient(data, target, numOfFeatures, regularizationStrength) // get dw
+		model.UpdateSVMGradients(ascent, l_rate, numOfFeatures)
+
+	}
+
+	return model.weights
+}
