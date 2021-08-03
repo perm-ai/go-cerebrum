@@ -35,7 +35,7 @@ func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfF
 		}
 		distance[i] = 1 - (target[i] * weightsDotData)
 	}
-	
+
 	for i, d := range distance {
 		var di []float64
 		if math.Max(0, float64(d)) == 0 {
