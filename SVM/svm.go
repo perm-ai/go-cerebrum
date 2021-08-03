@@ -1,6 +1,7 @@
 package svm
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/perm-ai/go-cerebrum/array"
@@ -45,10 +46,10 @@ func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfF
 			offset = array.MulConstantArrayNew(regularizationStrength, offset) // ans = ans * regularization strength
 			di = array.SubtArraysNew(model.weights, offset)
 		}
-		dw = array.MulArraysNew(dw, di)
+		dw = array.AddArraysNew(dw, di)
 	}
 
-	dw = array.MulConstantArrayNew(float64(1/numOfFeatures), dw)
+	dw = array.MulConstantArrayNew(float64(1/len(data)), dw) // average dw
 	return dw
 
 }
@@ -57,8 +58,10 @@ func (model *SVM) TrainSVM(data [][]float64, target []float64, epoch int, l_rate
 	weights := make([]float64, 4)
 	model.weights = weights
 	for i := 0; i < epoch; i++ {
+		fmt.Printf("Start Training epoch number %d \n", i+1)
 		ascent := model.ComputeCostGradient(data, target, numOfFeatures, regularizationStrength) // get dw
 		model.UpdateSVMGradients(ascent, l_rate, numOfFeatures)
+		fmt.Printf("The updated weights is %f \n\n", model.weights)
 	}
 
 	return model.weights
