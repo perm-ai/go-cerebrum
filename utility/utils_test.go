@@ -372,6 +372,34 @@ func TestSquareRoot(t *testing.T) {
 
 }
 
+func TestSquareRootPoly(t *testing.T) {
+
+	testCase := utils.GenerateRandomFloatArray(100, 0.3, 1.75)
+	expect := make([]float64, 100)
+
+	for i := range expect {
+		expect[i] = math.Sqrt(testCase[i])
+	}
+
+	timer := logger.StartTimer("Square root")
+
+	ct := utils.Encrypt(testCase)
+	utils.Evaluator.DropLevel(&ct, ct.Level() - 9)
+	result := utils.SqrtApprox(&ct, 3, 1.75, true)
+
+	timer.LogTimeTaken()
+
+	decryptedResult := utils.Decrypt(result)[0:100]
+
+	fmt.Printf("Before: %d, After: %d (took %d levels)", ct.Level(), result.Level(), (ct.Level() - result.Level()))
+
+	if !ValidateResult(decryptedResult, expect, false, 1, log) {
+		t.Error("Square root wasn't calculated correctly")
+	}
+
+}
+
+
 func TestDotProduct(t *testing.T) {
 
 	testCases := GenerateTestCases(utils)

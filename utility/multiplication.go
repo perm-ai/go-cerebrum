@@ -128,13 +128,14 @@ func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 
 func (u Utils) MultiplyConst(a *ckks.Ciphertext, b float64, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
+	originalScale := a.Scale
 	u.Evaluator.MultByConst(a, b, destination)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
 	}
 
-	if rescale {
+	if rescale && destination.Scale != originalScale {
 		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
 	}
 
@@ -146,93 +147,6 @@ func (u Utils) MultiplyConstNew(a *ckks.Ciphertext, b float64, rescale bool, boo
 	u.MultiplyConst(a, b, destination, rescale, bootstrap)
 
 	return *destination
-
-}
-
-func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
-	
-	coeffs := []complex128{
-		complex(1.0, 0),
-		complex(1.0, 0),
-		complex(1.0/2, 0),
-		complex(1.0/6, 0),
-		complex(1.0/24, 0),
-		complex(1.0/120, 0),
-		complex(1.0/720, 0),
-		complex(1.0/5040, 0),
-	}
-
-	poly := ckks.NewPoly(coeffs)
-
-	var err error
-	var result *ckks.Ciphertext
-
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale); err != nil {
-		panic(err)
-	}
-
-	return result
-
-}
-
-func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float64) *ckks.Ciphertext {
-
-	// This function is used to calculate 1 / (n * stretchScale)
-
-	// Degree 7 approximation of inverse function
-
-	coeffs := []complex128{
-		complex(8, 0),
-		complex(-28, 0),
-		complex(56, 0),
-		complex(-70, 0),
-		complex(56, 0),
-		complex(-28, 0),
-		complex(8, 0),
-		complex(-1, 0),
-	}
-
-	if stretchScale != 1 {
-
-		for i, coeff := range coeffs{
-
-			coeffs[i] = complex(real(coeff) * math.Pow(stretchScale, float64(i)), 0)
-
-		}
-
-	}
-
-	poly := ckks.NewPoly(coeffs)
-
-	var err error
-	var result *ckks.Ciphertext
-
-	if result, err = u.Evaluator.EvaluatePoly(ciphertext, poly, ciphertext.Scale); err != nil {
-		panic(err)
-	}
-
-	return result
-
-}
-
-func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64) ckks.Ciphertext {
-
-	// Calculate approximate inverse of a ciphertext. only works within the bound of [0.175, 1.5]
-	// Costs 3 mutiplicative depth
-	// horizontalStretchScale is applied to get the number between wanted bound
-	// This function, if used with correct ciphertext and stretching params, will return 1/n.
-
-	if horizontalStretchScale != 1 {
-
-		// Calculate inverse
-		inversed := u.InverseApproxNew(ct, horizontalStretchScale)
-
-		// Apply vertical stretch
-		return u.MultiplyConstNew(inversed, horizontalStretchScale, true, false)
-
-	} else {
-		return *u.InverseApproxNew(ct, 1)
-	}
 
 }
 
