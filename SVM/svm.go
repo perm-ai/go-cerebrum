@@ -4,65 +4,127 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/perm-ai/go-cerebrum/array"
+	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/activations"
+	"github.com/perm-ai/go-cerebrum/key"
+	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-// NORMALIZE DATA BEFORE TRAINING
-
 type SVM struct {
-	weights []float64
+	u      *utility.Utils
+	Weight *ckks.Ciphertext
 }
 
-func NewSVMModel() SVM {
-	weights := array.GeneratePlainArray(0, 4)
-	return SVM{weights}
+func NewSVM(u utility.Utils) SVM {
+
+	weightPlain := make([]float64, u.Params.Slots())
+	encryptedWeight := u.Encrypt(weightPlain)
+
+	return SVM{&u, &encryptedWeight}
+
 }
 
-func (model *SVM) UpdateSVMGradients(ascend []float64, l_rate float64, numOfFeatures int) {
-	for i := 0; i < numOfFeatures; i++ {
-		model.weights[i] = model.weights[i] - (ascend[i] * l_rate)
+func (model SVM) Forward(x ckks.Ciphertext) ckks.Ciphertext {
+
+	return model.u.DotProductNew(x, *model.Weight, false)
+
+}
+
+// Backward propagation of SVM to get gradient
+// X and Y should be formatted through svm.PackSvmTrainingData
+func (model SVM) Backward(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int, ceilPow2 int, dataPoints int, C float64, bound float64) ckks.Ciphertext {
+
+	// Calculate xw
+	distance := model.u.MultiplyNew(x, *model.Weight, true, false)
+
+	// Calculate sum(x2)
+	var rotated ckks.Ciphertext
+
+	for rot := ceilPow2 / 2; rot >= 1; rot /= 2 {
+		rotated = model.u.RotateNew(&distance, rot)
+		model.u.Add(rotated, distance, &distance)
 	}
-}
 
-func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfFeatures int, regularizationStrength float64) []float64 {
-	dw := make([]float64, numOfFeatures) // create weights array of [data1, data2, data3, intercept]
-	var distance []float64   // n # of training examples
-	// distance = 1-(y_batch * (x dot weights))
-	for i := 0; i < 569; i++ {
-		// distance[i] = 1 - (target[i] * (model.weights[0]*data1[i]) + (model.weights[1]*data2[i]) + (model.weights[2]*data3[i]) + (model.weights[3]*1))
-		weightsDotData := 0.0 // for loop for all features
-		for k := 0; k < numOfFeatures; k++ {
-			weightsDotData += model.weights[k] * data[i][k]
+	rotated = model.u.RotateNew(&distance, (-1 * featureSize))
+	model.u.Add(rotated, distance, &distance)
+
+	// Calculate sum(xw) * y
+	model.u.Multiply(distance, y, &distance, true, false)
+
+	ones := make([][]float64, model.u.Params.Slots())
+
+	for i := 0; i < dataPoints; i++ {
+		ones[i] = make([]float64, featureSize)
+		for j := range ones[i] {
+			ones[i][j] = 1
 		}
-		distance[i] = 1 - (target[i] * weightsDotData)
 	}
 
-	for i, d := range distance {
-		var di []float64
-		if math.Max(0, float64(d)) == 0 {
-			di = model.weights
-		} else {
-			offset := array.MulConstantArrayNew(target[i], data[i])            // ans = ybatch * xbatch
-			offset = array.MulConstantArrayNew(regularizationStrength, offset) // ans = ans * regularization strength
-			di = array.SubtArraysNew(model.weights, offset)
-		}
-		dw = array.AddArraysNew(dw, di)
+	// Calculate distance = 1 - (sum(xw) * y)
+	spacedOne, _ := PackSvmTrainingData(ones, ones[0], model.u.Params.Slots())
+	onePlain := ckks.NewPlaintext(model.u.Params, distance.Level(), distance.Scale)
+	model.u.Encoder.EncodeNTT(onePlain, model.u.Float64ToComplex128(spacedOne), model.u.Params.LogSlots())
+
+	model.u.Evaluator.Sub(onePlain, &distance, &distance)
+
+	// Calculate activation
+	activation := activations.NewSvmActivation(*model.u)
+	activated := activation.Forward(distance, bound)
+
+	// Calculate margin * Y * X
+	m := model.u.MultiplyConstNew(&y, C, true, false)
+	model.u.Multiply(m, x, &m, true, false)
+
+	// Calculate dw = w - (m * activated_distance)
+	dw := model.u.MultiplyNew(m, activated, true, false)
+	model.u.Sub(*model.Weight, dw, &dw)
+
+	// Calculate sum of weight from all data size
+	for rot := model.u.Params.Slots() / 2; rot > ceilPow2; rot /= 2 {
+		rotated = model.u.RotateNew(&dw, rot)
+		model.u.Add(dw, rotated, &dw)
 	}
 
-	dw = array.MulConstantArrayNew(float64(1/len(data)), dw) // average dw
+	// Calculate average dw
+	model.u.MultiplyConst(&dw, (1.0 / float64(dataPoints)), &dw, true, false)
+
 	return dw
 
 }
 
-func (model *SVM) TrainSVM(data [][]float64, target []float64, epoch int, l_rate float64, numOfFeatures int, regularizationStrength float64) []float64 {
-	weights := make([]float64, numOfFeatures)
-	model.weights = weights
-	for i := 0; i < epoch; i++ {
-		fmt.Printf("Start Training epoch number %d \n", i+1)
-		ascent := model.ComputeCostGradient(data, target, numOfFeatures, regularizationStrength) // get dw
-		model.UpdateSVMGradients(ascent, l_rate, numOfFeatures)
-		fmt.Printf("The updated weights is %f \n\n", model.weights)
+func PackSvmTrainingData(x [][]float64, y []float64, slots int) (packedX []float64, packedY []float64) {
+
+	pow2 := key.GetPow2K(int(math.Log2(float64(slots))))
+	dataLen := len(x[0]) + 1
+	var ceilPow2 int
+
+	for _, pow2 := range pow2 {
+
+		if pow2 > dataLen {
+			ceilPow2 = pow2
+			break
+		} else {
+			ceilPow2 = pow2
+		}
+
+	}
+	fmt.Println(ceilPow2)
+
+	spacePerData := ceilPow2 * 2
+	fitable := float64(slots) / float64(spacePerData)
+	packedX = make([]float64, slots)
+	packedY = make([]float64, slots)
+
+	for i := 0; float64(i) < fitable && i < len(x); i++ {
+		start := spacePerData * i
+		for j, n := range x[i] {
+			packedX[start+j] = n
+			packedY[start+j] = y[i]
+		}
+		packedX[start+len(x[i])] = 1
+		packedY[start+len(x[i])] = y[i]
 	}
 
-	return model.weights
+	return packedX, packedY
+
 }
