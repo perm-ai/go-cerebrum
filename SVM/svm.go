@@ -25,12 +25,12 @@ func (model *SVM) UpdateSVMGradients(ascend []float64, l_rate float64, numOfFeat
 }
 
 func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfFeatures int, regularizationStrength float64) []float64 {
-	dw := make([]float64, 4) // create weights array of [data1, data2, data3, intercept]
+	dw := make([]float64, numOfFeatures) // create weights array of [data1, data2, data3, intercept]
 	var distance []float64   // n # of training examples
 	// distance = 1-(y_batch * (x dot weights))
-	for i := 0; i < len(data); i++ {
+	for i := 0; i < 569; i++ {
 		// distance[i] = 1 - (target[i] * (model.weights[0]*data1[i]) + (model.weights[1]*data2[i]) + (model.weights[2]*data3[i]) + (model.weights[3]*1))
-		var weightsDotData float64 // for loop for all features
+		weightsDotData := 0.0 // for loop for all features
 		for k := 0; k < numOfFeatures; k++ {
 			weightsDotData += model.weights[k] * data[i][k]
 		}
@@ -55,7 +55,7 @@ func (model *SVM) ComputeCostGradient(data [][]float64, target []float64, numOfF
 }
 
 func (model *SVM) TrainSVM(data [][]float64, target []float64, epoch int, l_rate float64, numOfFeatures int, regularizationStrength float64) []float64 {
-	weights := make([]float64, 4)
+	weights := make([]float64, numOfFeatures)
 	model.weights = weights
 	for i := 0; i < epoch; i++ {
 		fmt.Printf("Start Training epoch number %d \n", i+1)
