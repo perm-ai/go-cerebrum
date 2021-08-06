@@ -113,7 +113,10 @@ func TestLogisticRegression(t *testing.T) {
 	log.Log("lr = 0.1,epoch = 100")
 	data, dataTest := generateData(1000, 100, 3)
 	log.Log("There are " + fmt.Sprint(len(data.x)) + "column")
-	plaind := NewDataPlain(data.x[0:1], data.x[2])
+	dataA := make([][]float64, 2)
+	dataA[0] = data.x[0]
+	dataA[1] = data.x[1]
+	plaind := NewDataPlain(dataA, data.x[2])
 	Endata := EncryptData(plaind, utils)
 	log.Log("Initializing model")
 	model := NewLogisticRegression(utils, 3)
