@@ -108,7 +108,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
 
-		if model.weight[0].Level() < 7 {
+		if model.weight[0].Level() < 9 {
 			fmt.Println("Bootstrapping gradient")
 			if model.bias.Level() != 1 {
 				model.utils.Evaluator.DropLevel(&model.bias, model.bias.Level()-1)
