@@ -116,7 +116,7 @@ func TestLogisticRegression(t *testing.T) {
 	plaind := NewDataPlain(data.x, data.target)
 	Endata := EncryptData(plaind, utils)
 	log.Log("Initializing model")
-	model := NewLogisticRegression(utils, 2)
+	model := NewLogisticRegression(utils, 3)
 	log.Log("Begin training")
 	model.Train(Endata, 0.1, 100)
 	log.Log("Training complete testing the model")
