@@ -98,7 +98,6 @@ func TestLogisticRegression(t *testing.T) {
 	utils := utility.Utils{}
 	log := logger.NewLogger(true)
 	keysChain := key.GenerateKeys(0, true, true)
-	keysChain.DumpKeys("keychain", true, true, false, false, false)
 	utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
 
 	// csvpath := getStringfromConsole("Input path for data train")
