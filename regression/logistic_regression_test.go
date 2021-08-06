@@ -15,6 +15,7 @@ import (
 )
 
 func NewDataPlain(x [][]float64, target []float64) DataPlain {
+	fmt.Println("Data has coloumn :" + fmt.Sprint(len(x)))
 	return DataPlain{x, target}
 }
 func NewEmptyData(column int, amount int) DataPlain {
@@ -111,6 +112,7 @@ func TestLogisticRegression(t *testing.T) {
 
 	log.Log("lr = 0.1,epoch = 100")
 	data, dataTest := generateData(1000, 100, 3)
+	log.Log("There are " + fmt.Sprint(len(data.x)) + "column")
 	plaind := NewDataPlain(data.x[0:1], data.x[2])
 	Endata := EncryptData(plaind, utils)
 	log.Log("Initializing model")
