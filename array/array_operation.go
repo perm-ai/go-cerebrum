@@ -1,6 +1,8 @@
 package array
 
-import "math"
+import (
+	"math"
+)
 
 //add 2 arrays together, input arrays must have the same length
 func AddArraysNew(a1 []float64, a2 []float64) []float64 {
@@ -23,6 +25,21 @@ func AddArrays(a1 []float64, a2 []float64, destination []float64) {
 		for i, p := range a1 {
 			destination[i] = a2[i] + p
 		}
+	}
+}
+
+//add constant to every element in the array
+func AddConstantNew(constant float64, a []float64) []float64 {
+	result := make([]float64, len(a))
+	for i, p := range a {
+		result[i] = p + constant
+	}
+	return result
+}
+
+func AddConstant(constant float64, a []float64, destination []float64) {
+	for i, p := range a {
+		destination[i] = p + constant
 	}
 }
 
@@ -129,4 +146,14 @@ func GeneratePlainArray(value float64, length int) []float64 {
 		array[i] = value
 	}
 	return array
+}
+
+func GenFilledArraysofArrays(value float64, size1 int, size2 int) [][]float64 {
+	output := make([][]float64, size1)
+	for i := 0; i < size1; i++ {
+		for j := 0; j < size2; j++ {
+			output[i] = append(output[i], 0.0)
+		}
+	}
+	return output
 }

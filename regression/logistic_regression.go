@@ -8,6 +8,7 @@ import (
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
+	"github.com/perm-ai/go-cerebrum/array"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -34,22 +35,6 @@ type DataPlain struct {
 	target []float64
 }
 
-// func NewDataPlain(x1 []float64, x2 []float64, target []float64) DataPlain {
-// 	return DataPlain{x1, x2, target}
-// }
-
-// func EncryptData(data DataPlain, utils utility.Utils) Data {
-// 	log := logger.NewLogger(true)
-// 	log.Log("Encrypting X1")
-// 	encX1 := utils.Encrypt(data.x1)
-// 	log.Log("Encrypting X2")
-// 	encX2 := utils.Encrypt(data.x2)
-// 	log.Log("Encrypting target")
-// 	enctar := utils.Encrypt(data.target)
-// 	log.Log("Encryption complete")
-// 	return Data{encX1, encX2, enctar, len(data.x1)}
-
-// }
 func NewLogisticRegression(u utility.Utils, column int) LogisticRegression {
 
 	value := u.GenerateFilledArray(0.5)
@@ -140,27 +125,34 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 func (model LogisticRegression) LogTest(data DataPlain) {
 	//test the model and output accuracy
 	fmt.Printf("Testing accuracy")
-	wplain := make([][]float64, len(model.weight))
-	bplain := model.utils.Decrypt(&model.bias)
+	wplain := make([]float64, len(model.weight))
+	bplain := model.utils.Decrypt(&model.bias)[0]
 	for i := range wplain {
-		wplain[i] = model.utils.Decrypt(&model.weight[i])
+		wplain[i] = model.utils.Decrypt(&model.weight[i])[0]
 	}
+	//get prediction
 	correct := 0
-
-	for i := 0; i < len(data.x); i++ {
-		yhat := bplain[i] + w1plain[i]*data.x1[i] + w2plain[i]*data.x2[i]
-		guess := SigmoidCheck(yhat)
-		var trueguess int
-		if guess > 0.5 {
+	var predictTarget []float64
+	for j, p := range data.x {
+		predictTarget = array.AddArraysNew(array.MulConstantArrayNew(wplain[j], p), predictTarget)
+	}
+	array.AddConstant(bplain, predictTarget, predictTarget)
+	guess := array.SigmoidArray(predictTarget)
+	//Check if correct
+	var trueguess int
+	for i, p := range guess {
+		if p > 0.5 {
 			trueguess = 1
+		} else {
+			trueguess = 0
 		}
 		fmt.Printf("(%f)Predicted : %d, Expected : %f", guess, trueguess, data.target[i])
-		if guess == data.target[i] {
+		if p == data.target[i] {
 			correct++
 		}
 	}
 
-	acc := float64(correct) / float64(len(data.x1)) * 100.0
+	acc := float64(correct) / float64(len(guess)) * 100.0
 	fmt.Printf("Accuracy : %f", acc)
 
 }
