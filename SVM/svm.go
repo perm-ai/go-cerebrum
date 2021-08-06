@@ -32,7 +32,7 @@ func (model SVM) Forward(x ckks.Ciphertext) ckks.Ciphertext {
 
 // Backward propagation of SVM to get gradient
 // X and Y should be formatted through svm.PackSvmTrainingData
-func (model SVM) Backward(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int, ceilPow2 int, dataPoints int, C float64, bound float64) ckks.Ciphertext {
+func (model SVM) Backward(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int, ceilPow2 int, dataPoints int, C float64, bound float64, learningRate float64) ckks.Ciphertext {
 
 	// Calculate xw
 	distance := model.u.MultiplyNew(x, *model.Weight, true, false)
@@ -72,7 +72,7 @@ func (model SVM) Backward(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int,
 	activated := activation.Forward(distance, bound)
 
 	// Calculate margin * Y * X
-	m := model.u.MultiplyConstNew(&y, C, true, false)
+	m := model.u.MultiplyConstNew(&y, C * learningRate, true, false)
 	model.u.Multiply(m, x, &m, true, false)
 
 	// Calculate dw = w - (m * activated_distance)
@@ -89,6 +89,22 @@ func (model SVM) Backward(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int,
 	model.u.MultiplyConst(&dw, (1.0 / float64(dataPoints)), &dw, true, false)
 
 	return dw
+
+}
+
+func (model *SVM) UpdateGradient(dw ckks.Ciphertext){
+
+	model.u.Sub(*model.Weight, dw, model.Weight)
+	model.u.BootstrapInPlace(model.Weight)
+
+}
+
+func (model *SVM) Train(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int, ceilPow2 int, dataPoints int, C float64, bound float64, learningRate float64, epoch int){
+
+	for i := 0; i < epoch; i++ {
+		dw := model.Backward(x, y, featureSize, ceilPow2, dataPoints, C, bound, learningRate)
+		model.UpdateGradient(dw)
+	}
 
 }
 
