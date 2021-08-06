@@ -120,6 +120,6 @@ func TestLogisticRegression(t *testing.T) {
 	log.Log("Begin training")
 	model.Train(Endata, 0.1, 100)
 	log.Log("Training complete testing the model")
-	plainT := NewDataPlain(dataTest.x[0:1], dataTest.x[2])
+	plainT := NewDataPlain(dataTest.x, dataTest.target)
 	model.LogTest(plainT)
 }
