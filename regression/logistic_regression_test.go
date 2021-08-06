@@ -118,7 +118,7 @@ func TestLogisticRegression(t *testing.T) {
 	log.Log("Initializing model")
 	model := NewLogisticRegression(utils, 3)
 	log.Log("Begin training")
-	model.Train(Endata, 0.1, 100)
+	model.Train(Endata, 0.1, 10)
 	log.Log("Training complete testing the model")
 	plainT := NewDataPlain(dataTest.x, dataTest.target)
 	model.LogTest(plainT)
