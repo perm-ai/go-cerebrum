@@ -57,9 +57,12 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	for i := range data.x {
 		weight := model.utils.MultiplyNew(model.weight[i], data.x[i], true, false)
 		model.utils.Add(weight, result, &result)
+		fmt.Println("Computing w" + fmt.Sprint(i+1))
+
 	}
 	model.utils.Add(model.bias, result, &result)
 	model.utils.MultiplyConst(&result, 0.1, &result, true, false)
+	fmt.Println("Forward complete, computing sigmoid")
 	return sigmoid.Forward(result, data.datalength)
 
 }
@@ -109,13 +112,15 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		model.UpdateGradient(grad)
 
 		if model.weight[0].Level() < 9 {
-			fmt.Println("Bootstrapping gradient")
+			log.Log("Bootstrapping gradient")
 			if model.bias.Level() != 1 {
 				model.utils.Evaluator.DropLevel(&model.bias, model.bias.Level()-1)
 			}
 			for i := range model.weight {
+				log.Log("Bootstrapping weight " + fmt.Sprint(i+1))
 				model.utils.BootstrapInPlace(&model.weight[i])
 			}
+			log.Log("Bootstrapping bias ")
 			model.utils.BootstrapInPlace(&model.bias)
 
 		}
