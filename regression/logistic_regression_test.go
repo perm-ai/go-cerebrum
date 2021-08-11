@@ -36,8 +36,8 @@ func EncryptData(data DataPlain, utils utility.Utils) Data {
 	return Data{EnData, enctar, len(data.x[0])}
 
 }
-func generateData(dat int, testdata int, columnAmount int) (DataPlain, DataPlain) {
-
+func generateData(dat int, testdata int, columnAmount int) (DataPlain, DataPlain, []int) {
+	number := make([]int, 2)
 	d := NewEmptyData(columnAmount, dat)
 	dT := NewEmptyData(columnAmount, testdata)
 	rand.Seed(time.Now().UnixNano())
@@ -87,11 +87,12 @@ func generateData(dat int, testdata int, columnAmount int) (DataPlain, DataPlain
 	}
 
 	if !(ones < 2*zeros && zeros < ones) && !(zeros < 2*ones && ones < zeros) {
-		d, dT = generateData(dat, testdata, columnAmount)
+		d, dT, number = generateData(dat, testdata, columnAmount)
 
 	}
-	fmt.Printf("1 : %d , 0 : %d\n", ones, zeros)
-	return d, dT
+	number[0] = ones
+	number[1] = zeros
+	return d, dT, number
 
 }
 func TestLogisticRegression(t *testing.T) {
@@ -111,8 +112,9 @@ func TestLogisticRegression(t *testing.T) {
 	// data := importer.GetCSVNData(csvpath, a, false)
 
 	log.Log("lr = 0.1,epoch = 100")
-	data, dataTest := generateData(1000, 100, 2)
+	data, dataTest, number := generateData(1000, 100, 2)
 	log.Log("There are " + fmt.Sprint(len(data.x)) + "column")
+	log.Log("There are ones : " + fmt.Sprint(number[0]) + " zeros : " + fmt.Sprint(number[1]))
 	plaind := NewDataPlain(data.x, data.target)
 	Endata := EncryptData(plaind, utils)
 	log.Log("Initializing model")
