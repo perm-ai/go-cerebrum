@@ -61,7 +61,7 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 
 	}
 	model.utils.Add(model.bias, result, &result)
-	model.utils.MultiplyConst(&result, 0.1, &result, true, false)
+	model.utils.MultiplyConst(&result, 0.02, &result, true, false)
 	fmt.Println("Forward complete, computing sigmoid")
 	if result.Level() < 5 {
 		fmt.Println("bootstrapping result")
