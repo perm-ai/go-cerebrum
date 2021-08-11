@@ -13,7 +13,7 @@ import (
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
-var keyChain = key.GenerateKeys(0, false, true)
+var keyChain = key.GenerateKeys(2, true, true)
 var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 
@@ -357,7 +357,7 @@ func TestSquareRoot(t *testing.T) {
 	timer := logger.StartTimer("Square root")
 
 	ct := utils.Encrypt(testCase)
-	utils.Evaluator.DropLevel(&ct, ct.Level() - 9)
+	utils.Evaluator.DropLevel(&ct, ct.Level()-9)
 	result := utils.Sqrt(&ct, 3, 100)
 
 	timer.LogTimeTaken()
@@ -384,7 +384,7 @@ func TestSquareRootPoly(t *testing.T) {
 	timer := logger.StartTimer("Square root")
 
 	ct := utils.Encrypt(testCase)
-	utils.Evaluator.DropLevel(&ct, ct.Level() - 9)
+	utils.Evaluator.DropLevel(&ct, ct.Level()-9)
 	result := utils.SqrtApprox(&ct, 3, 1.75, true)
 
 	timer.LogTimeTaken()
@@ -398,7 +398,6 @@ func TestSquareRootPoly(t *testing.T) {
 	}
 
 }
-
 
 func TestDotProduct(t *testing.T) {
 
