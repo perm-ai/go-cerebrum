@@ -110,6 +110,8 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
+		log.Log("Gradient db level : " + fmt.Sprint(grad.db.Level()))
+		log.Log("Gradient dw level : " + fmt.Sprint(grad.dw[0].Level()))
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
