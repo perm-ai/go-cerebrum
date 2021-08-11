@@ -155,9 +155,11 @@ func (model LogisticRegression) LogTest(data DataPlain) {
 	for i := range wplain {
 		wplain[i] = model.utils.Decrypt(&model.weight[i])[0]
 	}
+	fmt.Println("w : " + fmt.Sprint(wplain))
+	fmt.Println("b : " + fmt.Sprint(bplain))
 	//get prediction
 	correct := 0
-	var predictTarget []float64
+	predictTarget := make([]float64, len(data.x))
 	for j, p := range data.x {
 		predictTarget = array.AddArraysNew(array.MulConstantArrayNew(wplain[j], p), predictTarget)
 	}
