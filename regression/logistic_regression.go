@@ -61,7 +61,7 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 
 	}
 	model.utils.Add(model.bias, result, &result)
-	model.utils.MultiplyConst(&result, 0.01, &result, true, false)
+	model.utils.MultiplyConst(&result, 0.2, &result, true, false)
 	fmt.Println("Forward complete, computing sigmoid")
 	if result.Level() < 5 {
 		fmt.Println("bootstrapping result")
@@ -110,7 +110,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
-		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0]))
+		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0:10]))
 
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
