@@ -1,6 +1,8 @@
 package activations
 
 import (
+	"fmt"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -10,15 +12,15 @@ import (
 //=================================================
 
 type Sigmoid struct {
-	U        		utility.Utils
-	forwardDeg0  	map[int]ckks.Plaintext
-	backwardDeg0 	map[int]ckks.Plaintext
+	U            utility.Utils
+	forwardDeg0  map[int]ckks.Plaintext
+	backwardDeg0 map[int]ckks.Plaintext
 }
 
 func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
 	// y := 0.5 + 0.197x + 0.004x^3
-
+	fmt.Println("Using sigmoid function")
 	// Calculate degree three
 	xSquared := s.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
 	deg3 := s.U.MultiplyConstNew(input.CopyNew(), 0.004, true, false)
@@ -29,17 +31,19 @@ func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 
 	// Encode deg0 as plaintext
 	var deg0 ckks.Plaintext
-
+	fmt.Println("Test")
 	if _, ok := s.forwardDeg0[inputLength]; ok {
 		deg0 = s.forwardDeg0[inputLength]
+		fmt.Print(" A")
 	} else {
 		deg0 = *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.5, inputLength)), s.U.Params.LogSlots())
+		fmt.Print(" B")
 	}
 
 	// Add all degree together
 	result := s.U.AddNew(deg3, deg1)
 	s.U.AddPlain(&result, &deg0, &result)
-
+	fmt.Println("Getting result")
 	return result
 
 }
