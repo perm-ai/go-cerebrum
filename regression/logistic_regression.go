@@ -112,14 +112,12 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
-		if test {
-			log.Log("weight 1" + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
-			log.Log("weight 2" + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
-			log.Log("bias" + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
-			log.Log("weight 1 level" + fmt.Sprint(model.weight[0].Level()))
-			log.Log("weight 2 level" + fmt.Sprint(model.weight[1].Level()))
-			log.Log("bias level" + fmt.Sprint(model.bias.Level()))
-		}
+		log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
+		log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
+		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
+		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
+		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
+		log.Log("bias level" + fmt.Sprint(model.bias.Level()))
 		if model.weight[0].Level() < 9 {
 			log.Log("Bootstrapping gradient")
 			if model.bias.Level() != 1 {
@@ -133,7 +131,13 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 			model.utils.BootstrapInPlace(&model.bias)
 
 		}
-
+		log.Log("Bootstrap complete")
+		log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
+		log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
+		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
+		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
+		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
+		log.Log("bias level" + fmt.Sprint(model.bias.Level()))
 	}
 }
 func (model LogisticRegression) LogTest(data DataPlain) {
