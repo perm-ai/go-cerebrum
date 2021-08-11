@@ -105,7 +105,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
-		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())))
+		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0]))
 
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
