@@ -24,7 +24,9 @@ func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 	// Calculate degree three
 	fmt.Println("Degree 3")
 	xSquared := s.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
+	fmt.Println("Degree 3.2")
 	deg3 := s.U.MultiplyConstNew(input.CopyNew(), 0.004, true, false)
+	fmt.Println("Degree 3.3")
 	s.U.Multiply(xSquared, deg3, &deg3, true, false)
 
 	// Calculate degree one
