@@ -48,7 +48,7 @@ func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 	fmt.Println("Getting result")
 	result := s.U.AddNew(deg3, deg1)
 	s.U.AddPlain(&result, &deg0, &result)
-
+	fmt.Println("result level : " + fmt.Sprint(result.Level()))
 	return result
 
 }
