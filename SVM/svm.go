@@ -1,146 +1,112 @@
 package svm
 
 import (
-	"fmt"
-	"math"
+	"math/rand"
+	"time"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/go-cerebrum/activations"
-	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type SVM struct {
-	u      *utility.Utils
-	Weight *ckks.Ciphertext
+	u      		*utility.Utils
+	Features	int
+	Weights 	[]ckks.Ciphertext
+	Alphas		ckks.Ciphertext
+	kernel 		Kernel
 }
 
-func NewSVM(u utility.Utils) SVM {
+func NewSVM(u utility.Utils, feature int, kernel Kernel) SVM {
 
 	weightPlain := make([]float64, u.Params.Slots())
-	encryptedWeight := u.Encrypt(weightPlain)
 
-	return SVM{&u, &encryptedWeight}
+	encryptedWeight := make([]ckks.Ciphertext, feature)
 
-}
-
-func (model SVM) Forward(x ckks.Ciphertext) ckks.Ciphertext {
-
-	return model.u.DotProductNew(x, *model.Weight, false)
-
-}
-
-// Backward propagation of SVM to get gradient
-// X and Y should be formatted through svm.PackSvmTrainingData
-func (model SVM) Backward(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int, ceilPow2 int, dataPoints int, C float64, bound float64, learningRate float64) ckks.Ciphertext {
-
-	// Calculate xw
-	distance := model.u.MultiplyNew(x, *model.Weight, true, false)
-
-	// Calculate sum(x2)
-	var rotated ckks.Ciphertext
-
-	for rot := ceilPow2 / 2; rot >= 1; rot /= 2 {
-		rotated = model.u.RotateNew(&distance, rot)
-		model.u.Add(rotated, distance, &distance)
+	for i := range encryptedWeight {
+		encryptedWeight[i] = u.Encrypt(weightPlain)
 	}
 
-	rotated = model.u.RotateNew(&distance, (-1 * featureSize))
-	model.u.Add(rotated, distance, &distance)
+	return SVM{&u, feature, encryptedWeight, ckks.Ciphertext{}, kernel}
 
-	// Calculate sum(xw) * y
-	model.u.Multiply(distance, y, &distance, true, false)
+}
 
-	ones := make([][]float64, model.u.Params.Slots())
+// func (model SVM) Forward(x ckks.Ciphertext) ckks.Ciphertext {
 
-	for i := 0; i < dataPoints; i++ {
-		ones[i] = make([]float64, featureSize)
-		for j := range ones[i] {
-			ones[i][j] = 1
+// 	return model.u.DotProductNew(x, *model.Weight, false)
+
+// }
+
+func (model *SVM) Fit(x []ckks.Ciphertext, y ckks.Ciphertext, dataLength int, iterations int, lambda float64){
+
+	model.Alphas = model.u.Encrypt(model.u.GenerateFilledArray(0))
+
+	for t := 1; t <= iterations; t++{
+
+		// Get random index
+		rand.Seed(time.Now().UnixNano())
+		it := rand.Intn(dataLength)
+
+		// Create an array of ciphertext to store each feature of data with random index
+		xi := make([]ckks.Ciphertext, model.Features)
+
+		// Create filter to filter out data at random index
+		filter := make([]float64, model.u.Params.Slots())
+		filter[it] = 1
+		encodedFilter := model.u.EncodePlaintextFromArray(filter)
+
+		// Loop through training data set and apply filter to extract data from that random index out
+		// then use sum element in place to make that ciphertext filled with that randomed index
+		for feature := range x{
+			xi[feature] = model.u.MultiplyPlainNew(&x[feature], &encodedFilter, true, true)
+			model.u.SumElementsInPlace(&xi[feature])
 		}
+
+		// Calculate alpha * y
+		scalar := model.u.MultiplyNew(model.Alphas, y, true, false)
+
+		// Calculate kernel
+		decision, kernelErr := model.kernel.Calculate(xi, x)
+
+		// Catch kernel error
+		if kernelErr != nil {
+			panic(kernelErr)
+		}
+
+		// Calculate decision
+		model.u.Multiply(decision, scalar, &decision, true, false)
+		model.u.SumElementsInPlace(&decision)
+
+		// Calculate and encode eta
+		etaArray := make([]float64, model.u.Params.Slots())
+		etaArray[it] = 1.0 / (lambda * float64(t))
+		eta := model.u.EncodePlaintextFromArray(etaArray)
+
+		// Apply eta
+		model.u.MultiplyPlain(&decision, &eta, &decision, true, false)
+
+		// Pass through decision function turning number <1 into 1 and >1 into 0
+		// TODO: Add decision function
+
+		// Add decision to alpha
+		model.u.Add(decision, model.Alphas, &model.Alphas)
 	}
 
-	// Calculate distance = 1 - (sum(xw) * y)
-	spacedOne, _ := PackSvmTrainingData(ones, ones[0], model.u.Params.Slots())
-	onePlain := ckks.NewPlaintext(model.u.Params, distance.Level(), distance.Scale)
-	model.u.Encoder.EncodeNTT(onePlain, model.u.Float64ToComplex128(spacedOne), model.u.Params.LogSlots())
+	if model.kernel.Type() == "linear" {
 
-	model.u.Evaluator.Sub(onePlain, &distance, &distance)
+		// Calculate weight if it is a linear kernel
+		for feature := range model.Weights{
 
-	// Calculate activation
-	activation := activations.NewSvmActivation(*model.u)
-	activated := activation.Forward(distance, bound)
+			model.Weights[feature] = model.u.MultiplyNew(model.Alphas, y, true, false)
+			model.u.Multiply(x[feature], model.Weights[feature], &model.Weights[feature], true, false)
+			model.u.SumElementsInPlace(&model.Weights[feature])
+			
+			regularizationConst := 1.0 / (lambda * float64(iterations))
+			regularization := model.u.EncodePlaintextFromArray(model.u.GenerateFilledArray(regularizationConst))
 
-	// Calculate margin * Y * X
-	m := model.u.MultiplyConstNew(&y, C * learningRate, true, false)
-	model.u.Multiply(m, x, &m, true, false)
+			model.u.MultiplyPlain(&model.Weights[feature], &regularization, &model.Weights[feature], true, false)
 
-	// Calculate dw = w - (m * activated_distance)
-	dw := model.u.MultiplyNew(m, activated, true, false)
-	model.u.Sub(*model.Weight, dw, &dw)
-
-	// Calculate sum of weight from all data size
-	for rot := model.u.Params.Slots() / 2; rot > ceilPow2; rot /= 2 {
-		rotated = model.u.RotateNew(&dw, rot)
-		model.u.Add(dw, rotated, &dw)
-	}
-
-	// Calculate average dw
-	model.u.MultiplyConst(&dw, (1.0 / float64(dataPoints)), &dw, true, false)
-
-	return dw
-
-}
-
-func (model *SVM) UpdateGradient(dw ckks.Ciphertext){
-
-	model.u.Sub(*model.Weight, dw, model.Weight)
-	model.u.BootstrapInPlace(model.Weight)
-
-}
-
-func (model *SVM) Train(x ckks.Ciphertext, y ckks.Ciphertext, featureSize int, ceilPow2 int, dataPoints int, C float64, bound float64, learningRate float64, epoch int){
-
-	for i := 0; i < epoch; i++ {
-		dw := model.Backward(x, y, featureSize, ceilPow2, dataPoints, C, bound, learningRate)
-		model.UpdateGradient(dw)
-	}
-
-}
-
-func PackSvmTrainingData(x [][]float64, y []float64, slots int) (packedX []float64, packedY []float64) {
-
-	pow2 := key.GetPow2K(int(math.Log2(float64(slots))))
-	dataLen := len(x[0]) + 1
-	var ceilPow2 int
-
-	for _, pow2 := range pow2 {
-
-		if pow2 > dataLen {
-			ceilPow2 = pow2
-			break
-		} else {
-			ceilPow2 = pow2
 		}
 
 	}
-	fmt.Println(ceilPow2)
-
-	spacePerData := ceilPow2 * 2
-	fitable := float64(slots) / float64(spacePerData)
-	packedX = make([]float64, slots)
-	packedY = make([]float64, slots)
-
-	for i := 0; float64(i) < fitable && i < len(x); i++ {
-		start := spacePerData * i
-		for j, n := range x[i] {
-			packedX[start+j] = n
-			packedY[start+j] = y[i]
-		}
-		packedX[start+len(x[i])] = 1
-		packedY[start+len(x[i])] = y[i]
-	}
-
-	return packedX, packedY
 
 }
