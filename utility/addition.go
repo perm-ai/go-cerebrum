@@ -107,9 +107,11 @@ func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 			lowerScale = a
 		}
 
-		rescaler := ckks.NewPlaintext(utils.Params, higherScale.Level(), higherScale.Scale/lowerScale.Scale)
-		utils.Encoder.EncodeNTT(rescaler, utils.Float64ToComplex128(utils.GenerateFilledArray(1)), utils.Params.LogSlots())
-		utils.MultiplyPlain(lowerScale, rescaler, lowerScale, false, false)
+		if higherScale.Scale / lowerScale.Scale < 4{
+			rescaler := ckks.NewPlaintext(utils.Params, higherScale.Level(), higherScale.Scale/lowerScale.Scale)
+			utils.Encoder.EncodeNTT(rescaler, utils.Float64ToComplex128(utils.GenerateFilledArray(1)), utils.Params.LogSlots())
+			utils.MultiplyPlain(lowerScale, rescaler, lowerScale, false, false)
+		}
 
 	}
 
