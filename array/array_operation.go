@@ -2,6 +2,8 @@ package array
 
 import (
 	"math"
+	"math/rand"
+	"time"
 )
 
 //add 2 arrays together, input arrays must have the same length
@@ -156,4 +158,17 @@ func GenFilledArraysofArrays(value float64, size1 int, size2 int) [][]float64 {
 		}
 	}
 	return output
+}
+
+func GenerateRandomNormalArray(length int) []float64 {
+
+	randomArr := make([]float64, length)
+	rand.Seed(time.Now().UnixNano())
+
+	for i := range randomArr {
+		randomArr[i] = rand.NormFloat64()
+	}
+
+	return randomArr
+
 }

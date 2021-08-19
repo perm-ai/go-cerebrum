@@ -30,12 +30,8 @@ func NewSVM(u utility.Utils, feature int, kernel Kernel) SVM {
 
 }
 
-// func (model SVM) Forward(x ckks.Ciphertext) ckks.Ciphertext {
-
-// 	return model.u.DotProductNew(x, *model.Weight, false)
-
-// }
-
+// Optimize the alpha value of an SVM model, if kernel is linear compute weight.
+// This optimization problem implements a Pegasos method to optimize primal SVM with kernel function
 func (model *SVM) Fit(x []ckks.Ciphertext, y ckks.Ciphertext, dataLength int, iterations int, lambda float64){
 
 	model.Alphas = model.u.Encrypt(model.u.GenerateFilledArray(0))
