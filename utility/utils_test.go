@@ -190,9 +190,6 @@ func TestAddition(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		fmt.Println(utils.Decrypt(&testCases[i].data1)[0], utils.Decrypt(&testCases[i].data2)[0], testCases[i].data1.Scale, testCases[i].data2.Scale)
-		fmt.Println(testCases[i].rawData1[0], testCases[i].rawData2[0])
-
 		sum := utils.AddNew(ct1, ct2)
 		addNewD := utils.Decrypt(&sum)
 
@@ -200,7 +197,10 @@ func TestAddition(t *testing.T) {
 			t.Error("Data wasn't correctly added (AddNew)")
 		}
 
+		timer := logger.StartTimer("Add")
 		utils.Add(ct1, ct2, &sum)
+		timer.LogTimeTaken()
+		
 		addD := utils.Decrypt(&sum)
 
 		if !ValidateResult(addD, testCases[i].addExpected, false, 1, log) {
