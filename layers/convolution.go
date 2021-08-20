@@ -176,27 +176,28 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 		start = -1
 	}
 
-	// (W1−F+2P)/S+1
-	outputRowSize := int(float64(c.InputSize[0] - c.Kernels[0].Row + (2 * (start * (-1)))) / float64(c.Strides[0])) + 1
-
-	// (H1−F+2P)/S+1 
-	outputColumnSize := int(float64(c.InputSize[1] - c.Kernels[1].Row + (2 * (start * (-1)))) / float64(c.Strides[1])) + 1
+	outputSize := c.GetOutputSize()
 
 	// Get kernel dimention
 	kernelDim := [2]int{c.Kernels[0].Row, c.Kernels[0].Column}
 
-	output := make([][][]*ckks.Ciphertext, outputRowSize)
+	// Generate array to store output
+	output := make([][][]*ckks.Ciphertext, outputSize[0])
 
+	// Loop through each row for kernel start position
 	for row := start; row < (c.InputSize[0] - kernelDim[0]); row += c.Strides[0]{
 
-		output[row] = make([][]*ckks.Ciphertext, outputColumnSize)
+		output[row] = make([][]*ckks.Ciphertext, outputSize[1])
 
+		// Loop through each column for kernel start position
 		for col := start; col < (c.InputSize[1] - kernelDim[1]); col += c.Strides[1]{
 
 			output[row][col] = make([]*ckks.Ciphertext, len(c.Kernels))
 			
+			// Loop through each kernel
 			for k := range c.Kernels{
 
+				// Declare result to store the dot product of kernel and that region of input
 				var result *ckks.Ciphertext
 
 				for krow := 0; krow < c.Kernels[k].Row; krow++ {
@@ -309,4 +310,21 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 
 		}
 	}
+}
+
+func (c *Conv2D) GetOutputSize() []int {
+
+	padding := 0
+	if c.Padding {
+		padding = 1
+	}
+
+	// (W1−F+2P)/S+1
+	outputRowSize := int(float64(c.InputSize[0] - c.Kernels[0].Row + (2 * padding)) / float64(c.Strides[0])) + 1
+
+	// (H1−F+2P)/S+1 
+	outputColumnSize := int(float64(c.InputSize[1] - c.Kernels[1].Row + (2 * padding)) / float64(c.Strides[1])) + 1
+
+	return []int{outputRowSize, outputColumnSize, len(c.Kernels)}
+
 }
