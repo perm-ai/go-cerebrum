@@ -1,6 +1,7 @@
 package layers
 
 import (
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/array"
@@ -166,6 +167,10 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 
 }
 
+func (c *Conv2D) LoadKernels(kernels []conv2dKernel){
+	c.Kernels = kernels
+}
+
 // Evaluate forward pass of the convolutional 2d layer
 // input must be packed according to section 3.1.1 in https://eprint.iacr.org/2018/1056.pdf
 func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
@@ -184,15 +189,21 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 	// Generate array to store output
 	output := make([][][]*ckks.Ciphertext, outputSize[0])
 
-	// Loop through each row for kernel start position
-	for row := start; row < (c.InputSize[0] - kernelDim[0]); row += c.Strides[0]{
+	// Store the current row of output
+	outputRow := 0
 
-		output[row] = make([][]*ckks.Ciphertext, outputSize[1])
+	// Loop through each row for kernel start position
+	for row := start; row + kernelDim[0] - 1 <= c.InputSize[0] + (-1 * start) - 1; row += c.Strides[0]{
+
+		output[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
+
+		// Store the current column of output
+		outputCol := 0
 
 		// Loop through each column for kernel start position
-		for col := start; col < (c.InputSize[1] - kernelDim[1]); col += c.Strides[1]{
+		for col := start; col + kernelDim[1] - 1 <= c.InputSize[1] + (-1 * start) - 1; col += c.Strides[1]{
 
-			output[row][col] = make([]*ckks.Ciphertext, len(c.Kernels))
+			output[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
 			
 			// Loop through each kernel
 			for k := range c.Kernels{
@@ -204,7 +215,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 					for kcol := 0; kcol < c.Kernels[k].Column; kcol++{
 
 						// Check if in padding
-						if row + krow == -1 || col + kcol == -1 {
+						if row + krow == -1 || col + kcol == -1 || row + krow == c.InputSize[0] || col + kcol == c.InputSize[1] {
 							continue
 						}
 
@@ -231,11 +242,12 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 					result = &activatedResult
 				}
 
-				output[row][col][k] = result
+				output[outputRow][outputCol][k] = result
 				
 			}
-
+			outputCol++
 		}
+		outputRow++
 	}
 
 	return output
@@ -267,10 +279,10 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	}
 
 	// Loop through input row
-	for row := (padding * -1); row < (c.InputSize[0] - gradientKernel.Row); row++{
+	for row := (padding * -1); row <= (c.InputSize[0] - gradientKernel.Row); row++{
 
 		// Loop through input column
-		for col := (padding * -1); col < (c.InputSize[1] - gradientKernel.Column); col++{
+		for col := (padding * -1); col <= (c.InputSize[1] - gradientKernel.Column); col++{
 			
 			// loop throught gradient of each kernel in this layer
 			for k := 0; k < gradientKernel.Depth; k++{
@@ -323,7 +335,7 @@ func (c *Conv2D) GetOutputSize() []int {
 	outputRowSize := int(float64(c.InputSize[0] - c.Kernels[0].Row + (2 * padding)) / float64(c.Strides[0])) + 1
 
 	// (H1−F+2P)/S+1 
-	outputColumnSize := int(float64(c.InputSize[1] - c.Kernels[1].Row + (2 * padding)) / float64(c.Strides[1])) + 1
+	outputColumnSize := int(float64(c.InputSize[1] - c.Kernels[0].Column + (2 * padding)) / float64(c.Strides[1])) + 1
 
 	return []int{outputRowSize, outputColumnSize, len(c.Kernels)}
 

@@ -224,6 +224,18 @@ func (u Utils) Encrypt(value []float64) ckks.Ciphertext {
 
 }
 
+func (u Utils) EncryptToPointer(value []float64) *ckks.Ciphertext {
+
+	// Encode value
+	plaintext := u.EncodeToScale(value, u.Scale)
+
+	// Encrypt value
+	ciphertext := u.Encryptor.EncryptNew(&plaintext)
+
+	return ciphertext
+
+}
+
 func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
 
 	// Encode value
