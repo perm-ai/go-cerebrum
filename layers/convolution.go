@@ -268,29 +268,34 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 
 func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext) Conv2dGradient{
 
-	backwardGradient := Conv2dGradient{}
+	gradients := Conv2dGradient{}
 
 	// Calculate ∂L/∂Z
 	if c.Activation != nil{
-		for ri, row := range gradient{
-			for ci, col := range row{
-				for di, dep := range col{
-					activatedGradient := (*c.Activation).Backward(*dep, c.batchSize)
-					gradient[ri][ci][di] = &activatedGradient
+		for ri := range gradient{
+			for ci := range gradient[ri]{
+				for di := range gradient[ri][ci]{
+
+					// Calculate ∂A/∂Z
+					activationGradient := (*c.Activation).Backward(*output[ri][ci][di], c.batchSize)
+
+					// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
+					c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+					
 				}
 			}
 		}
 	}
 
 	// Update bias using Σr(Σc(∂L/∂Z))
-	backwardGradient.BiasGradient = make([]*ckks.Ciphertext, len(c.Kernels))
+	gradients.BiasGradient = make([]*ckks.Ciphertext, len(c.Kernels))
 	for k := range c.Kernels{
 		for ri := range gradient{
 			for ci := range gradient[ri]{
-				if backwardGradient.BiasGradient[k] == nil{
-					backwardGradient.BiasGradient[k] = gradient[ri][ci][k]
+				if gradients.BiasGradient[k] == nil{
+					gradients.BiasGradient[k] = gradient[ri][ci][k]
 				} else {
-					c.utils.Add(*gradient[ri][ci][k], *backwardGradient.BiasGradient[k], backwardGradient.BiasGradient[k])
+					c.utils.Add(*gradient[ri][ci][k], *gradients.BiasGradient[k], gradients.BiasGradient[k])
 				}
 			}
 		}
@@ -316,18 +321,18 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 		gradientKernel.dialate(c.Strides, rightPadding, bottomPadding)
 	}
 
-	backwardGradient.WeightGradient = make([][][]*ckks.Ciphertext, len(c.Kernels))
+	gradients.WeightGradient = make([][][]*ckks.Ciphertext, len(c.Kernels))
 
 	// loop throught gradient of each kernel
 	for k := 0; k < gradientKernel.Depth; k++{
 
-		backwardGradient.WeightGradient[k] = make([][]*ckks.Ciphertext, c.Kernels[0].Row)
+		gradients.WeightGradient[k] = make([][]*ckks.Ciphertext, c.Kernels[0].Row)
 		currentGradientRow := 0
 
 		// Loop through input row
 		for row := (padding * -1); row <= c.InputSize[0] - gradientKernel.Row + padding; row++{
 
-			backwardGradient.WeightGradient[k][currentGradientRow] = make([]*ckks.Ciphertext, c.Kernels[0].Column)
+			gradients.WeightGradient[k][currentGradientRow] = make([]*ckks.Ciphertext, c.Kernels[0].Column)
 			currentGradientCol := 0
 
 			// Loop through input column
@@ -358,14 +363,14 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 						}
 					}
 				}
-				backwardGradient.WeightGradient[k][currentGradientRow][currentGradientCol] = result
+				gradients.WeightGradient[k][currentGradientRow][currentGradientCol] = result
 				currentGradientCol++
 			}
 			currentGradientRow++	
 		}
 	}
 
-	return backwardGradient
+	return gradients
 }
 
 func (c *Conv2D) UpdateGradient(gradient Conv2dGradient, lr float64){
