@@ -7,6 +7,7 @@ import (
 )
 
 type HousingData struct {
+	Age    []float64
 	Income []float64
 	Value  []float64
 }

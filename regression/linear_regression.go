@@ -11,28 +11,41 @@ import (
 
 type LinearRegression struct {
 	utils utility.Utils
-	M     ckks.Ciphertext
+	M     []ckks.Ciphertext
 	B     ckks.Ciphertext
 }
 
 type LinearRegressionGradient struct {
-	DM ckks.Ciphertext
+	DM []ckks.Ciphertext
 	DB ckks.Ciphertext
 }
 
-func NewLinearRegression(u utility.Utils) LinearRegression {
+// need to pass in number of independent features
+func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 
 	zeros := u.GenerateFilledArray(0.0)
-	m := u.Encrypt(zeros)
+	m := make([]ckks.Ciphertext, numOfFeatures)
+	for i := 0; i < numOfFeatures; i++ {
+		m[i] = u.Encrypt(zeros)
+	}
 	b := u.Encrypt(zeros)
 
 	return LinearRegression{u, m, b}
 
 }
 
-func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
+func (l LinearRegression) Forward(input []ckks.Ciphertext) ckks.Ciphertext {
 
-	result := l.utils.MultiplyNew(*input, l.M, true, false)
+	// prepare result ciphertesxt
+
+	result := l.utils.Encrypt(l.utils.GenerateFilledArray(0.0))
+
+	// W*X for each feature, add sum in result
+
+	for i := range input {
+		dot := l.utils.MultiplyNew(input[i], l.M[i], true, false)
+		l.utils.Add(result, dot, &result)
+	}
 
 	l.utils.Add(result, l.B, &result)
 
@@ -40,17 +53,19 @@ func (l LinearRegression) Forward(input *ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
+func (l LinearRegression) Backward(input []ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
 
 	// Calculate backward gradient using the following equation
 	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
 	// dB = (-2/n) * sum(label - prediction) * learning_rate
 
 	err := l.utils.SubNew(*y, output)
-
-	dM := l.utils.MultiplyNew(*input, *err.CopyNew(), true, false)
-	l.utils.SumElementsInPlace(&dM)
-	l.utils.MultiplyConstArray(&dM, l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dM, true, false)
+	dM := make([]ckks.Ciphertext, len(input))
+	for i := range input {
+		dM[i] = l.utils.MultiplyNew(input[i], *err.CopyNew(), true, false)
+		l.utils.SumElementsInPlace(&dM[i])
+		l.utils.MultiplyConstArray(&dM[i], l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dM[i], true, false)
+	}
 
 	dB := l.utils.SumElementsNew(err)
 	l.utils.MultiplyConstArray(&dB, l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dB, true, false)
@@ -61,12 +76,16 @@ func (l LinearRegression) Backward(input *ckks.Ciphertext, output ckks.Ciphertex
 
 func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
-	l.utils.Sub(l.M, gradient.DM, &l.M)
+	for i := range gradient.DM {
+		l.utils.Sub(l.M[i], gradient.DM[i], &l.M[i])
+	}
+
 	l.utils.Sub(l.B, gradient.DB, &l.B)
 
 }
 
-func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
+// pack data in array of ciphertexts
+func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
 
 	log := logger.NewLogger(true)
 
@@ -75,20 +94,22 @@ func (model *LinearRegression) Train(x *ckks.Ciphertext, y *ckks.Ciphertext, lea
 	for i := 0; i < epoch; i++ {
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		fwd := model.Forward(x.CopyNew())
+		fwd := model.Forward(x)
 
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		grad := model.Backward(x.CopyNew(), fwd, y, size, learningRate)
+		grad := model.Backward(x, fwd, y, size, learningRate)
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
-
-		if model.M.Level() < 4 || model.B.Level() < 4 {
+		
+		if model.M[0].Level() < 4 || model.B.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
 			if model.B.Level() != 1 {
 				model.utils.Evaluator.DropLevel(&model.B, model.B.Level()-1)
 			}
-			model.utils.BootstrapInPlace(&model.M)
+			for i := range x {
+				model.utils.BootstrapInPlace(&model.M[i])
+			}
 			model.utils.BootstrapInPlace(&model.B)
 		}
 

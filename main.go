@@ -4,43 +4,33 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/importer"
 	"github.com/perm-ai/go-cerebrum/key"
+	"github.com/perm-ai/go-cerebrum/regression"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 func main() {
 
-	keyChain := key.GenerateKeys(0, false, true)
-	utils := utility.NewUtils(keyChain, math.Pow(2, 35), 0, true)
+	utils := utility.Utils{}
+	keysChain := key.GenerateKeys(0, true, true)
+	utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
 
-	ct := utils.Encrypt(utils.GenerateFilledArray(2))
+	data := importer.GetHousingData("importer/test-data/housing_test.json")
 
-	// for _, ring := range ct.Value{
-	// 	fmt.Println(ring.Coeffs)
-	// }
+	fmt.Print(len(data.Value))
+	data1 := utils.Encrypt(data.Age)
+	data2 := utils.Encrypt(data.Income)
+	data3 := utils.Encrypt(data.Value)
+	model := regression.NewLinearRegression(utils, 2)
+	independentVar := []ckks.Ciphertext{data1, data2}
+	model.Train(independentVar, &data3, 0.1, len(data.Income), 20)
+	slope := make([]float64, 2)
+	for i := 0; i < 2; i++ {
+		slope[i] = utils.Decrypt(&model.M[i])[0]
+	}
+	bias := utils.Decrypt(&model.B)
 
-	fmt.Println(len(ct.Value[0].Coeffs))
-	fmt.Println(len(ct.Value[1].Coeffs))
-	fmt.Println(ct.Value[1].Coeffs[:10000])
-
-	// rawData := svm.GetBreastCancerData("./svm/SVM_dataset.json")
-	// data1 := rawData.Texture_mean
-	// data2 := rawData.Concavity_mean
-	// data3 := rawData.Symmetry_mean
-	// target := rawData.Diagnosis
-	// numOfData := len(rawData.Texture_mean)
-	// fmt.Printf("numOfData = %d \n", numOfData)
-	// data := make([][]float64, numOfData)
-	// for i := 0; i < len(rawData.Texture_mean); i++ {
-	// 	data[i] = make([]float64, 4)
-	// 	data[i][0] = data1[i]
-	// 	data[i][1] = data2[i]
-	// 	data[i][2] = data3[i]
-	// 	data[i][3] = 1
-	// }
-	// fmt.Printf("This dataset consists of %d data points and %d features \n", len(data), len(data[0]))
-	// fmt.Printf("Target has %d data points\n", len(target))
-	// model := svm.NewSVMModel()
-	// weights := model.TrainSVM(data, target, 20, 0.001, 4, 10000)
-	// fmt.Printf("The weights of the model are %f \n", weights)
+	fmt.Printf("The weights are biases are %f and %f", slope, bias[0])
 }
