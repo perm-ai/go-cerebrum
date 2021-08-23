@@ -279,10 +279,10 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	}
 
 	// Loop through input row
-	for row := (padding * -1); row <= (c.InputSize[0] - gradientKernel.Row); row++{
+	for row := (padding * -1); row <= c.InputSize[0] - gradientKernel.Row + padding; row++{
 
 		// Loop through input column
-		for col := (padding * -1); col <= (c.InputSize[1] - gradientKernel.Column); col++{
+		for col := (padding * -1); col <= c.InputSize[1] - gradientKernel.Column + padding; col++{
 			
 			// loop throught gradient of each kernel in this layer
 			for k := 0; k < gradientKernel.Depth; k++{
