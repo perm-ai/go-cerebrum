@@ -66,31 +66,19 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 	
 }
 
-func (k *conv2dKernel) dialate(dialation []int, rightPadding bool, bottomPadding bool) {
+func (k *conv2dKernel) dilate(dilation []int) {
 
-	// Turn bool to int
-	rPadding := 0
-	if rightPadding {
-		rPadding = 1
-	}
-
-	// Turn bool to int
-	bPadding := 0
-	if bottomPadding {
-		bPadding = 1
-	}
-
-	// Calculate the number of row for dialated kernel
-	newRow := k.Row + (dialation[0] * (k.Row - 1)) + rPadding
+	// Calculate the number of row for dilated kernel
+	newRow := k.Row + ((dilation[0]-1) * (k.Row - 1))
 
 	// Calculate row modulo for checking if certain row should be empty or not
-	rowMod := dialation[0] + 1
+	rowMod := dilation[0]
 
-	// Calculate the number of column for dialated kernel
-	newCol := k.Column + (dialation[1] * (k.Column - 1)) + bPadding
+	// Calculate the number of column for dilated kernel
+	newCol := k.Column + ((dilation[1]-1) * (k.Column - 1))
 
 	// Calculate column modulo for checking if certain column should be empty or not
-	colMod := dialation[1] + 1
+	colMod := dilation[1]
 
 	newData := make([][][]*ckks.Ciphertext, newRow)
 
@@ -125,6 +113,70 @@ func (k *conv2dKernel) dialate(dialation []int, rightPadding bool, bottomPadding
 
 }
 
+// Add padding to kernel (used as part of calculation for dL/dA(l-1))
+// size is padding you want to add for [row, column]
+func (k *conv2dKernel) addPadding(size []int) {
+
+	newRow := k.Row + (2 * size[0])
+	newCol := k.Column + (2 * size[1])
+
+	newData := make([][][]*ckks.Ciphertext, newRow)
+
+	oldRowIndex := 0
+
+	// Loop through each new row in new data
+	for newRowIndex := 0; newRowIndex < newRow; newRowIndex++{
+
+		newData[newRowIndex] = make([][]*ckks.Ciphertext, newCol)
+		oldColIndex := 0
+
+		// Check if that row isn't in padding
+		if newRowIndex >= size[0] && newRowIndex < size[0] + k.Row {
+
+			// Loop through each column in that row
+			for newColIndex := 0; newColIndex < newCol; newColIndex++{
+
+				// Check if column in padding or not
+				if newColIndex >= size[1] && newColIndex < size[1] + k.Column {
+					newData[newRowIndex][newColIndex] = k.Data[oldRowIndex][oldColIndex]
+					oldColIndex++
+				} else {
+					newData[newRowIndex][newColIndex] = make([]*ckks.Ciphertext, k.Depth)
+				}
+
+			}
+			oldRowIndex++
+
+		}
+
+	}
+
+	k.Row = newRow
+	k.Column = newCol
+	k.Data = newData
+
+}
+
+func (k conv2dKernel) rotate180() conv2dKernel{
+
+	rotated := make([][][]*ckks.Ciphertext, k.Row)
+
+	for row := range rotated{
+
+		rotated[row] = make([][]*ckks.Ciphertext, k.Column)
+
+		for col := range rotated[row]{
+
+			rotated[row][col] = k.Data[k.Row - row - 1][k.Column - col - 1]
+
+		}
+
+	}
+
+	return conv2dKernel{k.Row, k.Column, k.Depth, rotated}
+
+}
+
 //=================================================
 //		   		CONVOLUTIONAL GRADIENT
 //=================================================
@@ -132,6 +184,7 @@ type Conv2dGradient struct {
 
 	BiasGradient	[]*ckks.Ciphertext
 	WeightGradient	[][][]*ckks.Ciphertext // weight gradient in [kernel][row][column]
+	PrevLayerGradient [][][]*ckks.Ciphertext
 
 }
 
@@ -281,7 +334,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 
 					// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
 					c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
-					
+
 				}
 			}
 		}
@@ -309,16 +362,8 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 		padding = 1
 	}
 
-	if c.Strides[0] == 0 && c.Strides[1] == 0 {
-		// Calculate whether right padding is necessary for the gradient kernel
-		dialatedRow := gradientKernel.Row + (c.Strides[0] * (gradientKernel.Row - 1))
-		rightPadding := (c.InputSize[0] + (2*padding) + 1 - c.Kernels[0].Row) + 1 == dialatedRow
-
-		// Calculate whether bottom padding is necessary for the gradient kernel
-		dialatedColumn := gradientKernel.Column + (c.Strides[1] * (gradientKernel.Column - 1))
-		bottomPadding := (c.InputSize[1] + (2*padding) + 1 - c.Kernels[0].Column) + 1 == dialatedColumn
-
-		gradientKernel.dialate(c.Strides, rightPadding, bottomPadding)
+	if c.Strides[0] != 0 && c.Strides[1] != 0 {
+		gradientKernel.dilate(c.Strides)
 	}
 
 	gradients.WeightGradient = make([][][]*ckks.Ciphertext, len(c.Kernels))
@@ -368,6 +413,58 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 			}
 			currentGradientRow++	
 		}
+	}
+
+	// Calculate ∂L/∂A(l-1)
+
+	// Rotate all kernel by 180 degree clockwise
+	rotatedKernels := make([]conv2dKernel, len(c.Kernels))
+
+	for k := range c.Kernels{
+		rotatedKernels[k] = c.Kernels[k].rotate180()
+	}
+
+	// Prepare loss gradient w.r.t output of this layer (∂L/∂Z(l-1)) for ∂L/∂A(l-1) convolution calculation
+	lossGrad := generate2dKernelFromArray(gradient)
+	lossGrad.dilate(c.Strides)
+	lossGrad.addPadding([]int{c.Kernels[0].Row, c.Kernels[0].Column})
+
+	gradients.PrevLayerGradient = make([][][]*ckks.Ciphertext, c.InputSize[0])
+	
+	// Perform convolution between loss wrt Z and filter
+	for row := 0; row < lossGrad.Row - c.Kernels[0].Row; row++ {
+
+		gradients.PrevLayerGradient[row] = make([][]*ckks.Ciphertext, c.InputSize[1])
+
+		for col := 0; col < lossGrad.Column - c.Kernels[0].Column; col++{
+
+			gradients.PrevLayerGradient[row][col] = make([]*ckks.Ciphertext, c.InputSize[2])
+
+			for d := 0; d < c.InputSize[3]; d++{
+
+				// Loop through each kernel
+				for k := 0; k < len(c.Kernels); k++ {
+					// Loop through each row in kernel
+					for krow := range c.Kernels[k].Data{ 
+						// Loop through each column in kernel
+						for kcol := range c.Kernels[k].Data[krow]{ 
+
+							product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row + krow][col + kcol][k], true, false)
+
+							if gradients.PrevLayerGradient[row][col][d] == nil{
+								gradients.PrevLayerGradient[row][col][d] = &product
+							} else {
+								c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
+							}
+
+						}
+					}
+				}
+
+			}
+
+		}
+
 	}
 
 	return gradients
