@@ -1,8 +1,6 @@
 package activations
 
 import (
-	"fmt"
-
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -39,7 +37,6 @@ func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext
 	// Add all degree together
 	result := s.U.AddNew(deg3, deg1)
 	s.U.AddPlain(&result, &deg0, &result)
-	fmt.Println("result level : " + fmt.Sprint(result.Level()))
 	return result
 
 }
