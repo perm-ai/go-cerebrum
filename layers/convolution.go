@@ -238,7 +238,7 @@ func (c *Conv2D) LoadKernels(kernels []conv2dKernel){
 
 // Evaluate forward pass of the convolutional 2d layer
 // input must be packed according to section 3.1.1 in https://eprint.iacr.org/2018/1056.pdf
-func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
+func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [][][]*ckks.Ciphertext) {
 
 	// Calculate the starting coordinate
 	start := 0
@@ -253,6 +253,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 
 	// Generate array to store output
 	output := make([][][]*ckks.Ciphertext, outputSize[0])
+	activatedOutput := make([][][]*ckks.Ciphertext, outputSize[0])
 
 	// Store the current row of output
 	outputRow := 0
@@ -261,6 +262,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 	for row := start; row + kernelDim[0] - 1 <= c.InputSize[0] + (-1 * start) - 1; row += c.Strides[0]{
 
 		output[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
+		activatedOutput[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
 
 		// Store the current column of output
 		outputCol := 0
@@ -269,6 +271,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 		for col := start; col + kernelDim[1] - 1 <= c.InputSize[1] + (-1 * start) - 1; col += c.Strides[1]{
 
 			output[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
+			activatedOutput[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
 			
 			// Loop through each kernel
 			for k := range c.Kernels{
@@ -302,12 +305,14 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 					c.utils.Add(c.Bias[k], *result, result)
 				}
 
+				var activatedResult ckks.Ciphertext
+
 				if c.Activation != nil{
-					activatedResult := (*c.Activation).Forward(*result, c.InputSize[1])
-					result = &activatedResult
+					activatedResult = (*c.Activation).Forward(*result, c.InputSize[1])
 				}
 
 				output[outputRow][outputCol][k] = result
+				activatedOutput[outputRow][outputCol][k] = &activatedResult
 				
 			}
 			outputCol++
@@ -315,7 +320,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 		outputRow++
 	}
 
-	return output
+	return output, activatedOutput
 
 }
 
