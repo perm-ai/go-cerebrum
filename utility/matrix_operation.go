@@ -61,24 +61,6 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 }
 
-func (u Utils) Transpose2d(a [][]*ckks.Ciphertext) [][]*ckks.Ciphertext {
-
-	transposed := make([][]*ckks.Ciphertext, len(a[0]))
-
-	for row := range transposed {
-
-		transposed[row] = make([]*ckks.Ciphertext, len(a))
-
-		for col := range transposed {
-			transposed[row][col] = a[col][row]
-		}
-
-	}
-
-	return transposed
-
-}
-
 func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int, filterBy float64) []ckks.Ciphertext {
 
 	// Need to cover rotation in range [0, aSize)
@@ -130,27 +112,6 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 	}
 
 	return outerProduct
-
-}
-
-func (u Utils) Outer2d(a []*ckks.Ciphertext, b []*ckks.Ciphertext) [][]*ckks.Ciphertext{
-
-	output := make([][]*ckks.Ciphertext, len(a))
-
-	for i := range a{
-
-		output[i] = make([]*ckks.Ciphertext, len(b))
-
-		for j := range b{
-
-			product := u.MultiplyNew(*a[i], *b[j], true, false)
-			output[i][j] = &product
-
-		}
-		
-	}
-
-	return output
 
 }
 
