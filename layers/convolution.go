@@ -449,22 +449,24 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 						// Loop through each column in kernel
 						for kcol := range c.Kernels[k].Data[krow]{ 
 
-							product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row + krow][col + kcol][k], true, false)
+							// Check if in padding
+							if rotatedKernels[k].Data[krow][kcol][d] != nil && lossGrad.Data[row + krow][col + kcol][k] != nil{
 
-							if gradients.PrevLayerGradient[row][col][d] == nil{
-								gradients.PrevLayerGradient[row][col][d] = &product
-							} else {
-								c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
+								product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row + krow][col + kcol][k], true, false)
+
+								if gradients.PrevLayerGradient[row][col][d] == nil{
+									gradients.PrevLayerGradient[row][col][d] = &product
+								} else {
+									c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
+								}
+
 							}
 
 						}
 					}
 				}
-
 			}
-
 		}
-
 	}
 
 	return gradients
