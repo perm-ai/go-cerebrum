@@ -64,7 +64,7 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	model.utils.MultiplyConst(&result, 0.1, &result, true, false)
 	fmt.Println("Forward complete, computing sigmoid")
 
-	fmt.Println("result level : " + fmt.Sprint(result.Level()))
+	fmt.Println("result level before sigmoid: " + fmt.Sprint(result.Level()))
 	return sigmoid.Forward(result, data.datalength)
 
 }
@@ -107,11 +107,11 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
+		log.Log("result level after sidmoid: " + fmt.Sprint(fwd.Level()))
 		if fwd.Level() < 5 {
 			fmt.Println("bootstrapping result")
 			model.utils.BootstrapInPlace(&fwd)
 		}
-		log.Log("result level : " + fmt.Sprint(fwd.Level()))
 		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0:10]))
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
@@ -126,7 +126,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
 		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
 		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
-		if model.weight[0].Level() < 3 {
+		if model.weight[0].Level() < 5 {
 			for i := range model.weight {
 				model.utils.BootstrapInPlace(&model.weight[i])
 			}
