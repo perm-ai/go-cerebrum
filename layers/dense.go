@@ -28,9 +28,10 @@ type Dense struct {
 	Weights    [][]*ckks.Ciphertext
 	Bias       []*ckks.Ciphertext
 	Activation *activations.Activation
+	batchSize  int
 }
 
-func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool) Dense {
+func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int) Dense {
 
 	// Generate random weights and biases
 	weights := make([][]*ckks.Ciphertext, outputUnit)
@@ -44,7 +45,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 		weights[node] = make([]*ckks.Ciphertext, inputUnit)
 
 		if useBias {
-			bias[node] = utils.EncryptToPointer(utils.GenerateFilledArray(randomBias[node]))
+			bias[node] = utils.EncryptToPointer(utils.GenerateFilledArraySize(randomBias[node], batchSize))
 		}
 
 		for weight := 0; weight < inputUnit; weight++ {
@@ -55,7 +56,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 	}
 
-	return Dense{utils, inputUnit, outputUnit, weights, bias, activation}
+	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, batchSize}
 
 }
 
@@ -67,7 +68,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) []*ckks.Ciphertext {
 
 		output[node] = d.utils.InterDotProduct(input, d.Weights[node], true, false)
 
-		if d.Bias[node] != nil {
+		if len(d.Bias) != 0 {
 			d.utils.Add(*output[node], *d.Bias[node], output[node])
 		}
 
@@ -109,5 +110,25 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	}
 
 	return gradients
+
+}
+
+func (d *Dense) UpdateGradient(gradient DenseGradient, lr float64){
+
+	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(lr / float64(d.batchSize), d.batchSize))
+
+	for node := range d.Weights{
+
+		if len(d.Bias) != 0{
+			averagedLrBias := d.utils.MultiplyPlainNew(gradient.BiasGradient[node], &batchAverager, true, false)
+			d.utils.Sub(*d.Bias[node], averagedLrBias, d.Bias[node])
+		}
+
+		for w := range d.Weights[node]{
+			averagedLrWeight := d.utils.MultiplyPlainNew(gradient.WeightGradient[node][w], &batchAverager, true, false)
+			d.utils.Sub(*d.Weights[node][w], averagedLrWeight, d.Weights[node][w])
+		}
+
+	}
 
 }
