@@ -13,19 +13,22 @@ import (
 
 func main() {
 
-	utils := utility.Utils{}
-	keysChain := key.GenerateKeys(0, true, true)
-	utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
-
 	data := importer.GetHousingData("importer/test-data/housing_test.json")
 
-	fmt.Print(len(data.Value))
-	data1 := utils.Encrypt(data.Age)
-	data2 := utils.Encrypt(data.Income)
-	data3 := utils.Encrypt(data.Value)
+	fmt.Println(len(data.Housing_median_age))
+	fmt.Println(len(data.Median_income))
+	fmt.Println(len(data.Median_house_value))
+
+	utils := utility.Utils{}
+	keysChain := key.GenerateKeys(0, false, true)
+	utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
+
+	data1 := utils.Encrypt(data.Housing_median_age)
+	data2 := utils.Encrypt(data.Median_income)
+	data3 := utils.Encrypt(data.Median_house_value)
 	model := regression.NewLinearRegression(utils, 2)
 	independentVar := []ckks.Ciphertext{data1, data2}
-	model.Train(independentVar, &data3, 0.1, len(data.Income), 20)
+	model.Train(independentVar, &data3, 0.1, len(data.Median_income), 20)
 	slope := make([]float64, 2)
 	for i := 0; i < 2; i++ {
 		slope[i] = utils.Decrypt(&model.M[i])[0]

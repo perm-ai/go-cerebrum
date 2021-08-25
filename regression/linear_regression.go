@@ -60,15 +60,18 @@ func (l LinearRegression) Backward(input []ckks.Ciphertext, output ckks.Cipherte
 	// dB = (-2/n) * sum(label - prediction) * learning_rate
 
 	err := l.utils.SubNew(*y, output)
+
 	dM := make([]ckks.Ciphertext, len(input))
+	multiplier := l.utils.EncodePlaintextFromArray(l.utils.GenerateFilledArraySize((-2.0/float64(size))*learningRate, size))
+
 	for i := range input {
 		dM[i] = l.utils.MultiplyNew(input[i], *err.CopyNew(), true, false)
 		l.utils.SumElementsInPlace(&dM[i])
-		l.utils.MultiplyConstArray(&dM[i], l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dM[i], true, false)
+		l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
 	}
 
 	dB := l.utils.SumElementsNew(err)
-	l.utils.MultiplyConstArray(&dB, l.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &dB, true, false)
+	l.utils.MultiplyPlain(&dB, &multiplier, &dB, true, false)
 
 	return LinearRegressionGradient{dM, dB}
 
@@ -101,7 +104,7 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
-		
+
 		if model.M[0].Level() < 4 || model.B.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
 			if model.B.Level() != 1 {
