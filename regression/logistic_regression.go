@@ -91,7 +91,7 @@ func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr 
 
 func (model *LogisticRegression) UpdateGradient(grad LogisticRegressionGradient) {
 	log := logger.NewLogger(true)
-	if model.weight[0].Level() < 7 {
+	if model.weight[0].Level() < 9 {
 		for i := range model.weight {
 			model.utils.BootstrapInPlace(&model.weight[i])
 		}
