@@ -126,7 +126,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
 		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
 		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
-		if model.weight[0].Level() < 7 {
+		if model.weight[0].Level() < 3 {
 			for i := range model.weight {
 				model.utils.BootstrapInPlace(&model.weight[i])
 			}
