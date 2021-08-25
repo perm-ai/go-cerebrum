@@ -60,9 +60,10 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 }
 
-func (d Dense) Forward(input []*ckks.Ciphertext) []*ckks.Ciphertext {
+func (d Dense) Forward(input []*ckks.Ciphertext) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
 
 	output := make([]*ckks.Ciphertext, d.OutputUnit)
+	activatedOutput := make([]*ckks.Ciphertext, d.OutputUnit)
 
 	for node := range d.Weights {
 
@@ -72,9 +73,14 @@ func (d Dense) Forward(input []*ckks.Ciphertext) []*ckks.Ciphertext {
 			d.utils.Add(*output[node], *d.Bias[node], output[node])
 		}
 
+		if d.Activation != nil{
+			activated := (*d.Activation).Forward(*output[node], d.batchSize)
+			activatedOutput[node] = &activated
+		}
+		
 	}
 
-	return output
+	return output, activatedOutput
 
 }
 
@@ -131,4 +137,8 @@ func (d *Dense) UpdateGradient(gradient DenseGradient, lr float64){
 
 	}
 
+}
+
+func (d Dense) GetOutputSize() []int{
+	return []int{d.OutputUnit}
 }

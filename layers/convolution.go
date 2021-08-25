@@ -309,7 +309,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, 
 				var activatedResult ckks.Ciphertext
 
 				if c.Activation != nil{
-					activatedResult = (*c.Activation).Forward(*result, c.InputSize[1])
+					activatedResult = (*c.Activation).Forward(*result, c.batchSize)
 				}
 
 				output[outputRow][outputCol][k] = result
@@ -325,7 +325,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, 
 
 }
 
-func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext) Conv2dGradient{
+func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext, hasPrevLayer bool) Conv2dGradient{
 
 	gradients := Conv2dGradient{}
 
@@ -437,39 +437,41 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	lossGrad.dilate(c.Strides)
 	lossGrad.addPadding([]int{c.Kernels[0].Row, c.Kernels[0].Column})
 
-	gradients.PrevLayerGradient = make([][][]*ckks.Ciphertext, c.InputSize[0])
+	if hasPrevLayer{
+		gradients.PrevLayerGradient = make([][][]*ckks.Ciphertext, c.InputSize[0])
 	
-	// Perform convolution between loss wrt Z and filter
-	for row := 0; row < lossGrad.Row - c.Kernels[0].Row; row++ {
+		// Perform convolution between loss wrt Z and filter
+		for row := 0; row < lossGrad.Row - c.Kernels[0].Row; row++ {
 
-		gradients.PrevLayerGradient[row] = make([][]*ckks.Ciphertext, c.InputSize[1])
+			gradients.PrevLayerGradient[row] = make([][]*ckks.Ciphertext, c.InputSize[1])
 
-		for col := 0; col < lossGrad.Column - c.Kernels[0].Column; col++{
+			for col := 0; col < lossGrad.Column - c.Kernels[0].Column; col++{
 
-			gradients.PrevLayerGradient[row][col] = make([]*ckks.Ciphertext, c.InputSize[2])
+				gradients.PrevLayerGradient[row][col] = make([]*ckks.Ciphertext, c.InputSize[2])
 
-			for d := 0; d < c.InputSize[3]; d++{
+				for d := 0; d < c.InputSize[3]; d++{
 
-				// Loop through each kernel
-				for k := 0; k < len(c.Kernels); k++ {
-					// Loop through each row in kernel
-					for krow := range c.Kernels[k].Data{ 
-						// Loop through each column in kernel
-						for kcol := range c.Kernels[k].Data[krow]{ 
+					// Loop through each kernel
+					for k := 0; k < len(c.Kernels); k++ {
+						// Loop through each row in kernel
+						for krow := range c.Kernels[k].Data{ 
+							// Loop through each column in kernel
+							for kcol := range c.Kernels[k].Data[krow]{ 
 
-							// Check if in padding
-							if rotatedKernels[k].Data[krow][kcol][d] != nil && lossGrad.Data[row + krow][col + kcol][k] != nil{
+								// Check if in padding
+								if rotatedKernels[k].Data[krow][kcol][d] != nil && lossGrad.Data[row + krow][col + kcol][k] != nil{
 
-								product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row + krow][col + kcol][k], true, false)
+									product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row + krow][col + kcol][k], true, false)
 
-								if gradients.PrevLayerGradient[row][col][d] == nil{
-									gradients.PrevLayerGradient[row][col][d] = &product
-								} else {
-									c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
+									if gradients.PrevLayerGradient[row][col][d] == nil{
+										gradients.PrevLayerGradient[row][col][d] = &product
+									} else {
+										c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
+									}
+
 								}
 
 							}
-
 						}
 					}
 				}
