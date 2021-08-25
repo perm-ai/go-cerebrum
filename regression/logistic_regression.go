@@ -79,17 +79,15 @@ func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr 
 	//gradientb = (2/n)(sum(error))
 	dw := make([]ckks.Ciphertext, len(model.weight))
 	err := model.utils.SubNew(predict, data.target)
-	multiplier := model.utils.EncodePlaintextFromArray(model.utils.GenerateFilledArraySize((-2.0/float64(data.datalength))*lr, data.datalength))
-
 	for i := range model.weight {
 		fmt.Println("Computing w" + fmt.Sprint(i+1))
 		dw[i] = model.utils.MultiplyNew(data.x[i], *err.CopyNew(), true, false)
 		model.utils.SumElementsInPlace(&dw[i])
-		model.utils.MultiplyPlain(&dw[i], &multiplier, &dw[i], true, false)
+		model.utils.MultiplyConstArray(&dw[i], model.utils.GenerateFilledArraySize((-2/float64(data.datalength))*lr, data.datalength), &dw[i], true, false)
 	}
 
 	db := model.utils.SumElementsNew(err)
-	model.utils.MultiplyPlain(&db, &multiplier, &db, true, false)
+	model.utils.MultiplyConstArray(&db, model.utils.GenerateFilledArraySize((-2/float64(data.datalength))*lr, data.datalength), &db, true, false)
 
 	return LogisticRegressionGradient{dw, db}
 
@@ -112,8 +110,8 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
+		log.Log("result level : " + fmt.Sprint(fwd.Level()))
 		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0:10]))
-
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
 		log.Log("Gradient db level : " + fmt.Sprint(grad.db.Level()))
@@ -126,8 +124,8 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
 		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
 		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
-		log.Log("bias level" + fmt.Sprint(model.bias.Level()))
-		if model.weight[0].Level() < 9 {
+		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
+		if model.weight[0].Level() < 7 {
 			for i := range model.weight {
 				model.utils.BootstrapInPlace(&model.weight[i])
 			}
@@ -139,7 +137,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
 		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
 		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
-		log.Log("bias level" + fmt.Sprint(model.bias.Level()))
+		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
 	}
 }
 func (model LogisticRegression) LogTest(data DataPlain) {
