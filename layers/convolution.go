@@ -346,15 +346,17 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 		}
 	}
 
-	// Update bias using Σr(Σc(∂L/∂Z))
-	gradients.BiasGradient = make([]*ckks.Ciphertext, len(c.Kernels))
-	for k := range c.Kernels{
-		for ri := range gradient{
-			for ci := range gradient[ri]{
-				if gradients.BiasGradient[k] == nil{
-					gradients.BiasGradient[k] = gradient[ri][ci][k]
-				} else {
-					c.utils.Add(*gradient[ri][ci][k], *gradients.BiasGradient[k], gradients.BiasGradient[k])
+	if len(c.Bias) != 0 {
+		// Update bias using Σr(Σc(∂L/∂Z))
+		gradients.BiasGradient = make([]*ckks.Ciphertext, len(c.Kernels))
+		for k := range c.Kernels{
+			for ri := range gradient{
+				for ci := range gradient[ri]{
+					if gradients.BiasGradient[k] == nil{
+						gradients.BiasGradient[k] = gradient[ri][ci][k]
+					} else {
+						c.utils.Add(*gradient[ri][ci][k], *gradients.BiasGradient[k], gradients.BiasGradient[k])
+					}
 				}
 			}
 		}
@@ -484,13 +486,15 @@ func (c *Conv2D) UpdateGradient(gradient Conv2dGradient, lr float64){
 
 	for k := range c.Kernels{
 		
-		// Calculate average gradient of bias in a batch
-		c.utils.SumElementsInPlace(gradient.BiasGradient[k])
-		c.utils.MultiplyPlain(gradient.BiasGradient[k], &batchAverager, gradient.BiasGradient[k], true, false)
+		if len(c.Bias) != 0{
+			// Calculate average gradient of bias in a batch
+			c.utils.SumElementsInPlace(gradient.BiasGradient[k])
+			c.utils.MultiplyPlain(gradient.BiasGradient[k], &batchAverager, gradient.BiasGradient[k], true, false)
 
-		// Update bias
-		c.utils.Sub(c.Bias[k], *gradient.BiasGradient[k], &c.Bias[k])
-
+			// Update bias
+			c.utils.Sub(c.Bias[k], *gradient.BiasGradient[k], &c.Bias[k])
+		}
+		
 		// Update weight
 		c.Kernels[k].updateWeight(gradient.WeightGradient[k], batchAverager, c.utils)
 	}
