@@ -63,7 +63,6 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	model.utils.Add(model.bias, result, &result)
 	model.utils.MultiplyConst(&result, 0.1, &result, true, false)
 	fmt.Println("Forward complete, computing sigmoid")
-
 	fmt.Println("result level before sigmoid: " + fmt.Sprint(result.Level()))
 	return sigmoid.Forward(result, data.datalength)
 
@@ -91,7 +90,20 @@ func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr 
 }
 
 func (model *LogisticRegression) UpdateGradient(grad LogisticRegressionGradient) {
-
+	log := logger.NewLogger(true)
+	if model.weight[0].Level() < 7 {
+		for i := range model.weight {
+			model.utils.BootstrapInPlace(&model.weight[i])
+		}
+		model.utils.BootstrapInPlace(&model.bias)
+	}
+	log.Log("Bootstrap complete")
+	log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
+	log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
+	log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
+	log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
+	log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
+	log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
 	for i := range grad.dw {
 		model.utils.Sub(model.weight[i], grad.dw[i], &model.weight[i])
 	}
@@ -119,26 +131,14 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("Gradient dw level : " + fmt.Sprint(grad.dw[0].Level()))
 
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
+		log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
+		log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
+		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
+		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
+		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
+		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
 		model.UpdateGradient(grad)
-		log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
-		log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
-		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
-		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
-		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
-		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
-		if model.weight[0].Level() < 5 {
-			for i := range model.weight {
-				model.utils.BootstrapInPlace(&model.weight[i])
-			}
-			model.utils.BootstrapInPlace(&model.bias)
-		}
-		log.Log("Bootstrap complete")
-		log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
-		log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
-		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
-		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
-		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
-		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
+
 	}
 }
 func (model LogisticRegression) LogTest(data DataPlain) {
