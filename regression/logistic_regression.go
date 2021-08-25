@@ -64,6 +64,10 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	model.utils.MultiplyConst(&result, 0.1, &result, true, false)
 	fmt.Println("Forward complete, computing sigmoid")
 	fmt.Println("result level before sigmoid: " + fmt.Sprint(result.Level()))
+	if result.Level() < 5 {
+		fmt.Println("bootstrapping result")
+		model.utils.BootstrapInPlace(&result)
+	}
 	return sigmoid.Forward(result, data.datalength)
 
 }
@@ -92,10 +96,10 @@ func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr 
 func (model *LogisticRegression) UpdateGradient(grad LogisticRegressionGradient) {
 	log := logger.NewLogger(true)
 	if model.weight[0].Level() < 9 {
+		model.utils.BootstrapInPlace(&model.bias)
 		for i := range model.weight {
 			model.utils.BootstrapInPlace(&model.weight[i])
 		}
-		model.utils.BootstrapInPlace(&model.bias)
 	}
 	log.Log("Bootstrap complete")
 	log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
@@ -120,10 +124,7 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
 		log.Log("result level after sidmoid: " + fmt.Sprint(fwd.Level()))
-		if fwd.Level() < 5 {
-			fmt.Println("bootstrapping result")
-			model.utils.BootstrapInPlace(&fwd)
-		}
+
 		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0:10]))
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
