@@ -79,7 +79,7 @@ func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr 
 	//gradientb = (2/n)(sum(error))
 	dw := make([]ckks.Ciphertext, len(model.weight))
 	err := model.utils.SubNew(predict, data.target)
-	multiplier := model.utils.EncodePlaintextFromArray(l.utils.GenerateFilledArraySize((-2.0/float64(data.datalength))*lr, data.datalength))
+	multiplier := model.utils.EncodePlaintextFromArray(model.utils.GenerateFilledArraySize((-2.0/float64(data.datalength))*lr, data.datalength))
 
 	for i := range model.weight {
 		fmt.Println("Computing w" + fmt.Sprint(i+1))
