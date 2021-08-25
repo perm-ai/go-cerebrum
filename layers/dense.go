@@ -31,24 +31,24 @@ type Dense struct {
 	batchSize  int
 }
 
-func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int) Dense {
+func NewDense(utils utility.Utils, inputUnit []int, outputUnit []int, activation *activations.Activation, useBias bool, batchSize int) Dense {
 
 	// Generate random weights and biases
-	weights := make([][]*ckks.Ciphertext, outputUnit)
-	bias := make([]*ckks.Ciphertext, outputUnit)
+	weights := make([][]*ckks.Ciphertext, outputUnit[0])
+	bias := make([]*ckks.Ciphertext, outputUnit[0])
 
-	randomBias := array.GenerateRandomNormalArray(outputUnit)
+	randomBias := array.GenerateRandomNormalArray(outputUnit[0])
 
-	for node := 0; node < outputUnit; node++ {
+	for node := 0; node < outputUnit[0]; node++ {
 
-		randomWeight := array.GenerateRandomNormalArray(inputUnit)
-		weights[node] = make([]*ckks.Ciphertext, inputUnit)
+		randomWeight := array.GenerateRandomNormalArray(inputUnit[0])
+		weights[node] = make([]*ckks.Ciphertext, inputUnit[0])
 
 		if useBias {
 			bias[node] = utils.EncryptToPointer(utils.GenerateFilledArraySize(randomBias[node], batchSize))
 		}
 
-		for weight := 0; weight < inputUnit; weight++ {
+		for weight := 0; weight < inputUnit[0]; weight++ {
 
 			weights[node][weight] = utils.EncryptToPointer(utils.GenerateFilledArray(randomWeight[weight]))
 
@@ -56,7 +56,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 	}
 
-	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, batchSize}
+	return Dense{utils, inputUnit[0], outputUnit[0], weights, bias, activation, batchSize}
 
 }
 
