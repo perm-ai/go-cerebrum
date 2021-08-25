@@ -7,9 +7,9 @@ import (
 )
 
 type HousingData struct {
-	Age    []float64
-	Income []float64
-	Value  []float64
+	Housing_median_age    	[]float64
+	Median_income 			[]float64
+	Median_house_value  	[]float64
 }
 
 func GetHousingData(filepath string) HousingData {
