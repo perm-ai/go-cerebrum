@@ -57,9 +57,9 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 	
 	for row := range gradient{
 		for col := range gradient[row]{
-			lrGradient := utils.MultiplyPlainNew(gradient[row][col], &lr, true, false)
+			averagedLrGradient := utils.MultiplyPlainNew(gradient[row][col], &lr, true, false)
 			for d := range k.Data[row][col] {
-				utils.Sub(*k.Data[row][col][d], lrGradient, k.Data[row][col][d])
+				utils.Sub(*k.Data[row][col][d], averagedLrGradient, k.Data[row][col][d])
 			}
 		}
 	}
@@ -222,9 +222,10 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 
 	bias := []ckks.Ciphertext{}
 	if useBias{
+		randomBias := utils.GenerateRandomNormalArray(filters)
 		bias = make([]ckks.Ciphertext, filters)
 		for i := range bias {
-			bias[i] = utils.Encrypt(utils.GenerateRandomNormalArray(batchSize))
+			bias[i] = utils.Encrypt(utils.GenerateFilledArraySize(randomBias[i], batchSize))
 		}
 	}
 
@@ -479,15 +480,19 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 
 func (c *Conv2D) UpdateGradient(gradient Conv2dGradient, lr float64){
 
-	lrPlain := c.utils.EncodePlaintextFromArray(c.utils.GenerateFilledArray(lr))
+	batchAverager := c.utils.EncodePlaintextFromArray(c.utils.GenerateFilledArraySize(lr / float64(c.batchSize), c.batchSize))
 
 	for k := range c.Kernels{
+		
+		// Calculate average gradient of bias in a batch
+		c.utils.SumElementsInPlace(gradient.BiasGradient[k])
+		c.utils.MultiplyPlain(gradient.BiasGradient[k], &batchAverager, gradient.BiasGradient[k], true, false)
+
 		// Update bias
-		biasGradient := c.utils.MultiplyPlainNew(gradient.BiasGradient[k], &lrPlain, true, false)
-		c.utils.Sub(c.Bias[k], biasGradient, &c.Bias[k])
+		c.utils.Sub(c.Bias[k], *gradient.BiasGradient[k], &c.Bias[k])
 
 		// Update weight
-		c.Kernels[k].updateWeight(gradient.WeightGradient[k], lrPlain, c.utils)
+		c.Kernels[k].updateWeight(gradient.WeightGradient[k], batchAverager, c.utils)
 	}
 
 }
