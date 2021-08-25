@@ -116,9 +116,9 @@ func TestLogisticRegression(t *testing.T) {
 		log.Log("[" + fmt.Sprint(i) + "]")
 		utils.BootstrapInPlace(&encarray)
 		log.Log("Data : " + fmt.Sprint(utils.Decrypt(&encarray)[0]))
-		utils.AddConst(&encarray, utils.GenerateFilledArray(0.1), &encarray)
+		enarray = utils.AddConstNew(&encarray, utils.GenerateFilledArray(0.1))
 		log.Log("Data +0.1 : " + fmt.Sprint(utils.Decrypt(&encarray)[0]))
-		utils.AddConst(&encarray, utils.GenerateFilledArray(-0.1), &encarray)
+		enarray = utils.AddConstNew(&encarray, utils.GenerateFilledArray(-0.1))
 		log.Log("Data : " + fmt.Sprint(utils.Decrypt(&encarray)[0]))
 	}
 	// log.Log("lr = 0.1,epoch = 10")

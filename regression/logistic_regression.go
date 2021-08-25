@@ -134,9 +134,11 @@ func (model *LogisticRegression) Train(data Data, learningRate float64, epoch in
 				log.Log("Bootstrapping weight " + fmt.Sprint(i+1))
 				model.utils.BootstrapInPlace(&model.weight[i])
 			}
-			if model.bias.Level() < 5 {
+			if model.bias.Level() < 7 {
+				model.utils.MultiplyConstNew(&model.bias, 2, true, false)
 				log.Log("Bootstrapping bias ")
 				model.utils.BootstrapInPlace(&model.bias)
+				model.utils.MultiplyConstNew(&model.bias, 0.5, true, false)
 			}
 		}
 		log.Log("Bootstrap complete")
