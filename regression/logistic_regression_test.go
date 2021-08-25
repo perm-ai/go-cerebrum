@@ -111,7 +111,7 @@ func TestLogisticRegression(t *testing.T) {
 	// a := []int{0, 1, 2}
 	// data := importer.GetCSVNData(csvpath, a, false)
 
-	log.Log("lr = 0.1,epoch = 100")
+	log.Log("lr = 0.1,epoch = 10")
 	data, dataTest, number := generateData(1000, 100, 2)
 	log.Log("There are " + fmt.Sprint(len(data.x)) + "column")
 	log.Log("There are ones : " + fmt.Sprint(number[0]) + " zeros : " + fmt.Sprint(number[1]))
@@ -120,7 +120,7 @@ func TestLogisticRegression(t *testing.T) {
 	log.Log("Initializing model")
 	model := NewLogisticRegression(utils, 2)
 	log.Log("Begin training")
-	model.Train(Endata, 0.1, 20, true)
+	model.Train(Endata, 0.1, 10, true)
 	log.Log("Training complete testing the model")
 	plainT := NewDataPlain(dataTest.x, dataTest.target)
 	model.LogTest(plainT)
