@@ -5,6 +5,6 @@ import (
 )
 
 type Loss interface {
-	Forward(pred ckks.Ciphertext, y ckks.Ciphertext, predLength int) ckks.Ciphertext
-	Backward(pred ckks.Ciphertext, y ckks.Ciphertext, predLength int) ckks.Ciphertext
+	Forward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext
+	Backward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext
 }

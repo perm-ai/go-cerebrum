@@ -9,10 +9,17 @@ type CrossEntropy struct {
 	U utility.Utils
 }
 
-func (c CrossEntropy) Forward(pred ckks.Ciphertext, y ckks.Ciphertext, predLength int) ckks.Ciphertext {
+func (c CrossEntropy) Forward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext {
 	return pred
 }
 
-func (c CrossEntropy) Backward(pred ckks.Ciphertext, y ckks.Ciphertext, predLength int) ckks.Ciphertext {
-	return c.U.SubNew(pred, y)
+func (c CrossEntropy) Backward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext {
+	result := make([]*ckks.Ciphertext, len(pred))
+
+	for i := range pred{
+		sub := c.U.SubNew(*pred[i], *y[i])
+		result[i] = &sub
+	}
+
+	return result
 }
