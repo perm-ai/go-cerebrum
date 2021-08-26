@@ -17,14 +17,16 @@ type Sigmoid struct {
 
 func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 
-	// y := 0.5 + 0.197x + 0.004x^3
+	// y := 0.5 + 0.197x - 0.004x^3
 	// Calculate degree three
 	xSquared := s.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
-	deg3 := s.U.MultiplyConstNew(input.CopyNew(), 0.004, true, false)
+	deg3Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(-0.004, inputLength))
+	deg3 := s.U.MultiplyPlainNew(input.CopyNew(), &deg3Coeff, true, false)
 	s.U.Multiply(xSquared, deg3, &deg3, true, false)
 
 	// Calculate degree one
-	deg1 := s.U.MultiplyConstNew(input.CopyNew(), 0.197, true, false)
+	deg1Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.197, inputLength))
+	deg1 := s.U.MultiplyPlainNew(input.CopyNew(), &deg1Coeff, true, false)
 
 	// Encode deg0 as plaintext
 	var deg0 ckks.Plaintext
@@ -47,7 +49,8 @@ func (s Sigmoid) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 
 	// Calculate degree three
 	xSquared := s.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
-	deg2 := s.U.MultiplyConstNew(&xSquared, 0.012, true, false)
+	deg2Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.012, inputLength))
+	deg2 := s.U.MultiplyPlainNew(&xSquared, &deg2Coeff, true, false)
 
 	// Encode deg0 as plaintext
 	var deg0 ckks.Plaintext
@@ -63,4 +66,12 @@ func (s Sigmoid) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 
 	return result
 
+}
+
+func (s Sigmoid) GetForwardLevelConsumption() int {
+	return 2
+}
+
+func (s Sigmoid) GetBackwardLevelConsumption() int {
+	return 2
 }
