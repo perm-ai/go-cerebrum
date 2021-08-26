@@ -40,7 +40,7 @@ func (f Flatten2D) Forward(input [][][]*ckks.Ciphertext) []*ckks.Ciphertext {
 
 }
 
-func (f Flatten2D) Backward(output []*ckks.Ciphertext) [][][]*ckks.Ciphertext {
+func (f Flatten2D) Backward(output []*ckks.Ciphertext) Gradient2d{
 
 	gradient := make([][][]*ckks.Ciphertext, f.InputSize[0])
 
@@ -54,10 +54,14 @@ func (f Flatten2D) Backward(output []*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 		}
 	}
 
-	return gradient
+	return Gradient2d{PrevLayerGradient: gradient}
 
 }
 
-func (f Flatten2D) GetOutputSize() []int {
-	return []int{f.OutputSize}
+func (f Flatten2D) GetOutputSize() int {
+	return f.OutputSize
+}
+
+func (f Flatten2D) IsTrainable() bool {
+	return false
 }

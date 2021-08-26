@@ -8,16 +8,6 @@ import (
 )
 
 //=================================================
-//			  DENSE GRADIENT
-//=================================================
-
-type DenseGradient struct {
-	BiasGradient      []*ckks.Ciphertext
-	WeightGradient    [][]*ckks.Ciphertext
-	PrevLayerGradient []*ckks.Ciphertext
-}
-
-//=================================================
 //					DENSE LAYER
 //=================================================
 
@@ -31,24 +21,24 @@ type Dense struct {
 	batchSize  int
 }
 
-func NewDense(utils utility.Utils, inputUnit []int, outputUnit []int, activation *activations.Activation, useBias bool, batchSize int) Dense {
+func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int) Dense {
 
 	// Generate random weights and biases
-	weights := make([][]*ckks.Ciphertext, outputUnit[0])
-	bias := make([]*ckks.Ciphertext, outputUnit[0])
+	weights := make([][]*ckks.Ciphertext, outputUnit)
+	bias := make([]*ckks.Ciphertext, outputUnit)
 
-	randomBias := array.GenerateRandomNormalArray(outputUnit[0])
+	randomBias := array.GenerateRandomNormalArray(outputUnit)
 
-	for node := 0; node < outputUnit[0]; node++ {
+	for node := 0; node < outputUnit; node++ {
 
-		randomWeight := array.GenerateRandomNormalArray(inputUnit[0])
-		weights[node] = make([]*ckks.Ciphertext, inputUnit[0])
+		randomWeight := array.GenerateRandomNormalArray(inputUnit)
+		weights[node] = make([]*ckks.Ciphertext, inputUnit)
 
 		if useBias {
 			bias[node] = utils.EncryptToPointer(utils.GenerateFilledArraySize(randomBias[node], batchSize))
 		}
 
-		for weight := 0; weight < inputUnit[0]; weight++ {
+		for weight := 0; weight < inputUnit; weight++ {
 
 			weights[node][weight] = utils.EncryptToPointer(utils.GenerateFilledArray(randomWeight[weight]))
 
@@ -56,7 +46,7 @@ func NewDense(utils utility.Utils, inputUnit []int, outputUnit []int, activation
 
 	}
 
-	return Dense{utils, inputUnit[0], outputUnit[0], weights, bias, activation, batchSize}
+	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, batchSize}
 
 }
 
@@ -73,11 +63,11 @@ func (d Dense) Forward(input []*ckks.Ciphertext) ([]*ckks.Ciphertext, []*ckks.Ci
 			d.utils.Add(*output[node], *d.Bias[node], output[node])
 		}
 
-		if d.Activation != nil{
+		if d.Activation != nil {
 			activated := (*d.Activation).Forward(*output[node], d.batchSize)
 			activatedOutput[node] = &activated
 		}
-		
+
 	}
 
 	return output, activatedOutput
@@ -88,9 +78,9 @@ func (d Dense) Forward(input []*ckks.Ciphertext) ([]*ckks.Ciphertext, []*ckks.Ci
 // output is Z(l) - output of this layer
 // gradient is ∂L/∂A(l) - influence that the activation of this layer has on the next layer
 // hasPrevLayer determine whether this function calculates the gradient ∂L/∂A(l-1)
-func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gradient []*ckks.Ciphertext, hasPrevLayer bool) DenseGradient {
+func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gradient []*ckks.Ciphertext, hasPrevLayer bool) Gradient1d {
 
-	gradients := DenseGradient{}
+	gradients := Gradient1d{}
 
 	// Calculate gradients for last layer
 	if d.Activation != nil {
@@ -119,18 +109,18 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 }
 
-func (d *Dense) UpdateGradient(gradient DenseGradient, lr float64){
+func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
-	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(lr / float64(d.batchSize), d.batchSize))
+	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(lr/float64(d.batchSize), d.batchSize))
 
-	for node := range d.Weights{
+	for node := range d.Weights {
 
-		if len(d.Bias) != 0{
+		if len(d.Bias) != 0 {
 			averagedLrBias := d.utils.MultiplyPlainNew(gradient.BiasGradient[node], &batchAverager, true, false)
 			d.utils.Sub(*d.Bias[node], averagedLrBias, d.Bias[node])
 		}
 
-		for w := range d.Weights[node]{
+		for w := range d.Weights[node] {
 			averagedLrWeight := d.utils.MultiplyPlainNew(gradient.WeightGradient[node][w], &batchAverager, true, false)
 			d.utils.Sub(*d.Weights[node][w], averagedLrWeight, d.Weights[node][w])
 		}
@@ -139,6 +129,14 @@ func (d *Dense) UpdateGradient(gradient DenseGradient, lr float64){
 
 }
 
-func (d Dense) GetOutputSize() []int{
-	return []int{d.OutputUnit}
+func (d Dense) GetOutputSize() int {
+	return d.OutputUnit
+}
+
+func (d Dense) IsTrainable() bool{
+	return true
+}
+
+func (d Dense) HasActivation() bool{
+	return d.Activation != nil
 }

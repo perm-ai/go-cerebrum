@@ -1,7 +1,6 @@
 package layers
 
 import (
-
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/array"
@@ -13,10 +12,10 @@ import (
 //=================================================
 
 type conv2dKernel struct {
-	Row		int
-	Column	int
-	Depth	int
-	Data 	[][][]*ckks.Ciphertext
+	Row    int
+	Column int
+	Depth  int
+	Data   [][][]*ckks.Ciphertext
 }
 
 func generateRandomNormal2dKernel(row int, col int, depth int, utils utility.Utils) conv2dKernel {
@@ -32,8 +31,8 @@ func generateRandomNormal2dKernel(row int, col int, depth int, utils utility.Uti
 
 			data[r][c] = make([]*ckks.Ciphertext, depth)
 
-			for d := 0; d < depth; d++{
-				encryptedRandom := utils.Encrypt(utils.GenerateFilledArray(randomNums[(r * col) + c]))
+			for d := 0; d < depth; d++ {
+				encryptedRandom := utils.Encrypt(utils.GenerateFilledArray(randomNums[(r*col)+c]))
 				data[r][c][d] = &encryptedRandom
 			}
 		}
@@ -53,29 +52,29 @@ func generate2dKernelFromArray(data [][][]*ckks.Ciphertext) conv2dKernel {
 
 }
 
-func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plaintext, utils utility.Utils){
-	
-	for row := range gradient{
-		for col := range gradient[row]{
+func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plaintext, utils utility.Utils) {
+
+	for row := range gradient {
+		for col := range gradient[row] {
 			averagedLrGradient := utils.MultiplyPlainNew(gradient[row][col], &lr, true, false)
 			for d := range k.Data[row][col] {
 				utils.Sub(*k.Data[row][col][d], averagedLrGradient, k.Data[row][col][d])
 			}
 		}
 	}
-	
+
 }
 
 func (k *conv2dKernel) dilate(dilation []int) {
 
 	// Calculate the number of row for dilated kernel
-	newRow := k.Row + ((dilation[0]-1) * (k.Row - 1))
+	newRow := k.Row + ((dilation[0] - 1) * (k.Row - 1))
 
 	// Calculate row modulo for checking if certain row should be empty or not
 	rowMod := dilation[0]
 
 	// Calculate the number of column for dilated kernel
-	newCol := k.Column + ((dilation[1]-1) * (k.Column - 1))
+	newCol := k.Column + ((dilation[1] - 1) * (k.Column - 1))
 
 	// Calculate column modulo for checking if certain column should be empty or not
 	colMod := dilation[1]
@@ -89,12 +88,12 @@ func (k *conv2dKernel) dilate(dilation []int) {
 		oldCol := 0
 		newData[row] = make([][]*ckks.Ciphertext, newCol)
 
-		if row % rowMod == 0 {
-			for col := range newData[row]{
+		if row%rowMod == 0 {
+			for col := range newData[row] {
 
 				newData[row][col] = make([]*ckks.Ciphertext, k.Depth)
 
-				if col % colMod == 0 {
+				if col%colMod == 0 {
 
 					newData[row][col] = k.Data[oldRow][oldCol]
 					oldCol++
@@ -125,19 +124,19 @@ func (k *conv2dKernel) addPadding(size []int) {
 	oldRowIndex := 0
 
 	// Loop through each new row in new data
-	for newRowIndex := 0; newRowIndex < newRow; newRowIndex++{
+	for newRowIndex := 0; newRowIndex < newRow; newRowIndex++ {
 
 		newData[newRowIndex] = make([][]*ckks.Ciphertext, newCol)
 		oldColIndex := 0
 
 		// Check if that row isn't in padding
-		if newRowIndex >= size[0] && newRowIndex < size[0] + k.Row {
+		if newRowIndex >= size[0] && newRowIndex < size[0]+k.Row {
 
 			// Loop through each column in that row
-			for newColIndex := 0; newColIndex < newCol; newColIndex++{
+			for newColIndex := 0; newColIndex < newCol; newColIndex++ {
 
 				// Check if column in padding or not
-				if newColIndex >= size[1] && newColIndex < size[1] + k.Column {
+				if newColIndex >= size[1] && newColIndex < size[1]+k.Column {
 					newData[newRowIndex][newColIndex] = k.Data[oldRowIndex][oldColIndex]
 					oldColIndex++
 				} else {
@@ -157,17 +156,17 @@ func (k *conv2dKernel) addPadding(size []int) {
 
 }
 
-func (k conv2dKernel) rotate180() conv2dKernel{
+func (k conv2dKernel) rotate180() conv2dKernel {
 
 	rotated := make([][][]*ckks.Ciphertext, k.Row)
 
-	for row := range rotated{
+	for row := range rotated {
 
 		rotated[row] = make([][]*ckks.Ciphertext, k.Column)
 
-		for col := range rotated[row]{
+		for col := range rotated[row] {
 
-			rotated[row][col] = k.Data[k.Row - row - 1][k.Column - col - 1]
+			rotated[row][col] = k.Data[k.Row-row-1][k.Column-col-1]
 
 		}
 
@@ -178,29 +177,18 @@ func (k conv2dKernel) rotate180() conv2dKernel{
 }
 
 //=================================================
-//		   		CONVOLUTIONAL GRADIENT
-//=================================================
-type Conv2dGradient struct {
-
-	BiasGradient	[]*ckks.Ciphertext
-	WeightGradient	[][][]*ckks.Ciphertext // weight gradient in [kernel][row][column]
-	PrevLayerGradient [][][]*ckks.Ciphertext
-
-}
-
-//=================================================
 //		   		CONVOLUTIONAL LAYER
 //=================================================
 
 type Conv2D struct {
-	utils		utility.Utils
-	Kernels		[]conv2dKernel
-	Bias		[]ckks.Ciphertext
-	Strides		[]int
-	Padding		bool
-	Activation	*activations.Activation
-	InputSize	[]int
-	batchSize	int
+	utils      utility.Utils
+	Kernels    []conv2dKernel
+	Bias       []ckks.Ciphertext
+	Strides    []int
+	Padding    bool
+	Activation *activations.Activation
+	InputSize  []int
+	batchSize  int
 }
 
 // Constructor for Convolutional layer struct
@@ -212,16 +200,16 @@ type Conv2D struct {
 // useBias specify whether or not a bias will be used
 // inputSize specify the size of input in the following order [row, column, channel] if there's channel
 // batchSize, when useBias is true, is the number of training example in a training ciphertexts with lowest number of training data
-func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int, padding bool, activation *activations.Activation, useBias bool, inputSize []int, batchSize int) Conv2D{
+func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int, padding bool, activation *activations.Activation, useBias bool, inputSize []int, batchSize int) Conv2D {
 
 	kernels := make([]conv2dKernel, filters)
 
-	for i := range kernels{
+	for i := range kernels {
 		kernels[i] = generateRandomNormal2dKernel(kernelSize[0], kernelSize[1], inputSize[2], utils)
 	}
 
 	bias := []ckks.Ciphertext{}
-	if useBias{
+	if useBias {
 		randomBias := utils.GenerateRandomNormalArray(filters)
 		bias = make([]ckks.Ciphertext, filters)
 		for i := range bias {
@@ -233,13 +221,13 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 
 }
 
-func (c *Conv2D) LoadKernels(kernels []conv2dKernel){
+func (c *Conv2D) LoadKernels(kernels []conv2dKernel) {
 	c.Kernels = kernels
 }
 
 // Evaluate forward pass of the convolutional 2d layer
 // input must be packed according to section 3.1.1 in https://eprint.iacr.org/2018/1056.pdf
-func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [][][]*ckks.Ciphertext) {
+func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [][][]*ckks.Ciphertext) {
 
 	// Calculate the starting coordinate
 	start := 0
@@ -260,7 +248,7 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, 
 	outputRow := 0
 
 	// Loop through each row for kernel start position
-	for row := start; row + kernelDim[0] - 1 <= c.InputSize[0] + (-1 * start) - 1; row += c.Strides[0]{
+	for row := start; row+kernelDim[0]-1 <= c.InputSize[0]+(-1*start)-1; row += c.Strides[0] {
 
 		output[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
 		activatedOutput[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
@@ -269,28 +257,28 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, 
 		outputCol := 0
 
 		// Loop through each column for kernel start position
-		for col := start; col + kernelDim[1] - 1 <= c.InputSize[1] + (-1 * start) - 1; col += c.Strides[1]{
+		for col := start; col+kernelDim[1]-1 <= c.InputSize[1]+(-1*start)-1; col += c.Strides[1] {
 
 			output[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
 			activatedOutput[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
-			
+
 			// Loop through each kernel
-			for k := range c.Kernels{
+			for k := range c.Kernels {
 
 				// Declare result to store the dot product of kernel and that region of input
 				var result *ckks.Ciphertext
 
 				for krow := 0; krow < c.Kernels[k].Row; krow++ {
-					for kcol := 0; kcol < c.Kernels[k].Column; kcol++{
+					for kcol := 0; kcol < c.Kernels[k].Column; kcol++ {
 
 						// Check if in padding
-						if row + krow == -1 || col + kcol == -1 || row + krow == c.InputSize[0] || col + kcol == c.InputSize[1] {
+						if row+krow == -1 || col+kcol == -1 || row+krow == c.InputSize[0] || col+kcol == c.InputSize[1] {
 							continue
 						}
 
-						for kdep := 0; kdep < c.Kernels[k].Depth; kdep++{
+						for kdep := 0; kdep < c.Kernels[k].Depth; kdep++ {
 
-							product := c.utils.MultiplyNew(*c.Kernels[k].Data[krow][kcol][kdep], *input[row + krow][col + kcol][kdep], true, false)
+							product := c.utils.MultiplyNew(*c.Kernels[k].Data[krow][kcol][kdep], *input[row+krow][col+kcol][kdep], true, false)
 
 							if result == nil {
 								result = &product
@@ -302,19 +290,19 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, 
 					}
 				}
 
-				if len(c.Bias) != 0{
+				if len(c.Bias) != 0 {
 					c.utils.Add(c.Bias[k], *result, result)
 				}
 
 				var activatedResult ckks.Ciphertext
 
-				if c.Activation != nil{
+				if c.Activation != nil {
 					activatedResult = (*c.Activation).Forward(*result, c.batchSize)
 				}
 
 				output[outputRow][outputCol][k] = result
 				activatedOutput[outputRow][outputCol][k] = &activatedResult
-				
+
 			}
 			outputCol++
 		}
@@ -325,15 +313,15 @@ func (c Conv2D) Forward (input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, 
 
 }
 
-func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext, hasPrevLayer bool) Conv2dGradient{
+func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext, hasPrevLayer bool) Gradient2d {
 
-	gradients := Conv2dGradient{}
+	gradients := Gradient2d{}
 
 	// Calculate ∂L/∂Z
-	if c.Activation != nil{
-		for ri := range gradient{
-			for ci := range gradient[ri]{
-				for di := range gradient[ri][ci]{
+	if c.Activation != nil {
+		for ri := range gradient {
+			for ci := range gradient[ri] {
+				for di := range gradient[ri][ci] {
 
 					// Calculate ∂A/∂Z
 					activationGradient := (*c.Activation).Backward(*output[ri][ci][di], c.batchSize)
@@ -349,10 +337,10 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	if len(c.Bias) != 0 {
 		// Update bias using Σr(Σc(∂L/∂Z))
 		gradients.BiasGradient = make([]*ckks.Ciphertext, len(c.Kernels))
-		for k := range c.Kernels{
-			for ri := range gradient{
-				for ci := range gradient[ri]{
-					if gradients.BiasGradient[k] == nil{
+		for k := range c.Kernels {
+			for ri := range gradient {
+				for ci := range gradient[ri] {
+					if gradients.BiasGradient[k] == nil {
 						gradients.BiasGradient[k] = gradient[ri][ci][k]
 					} else {
 						c.utils.Add(*gradient[ri][ci][k], *gradients.BiasGradient[k], gradients.BiasGradient[k])
@@ -366,7 +354,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	gradientKernel := generate2dKernelFromArray(gradient)
 
 	padding := 0
-	if c.Padding{
+	if c.Padding {
 		padding = 1
 	}
 
@@ -377,35 +365,35 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	gradients.WeightGradient = make([][][]*ckks.Ciphertext, len(c.Kernels))
 
 	// loop throught gradient of each kernel
-	for k := 0; k < gradientKernel.Depth; k++{
+	for k := 0; k < gradientKernel.Depth; k++ {
 
 		gradients.WeightGradient[k] = make([][]*ckks.Ciphertext, c.Kernels[0].Row)
 		currentGradientRow := 0
 
 		// Loop through input row
-		for row := (padding * -1); row <= c.InputSize[0] - gradientKernel.Row + padding; row++{
+		for row := (padding * -1); row <= c.InputSize[0]-gradientKernel.Row+padding; row++ {
 
 			gradients.WeightGradient[k][currentGradientRow] = make([]*ckks.Ciphertext, c.Kernels[0].Column)
 			currentGradientCol := 0
 
 			// Loop through input column
-			for col := (padding * -1); col <= c.InputSize[1] - gradientKernel.Column + padding; col++{
+			for col := (padding * -1); col <= c.InputSize[1]-gradientKernel.Column+padding; col++ {
 
 				var result *ckks.Ciphertext
 
 				// loop through gradient kernel's row and column
 				for krow := 0; krow < gradientKernel.Row; krow++ {
-					for kcol := 0; kcol < gradientKernel.Column; kcol++{
+					for kcol := 0; kcol < gradientKernel.Column; kcol++ {
 
 						// Check if in padding or is nil
-						if row + krow == -1 || col + kcol == -1 || gradientKernel.Data[krow][kcol][0] == nil {
+						if row+krow == -1 || col+kcol == -1 || gradientKernel.Data[krow][kcol][0] == nil {
 							continue
 						}
 
 						// Loop through input channel
-						for dep := 0; dep < c.InputSize[2]; dep++{
+						for dep := 0; dep < c.InputSize[2]; dep++ {
 
-							product := c.utils.MultiplyNew(*gradientKernel.Data[krow][kcol][k], *input[row + krow][col + kcol][dep], true, false)
+							product := c.utils.MultiplyNew(*gradientKernel.Data[krow][kcol][k], *input[row+krow][col+kcol][dep], true, false)
 
 							if result == nil {
 								result = &product
@@ -419,7 +407,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 				gradients.WeightGradient[k][currentGradientRow][currentGradientCol] = result
 				currentGradientCol++
 			}
-			currentGradientRow++	
+			currentGradientRow++
 		}
 	}
 
@@ -428,7 +416,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	// Rotate all kernel by 180 degree clockwise
 	rotatedKernels := make([]conv2dKernel, len(c.Kernels))
 
-	for k := range c.Kernels{
+	for k := range c.Kernels {
 		rotatedKernels[k] = c.Kernels[k].rotate180()
 	}
 
@@ -437,33 +425,33 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	lossGrad.dilate(c.Strides)
 	lossGrad.addPadding([]int{c.Kernels[0].Row, c.Kernels[0].Column})
 
-	if hasPrevLayer{
+	if hasPrevLayer {
 		gradients.PrevLayerGradient = make([][][]*ckks.Ciphertext, c.InputSize[0])
-	
+
 		// Perform convolution between loss wrt Z and filter
-		for row := 0; row < lossGrad.Row - c.Kernels[0].Row; row++ {
+		for row := 0; row < lossGrad.Row-c.Kernels[0].Row; row++ {
 
 			gradients.PrevLayerGradient[row] = make([][]*ckks.Ciphertext, c.InputSize[1])
 
-			for col := 0; col < lossGrad.Column - c.Kernels[0].Column; col++{
+			for col := 0; col < lossGrad.Column-c.Kernels[0].Column; col++ {
 
 				gradients.PrevLayerGradient[row][col] = make([]*ckks.Ciphertext, c.InputSize[2])
 
-				for d := 0; d < c.InputSize[3]; d++{
+				for d := 0; d < c.InputSize[3]; d++ {
 
 					// Loop through each kernel
 					for k := 0; k < len(c.Kernels); k++ {
 						// Loop through each row in kernel
-						for krow := range c.Kernels[k].Data{ 
+						for krow := range c.Kernels[k].Data {
 							// Loop through each column in kernel
-							for kcol := range c.Kernels[k].Data[krow]{ 
+							for kcol := range c.Kernels[k].Data[krow] {
 
 								// Check if in padding
-								if rotatedKernels[k].Data[krow][kcol][d] != nil && lossGrad.Data[row + krow][col + kcol][k] != nil{
+								if rotatedKernels[k].Data[krow][kcol][d] != nil && lossGrad.Data[row+krow][col+kcol][k] != nil {
 
-									product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row + krow][col + kcol][k], true, false)
+									product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row+krow][col+kcol][k], true, false)
 
-									if gradients.PrevLayerGradient[row][col][d] == nil{
+									if gradients.PrevLayerGradient[row][col][d] == nil {
 										gradients.PrevLayerGradient[row][col][d] = &product
 									} else {
 										c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
@@ -482,13 +470,13 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	return gradients
 }
 
-func (c *Conv2D) UpdateGradient(gradient Conv2dGradient, lr float64){
+func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 
-	batchAverager := c.utils.EncodePlaintextFromArray(c.utils.GenerateFilledArraySize(lr / float64(c.batchSize), c.batchSize))
+	batchAverager := c.utils.EncodePlaintextFromArray(c.utils.GenerateFilledArraySize(lr/float64(c.batchSize), c.batchSize))
 
-	for k := range c.Kernels{
-		
-		if len(c.Bias) != 0{
+	for k := range c.Kernels {
+
+		if len(c.Bias) != 0 {
 			// Calculate average gradient of bias in a batch
 			c.utils.SumElementsInPlace(gradient.BiasGradient[k])
 			c.utils.MultiplyPlain(gradient.BiasGradient[k], &batchAverager, gradient.BiasGradient[k], true, false)
@@ -496,7 +484,7 @@ func (c *Conv2D) UpdateGradient(gradient Conv2dGradient, lr float64){
 			// Update bias
 			c.utils.Sub(c.Bias[k], *gradient.BiasGradient[k], &c.Bias[k])
 		}
-		
+
 		// Update weight
 		c.Kernels[k].updateWeight(gradient.WeightGradient[k], batchAverager, c.utils)
 	}
@@ -511,11 +499,19 @@ func (c *Conv2D) GetOutputSize() []int {
 	}
 
 	// (W1−F+2P)/S+1
-	outputRowSize := int(float64(c.InputSize[0] - c.Kernels[0].Row + (2 * padding)) / float64(c.Strides[0])) + 1
+	outputRowSize := int(float64(c.InputSize[0]-c.Kernels[0].Row+(2*padding))/float64(c.Strides[0])) + 1
 
-	// (H1−F+2P)/S+1 
-	outputColumnSize := int(float64(c.InputSize[1] - c.Kernels[0].Column + (2 * padding)) / float64(c.Strides[1])) + 1
+	// (H1−F+2P)/S+1
+	outputColumnSize := int(float64(c.InputSize[1]-c.Kernels[0].Column+(2*padding))/float64(c.Strides[1])) + 1
 
 	return []int{outputRowSize, outputColumnSize, len(c.Kernels)}
 
+}
+
+func (c Conv2D) IsTrainable() bool {
+	return true
+}
+
+func (c Conv2D) HasActivation() bool {
+	return c.Activation != nil
 }

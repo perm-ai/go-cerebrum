@@ -27,7 +27,7 @@ func (p AveragePooling2D) GetOutputSize() []int{
 
 }
 
-func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
+func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [][][]*ckks.Ciphertext) {
 
 	currentOutRow := 0
 	outputSize := p.GetOutputSize()
@@ -76,11 +76,11 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) [][][]*ckks.Ciph
 
 	}
 
-	return output
+	return output, nil
 
 }
 
-func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
+func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) Gradient2d {
 
 	gradientSize := p.GetOutputSize()
 
@@ -143,6 +143,14 @@ func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) [][][]*ckks.
 
 	}
 
-	return upSampledGradient
+	return Gradient2d{PrevLayerGradient: upSampledGradient}
 
+}
+
+func (p AveragePooling2D) IsTrainable() bool {
+	return false
+}
+
+func (p AveragePooling2D) HasActivation() bool {
+	return false
 }
