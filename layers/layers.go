@@ -6,9 +6,17 @@ import "github.com/ldsec/lattigo/v2/ckks"
 //		   		2 DIMENTIONAL GRADIENT
 //=================================================
 type Gradient2d struct {
-	BiasGradient      []*ckks.Ciphertext
-	WeightGradient    [][][]*ckks.Ciphertext
-	PrevLayerGradient [][][]*ckks.Ciphertext
+	BiasGradient   []*ckks.Ciphertext
+	WeightGradient [][][]*ckks.Ciphertext
+	InputGradient  [][][]*ckks.Ciphertext
+}
+
+//=================================================
+//		   		2 DIMENTIONAL OUTPUT
+//=================================================
+type Output2d struct {
+	Output           [][][]*ckks.Ciphertext
+	ActivationOutput [][][]*ckks.Ciphertext
 }
 
 //=================================================
@@ -16,9 +24,17 @@ type Gradient2d struct {
 //=================================================
 
 type Gradient1d struct {
-	BiasGradient      []*ckks.Ciphertext
-	WeightGradient    [][]*ckks.Ciphertext
-	PrevLayerGradient []*ckks.Ciphertext
+	BiasGradient   []*ckks.Ciphertext
+	WeightGradient [][]*ckks.Ciphertext
+	InputGradient  []*ckks.Ciphertext
+}
+
+//=================================================
+//		   		1 DIMENTIONAL OUTPUT
+//=================================================
+type Output1d struct {
+	Output           []*ckks.Ciphertext
+	ActivationOutput []*ckks.Ciphertext
 }
 
 //=================================================
@@ -26,7 +42,7 @@ type Gradient1d struct {
 //=================================================
 
 type Layer1D interface {
-	Forward(input []*ckks.Ciphertext) ([]*ckks.Ciphertext, []*ckks.Ciphertext)
+	Forward(input []*ckks.Ciphertext) Output1d
 	Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gradient []*ckks.Ciphertext, hasPrevLayer bool) Gradient1d
 	UpdateGradient(gradient Gradient1d, lr float64)
 	GetOutputSize() int
@@ -39,7 +55,7 @@ type Layer1D interface {
 //=================================================
 
 type Layer2D interface {
-	Forward(input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [][][]*ckks.Ciphertext)
+	Forward(input [][][]*ckks.Ciphertext) Output2d
 	Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext, hasPrevLayer bool) Gradient2d
 	UpdateGradient(gradient Gradient1d, lr float64)
 	GetOutputSize() []int

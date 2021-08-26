@@ -227,7 +227,7 @@ func (c *Conv2D) LoadKernels(kernels []conv2dKernel) {
 
 // Evaluate forward pass of the convolutional 2d layer
 // input must be packed according to section 3.1.1 in https://eprint.iacr.org/2018/1056.pdf
-func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [][][]*ckks.Ciphertext) {
+func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 
 	// Calculate the starting coordinate
 	start := 0
@@ -309,7 +309,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) ([][][]*ckks.Ciphertext, [
 		outputRow++
 	}
 
-	return output, activatedOutput
+	return Output2d{output, activatedOutput}
 
 }
 
@@ -426,16 +426,16 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	lossGrad.addPadding([]int{c.Kernels[0].Row, c.Kernels[0].Column})
 
 	if hasPrevLayer {
-		gradients.PrevLayerGradient = make([][][]*ckks.Ciphertext, c.InputSize[0])
+		gradients.InputGradient = make([][][]*ckks.Ciphertext, c.InputSize[0])
 
 		// Perform convolution between loss wrt Z and filter
 		for row := 0; row < lossGrad.Row-c.Kernels[0].Row; row++ {
 
-			gradients.PrevLayerGradient[row] = make([][]*ckks.Ciphertext, c.InputSize[1])
+			gradients.InputGradient[row] = make([][]*ckks.Ciphertext, c.InputSize[1])
 
 			for col := 0; col < lossGrad.Column-c.Kernels[0].Column; col++ {
 
-				gradients.PrevLayerGradient[row][col] = make([]*ckks.Ciphertext, c.InputSize[2])
+				gradients.InputGradient[row][col] = make([]*ckks.Ciphertext, c.InputSize[2])
 
 				for d := 0; d < c.InputSize[3]; d++ {
 
@@ -451,10 +451,10 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 
 									product := c.utils.MultiplyNew(*rotatedKernels[k].Data[krow][kcol][d], *lossGrad.Data[row+krow][col+kcol][k], true, false)
 
-									if gradients.PrevLayerGradient[row][col][d] == nil {
-										gradients.PrevLayerGradient[row][col][d] = &product
+									if gradients.InputGradient[row][col][d] == nil {
+										gradients.InputGradient[row][col][d] = &product
 									} else {
-										c.utils.Add(*gradients.PrevLayerGradient[row][col][d], product, gradients.PrevLayerGradient[row][col][d])
+										c.utils.Add(*gradients.InputGradient[row][col][d], product, gradients.InputGradient[row][col][d])
 									}
 
 								}

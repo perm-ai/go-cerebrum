@@ -24,7 +24,7 @@ func NewFlatten(inputSize []int) Flatten2D{
 	return Flatten2D{inputSize, outputSize}
 }
 
-func (f Flatten2D) Forward(input [][][]*ckks.Ciphertext) []*ckks.Ciphertext {
+func (f Flatten2D) Forward(input [][][]*ckks.Ciphertext) Output1d {
 
 	output := make([]*ckks.Ciphertext, f.OutputSize)
 
@@ -36,7 +36,7 @@ func (f Flatten2D) Forward(input [][][]*ckks.Ciphertext) []*ckks.Ciphertext {
 		}
 	}
 
-	return output
+	return Output1d{Output: output}
 
 }
 
@@ -54,7 +54,7 @@ func (f Flatten2D) Backward(output []*ckks.Ciphertext) Gradient2d{
 		}
 	}
 
-	return Gradient2d{PrevLayerGradient: gradient}
+	return Gradient2d{InputGradient: gradient}
 
 }
 

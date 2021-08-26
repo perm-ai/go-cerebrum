@@ -50,7 +50,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 }
 
-func (d Dense) Forward(input []*ckks.Ciphertext) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
+func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	output := make([]*ckks.Ciphertext, d.OutputUnit)
 	activatedOutput := make([]*ckks.Ciphertext, d.OutputUnit)
@@ -70,7 +70,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) ([]*ckks.Ciphertext, []*ckks.Ci
 
 	}
 
-	return output, activatedOutput
+	return Output1d{output, activatedOutput}
 
 }
 
@@ -92,7 +92,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 	gradients.BiasGradient = gradient
 	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input)
-	gradients.PrevLayerGradient = make([]*ckks.Ciphertext, d.InputUnit)
+	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
 
@@ -100,7 +100,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		transposedWeight := d.utils.InterTranspose(d.Weights)
 
 		for xi := range transposedWeight {
-			gradients.PrevLayerGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false)
+			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false)
 		}
 
 	}
