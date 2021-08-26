@@ -147,6 +147,8 @@ func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) Gradient2d {
 
 }
 
+func (p *AveragePooling2D) UpdateGradient(gradient Gradient2d, lr float64) {}
+
 func (p AveragePooling2D) IsTrainable() bool {
 	return false
 }

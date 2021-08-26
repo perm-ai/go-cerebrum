@@ -57,7 +57,7 @@ type Layer1D interface {
 type Layer2D interface {
 	Forward(input [][][]*ckks.Ciphertext) Output2d
 	Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext, hasPrevLayer bool) Gradient2d
-	UpdateGradient(gradient Gradient1d, lr float64)
+	UpdateGradient(gradient Gradient2d, lr float64)
 	GetOutputSize() []int
 	IsTrainable() bool
 	HasActivation() bool
