@@ -10,9 +10,9 @@ import (
 )
 
 type LinearRegression struct {
-	utils utility.Utils
-	M     []ckks.Ciphertext
-	B     ckks.Ciphertext
+	utils  utility.Utils
+	Weight []ckks.Ciphertext
+	Bias   ckks.Ciphertext
 }
 
 type LinearRegressionGradient struct {
@@ -43,11 +43,11 @@ func (l LinearRegression) Forward(input []ckks.Ciphertext) ckks.Ciphertext {
 	// W*X for each feature, add sum in result
 
 	for i := range input {
-		dot := l.utils.MultiplyNew(input[i], l.M[i], true, false)
+		dot := l.utils.MultiplyNew(input[i], l.Weight[i], true, false)
 		l.utils.Add(result, dot, &result)
 	}
 
-	l.utils.Add(result, l.B, &result)
+	l.utils.Add(result, l.Bias, &result)
 
 	return result
 
@@ -80,10 +80,10 @@ func (l LinearRegression) Backward(input []ckks.Ciphertext, output ckks.Cipherte
 func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	for i := range gradient.DM {
-		l.utils.Sub(l.M[i], gradient.DM[i], &l.M[i])
+		l.utils.Sub(l.Weight[i], gradient.DM[i], &l.Weight[i])
 	}
 
-	l.utils.Sub(l.B, gradient.DB, &l.B)
+	l.utils.Sub(l.Bias, gradient.DB, &l.Bias)
 
 }
 
@@ -105,15 +105,15 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 		model.UpdateGradient(grad)
 
-		if model.M[0].Level() < 4 || model.B.Level() < 4 {
+		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
-			if model.B.Level() != 1 {
-				model.utils.Evaluator.DropLevel(&model.B, model.B.Level()-1)
+			if model.Bias.Level() != 1 {
+				model.utils.Evaluator.DropLevel(&model.Bias, model.Bias.Level()-1)
 			}
 			for i := range x {
-				model.utils.BootstrapInPlace(&model.M[i])
+				model.utils.BootstrapInPlace(&model.Weight[i])
 			}
-			model.utils.BootstrapInPlace(&model.B)
+			model.utils.BootstrapInPlace(&model.Bias)
 		}
 
 	}

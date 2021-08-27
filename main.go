@@ -31,9 +31,9 @@ func main() {
 	model.Train(independentVar, &data3, 0.1, len(data.Median_income), 20)
 	slope := make([]float64, 2)
 	for i := 0; i < 2; i++ {
-		slope[i] = utils.Decrypt(&model.M[i])[0]
+		slope[i] = utils.Decrypt(&model.Weight[i])[0]
 	}
-	bias := utils.Decrypt(&model.B)
+	bias := utils.Decrypt(&model.Bias)
 
 	fmt.Printf("The weights are biases are %f and %f", slope, bias[0])
 }
