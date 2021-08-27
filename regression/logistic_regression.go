@@ -1,22 +1,19 @@
 package regression
 
 import (
-	// "fmt"
-
 	"fmt"
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
-	"github.com/perm-ai/go-cerebrum/array"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type LogisticRegression struct {
 	utils  utility.Utils
-	weight []ckks.Ciphertext
-	bias   ckks.Ciphertext
+	Weight []ckks.Ciphertext
+	Bias   ckks.Ciphertext
 }
 
 type LogisticRegressionGradient struct {
@@ -30,19 +27,14 @@ type Data struct {
 	datalength int
 }
 
-type DataPlain struct {
-	x      [][]float64
-	target []float64
-}
+func NewLogisticRegression(u utility.Utils, numOfFeatures int) LogisticRegression {
 
-func NewLogisticRegression(u utility.Utils, column int) LogisticRegression {
-
-	value := u.GenerateFilledArray(0.5)
-	w := make([]ckks.Ciphertext, column)
-	for i := 0; i < column; i++ {
+	value := u.GenerateFilledArray(0.0)
+	b := u.Encrypt(value)
+	w := make([]ckks.Ciphertext, numOfFeatures)
+	for i := 0; i < numOfFeatures; i++ {
 		w[i] = u.Encrypt(value)
 	}
-	b := u.Encrypt(value)
 
 	return LogisticRegression{u, w, b}
 
@@ -55,17 +47,12 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	sigmoid := activations.Sigmoid{U: model.utils}
 	//w[i]*x[i]
 	for i := range data.x {
-		weight := model.utils.MultiplyNew(model.weight[i], data.x[i], true, false)
-		model.utils.Add(weight, result, &result)
-		fmt.Println("Computing w" + fmt.Sprint(i+1))
+		Weight := model.utils.MultiplyNew(model.Weight[i], data.x[i], true, false)
+		model.utils.Add(Weight, result, &result)
 
 	}
-	model.utils.Add(model.bias, result, &result)
-	model.utils.MultiplyConst(&result, 0.1, &result, true, false)
-	fmt.Println("Forward complete, computing sigmoid")
-	fmt.Println("result level before sigmoid: " + fmt.Sprint(result.Level()))
-	if result.Level() < 5 {
-		fmt.Println("bootstrapping result")
+	model.utils.Add(model.Bias, result, &result)
+	if result.Level() < 6 {
 		model.utils.BootstrapInPlace(&result)
 	}
 	return sigmoid.Forward(result, data.datalength)
@@ -74,107 +61,78 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 
 func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr float64) LogisticRegressionGradient {
 
-	//error = prediction - actual data
-	//gradientw = (2/n)(sum(error*datax))
-	//gradientb = (2/n)(sum(error))
-	dw := make([]ckks.Ciphertext, len(model.weight))
+	dw := make([]ckks.Ciphertext, len(model.Weight))
 	err := model.utils.SubNew(predict, data.target)
-	for i := range model.weight {
-		fmt.Println("Computing w" + fmt.Sprint(i+1))
-		dw[i] = model.utils.MultiplyNew(data.x[i], *err.CopyNew(), true, false)
+	multiplier := model.utils.EncodePlaintextFromArray(model.utils.GenerateFilledArraySize((2.0/float64(data.datalength))*lr, data.datalength))
+	for i := range model.Weight {
+		dw[i] = model.utils.MultiplyNew(data.x[i], err, true, false)
 		model.utils.SumElementsInPlace(&dw[i])
-		model.utils.MultiplyConstArray(&dw[i], model.utils.GenerateFilledArraySize((-2/float64(data.datalength))*lr, data.datalength), &dw[i], true, false)
+		model.utils.MultiplyPlain(&dw[i], &multiplier, &dw[i], true, false)
 	}
 
 	db := model.utils.SumElementsNew(err)
-	model.utils.MultiplyConstArray(&db, model.utils.GenerateFilledArraySize((-2/float64(data.datalength))*lr, data.datalength), &db, true, false)
+	model.utils.MultiplyPlain(&db, &multiplier, &db, true, false)
 
 	return LogisticRegressionGradient{dw, db}
 
 }
 
 func (model *LogisticRegression) UpdateGradient(grad LogisticRegressionGradient) {
-	log := logger.NewLogger(true)
-	if model.weight[0].Level() < 9 {
-		model.utils.BootstrapInPlace(&model.bias)
-		for i := range model.weight {
-			model.utils.BootstrapInPlace(&model.weight[i])
-		}
-	}
-	log.Log("Bootstrap complete")
-	log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
-	log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
-	log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
-	log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
-	log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
-	log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
 	for i := range grad.dw {
-		model.utils.Sub(model.weight[i], grad.dw[i], &model.weight[i])
+		model.utils.Sub(model.Weight[i], grad.dw[i], &model.Weight[i])
 	}
-	model.utils.Sub(model.bias, grad.db, &model.bias)
+	model.utils.Sub(model.Bias, grad.db, &model.Bias)
 
 }
 
-func (model *LogisticRegression) Train(data Data, learningRate float64, epoch int, test bool) {
-	log := logger.NewLogger(test)
+func (model *LogisticRegression) Train(x []ckks.Ciphertext, target ckks.Ciphertext, datalength int, learningRate float64, epoch int) {
+	data := Data{x, target, datalength}
+	log := logger.NewLogger(true)
 	log.Log("Starting Logistic Regression Training on encrypted data")
 
 	for i := 0; i < epoch; i++ {
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
-		log.Log("result level after sidmoid: " + fmt.Sprint(fwd.Level()))
+		model.showall("forward", false)
 
-		log.Log("result :" + fmt.Sprint(model.utils.Decrypt(fwd.CopyNew())[0:10]))
+		if fwd.Level() < 5 {
+			model.utils.BootstrapInPlace(&fwd)
+		}
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
-		log.Log("Gradient db level : " + fmt.Sprint(grad.db.Level()))
-		log.Log("Gradient dw level : " + fmt.Sprint(grad.dw[0].Level()))
 
+		model.showall("backward", false)
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
-		log.Log("weight 1 : " + fmt.Sprint(model.utils.Decrypt(model.weight[0].CopyNew())[0]))
-		log.Log("weight 2 : " + fmt.Sprint(model.utils.Decrypt(model.weight[1].CopyNew())[0]))
-		log.Log("bias : " + fmt.Sprint(model.utils.Decrypt(model.bias.CopyNew())[0]))
-		log.Log("weight 1 level : " + fmt.Sprint(model.weight[0].Level()))
-		log.Log("weight 2 level : " + fmt.Sprint(model.weight[1].Level()))
-		log.Log("bias level : " + fmt.Sprint(model.bias.Level()))
+
 		model.UpdateGradient(grad)
 
+		model.showall("updating gradient", false)
+		if i != epoch-1 {
+			if model.Weight[0].Level() < 8 {
+				for i := range model.Weight {
+					model.utils.BootstrapInPlace(&model.Weight[i])
+				}
+				model.showall("bootstrapping Weight", false)
+			}
+
+			if model.Bias.Level() < 5 {
+				model.utils.BootstrapInPlace(&model.Bias)
+			}
+		}
+
 	}
+	log.Log("Trainning complete")
 }
-func (model LogisticRegression) LogTest(data DataPlain) {
-	//test the model and output accuracy
-	fmt.Printf("Testing accuracy")
-	wplain := make([]float64, len(model.weight))
-	bplain := model.utils.Decrypt(&model.bias)[0]
-	for i := range wplain {
-		wplain[i] = model.utils.Decrypt(&model.weight[i])[0]
-	}
-	fmt.Println("w : " + fmt.Sprint(wplain))
-	fmt.Println("b : " + fmt.Sprint(bplain))
-	//get prediction
-	correct := 0
-	predictTarget := make([]float64, len(data.x))
-	for j, p := range data.x {
-		predictTarget = array.AddArraysNew(array.MulConstantArrayNew(wplain[j], p), predictTarget)
-	}
-	array.AddConstant(bplain, predictTarget, predictTarget)
-	guess := array.SigmoidArray(predictTarget)
-	//Check if correct
-	var trueguess int
-	for i, p := range guess {
-		if p > 0.5 {
-			trueguess = 1
-		} else {
-			trueguess = 0
-		}
-		fmt.Printf("(%f)Predicted : %d, Expected : %f", guess, trueguess, data.target[i])
-		if p == data.target[i] {
-			correct++
-		}
-	}
 
-	acc := float64(correct) / float64(len(guess)) * 100.0
-	fmt.Printf("Accuracy : %f", acc)
-
+func (m LogisticRegression) showall(str string, show bool) {
+	if show {
+		log := logger.NewLogger(true)
+		log.Log("Weight 1 after " + str + ": " + fmt.Sprint(m.utils.Decrypt(m.Weight[0].CopyNew())[0]))
+		log.Log("Weight 2 after " + str + ": " + fmt.Sprint(m.utils.Decrypt(m.Weight[1].CopyNew())[0]))
+		log.Log("Bias after " + str + ": " + fmt.Sprint(m.utils.Decrypt(m.Bias.CopyNew())[0]))
+		log.Log("Weight 1 level after " + str + ": " + fmt.Sprint(m.Weight[0].Level()))
+		log.Log("Weight 2 level after " + str + ": " + fmt.Sprint(m.Weight[1].Level()))
+		log.Log("Bias level after " + str + ": " + fmt.Sprint(m.Bias.Level()))
+	}
 }
