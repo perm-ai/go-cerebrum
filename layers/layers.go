@@ -45,9 +45,17 @@ type Layer1D interface {
 	Forward(input []*ckks.Ciphertext) Output1d
 	Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gradient []*ckks.Ciphertext, hasPrevLayer bool) Gradient1d
 	UpdateGradient(gradient Gradient1d, lr float64)
+
 	GetOutputSize() int
 	IsTrainable() bool
 	HasActivation() bool
+
+	SetBootstrapOutput(set bool, direction string) // Direction "forward" or "backward"
+	SetBootstrapActivation(set bool, direction string) // Direction "forward" or "backward"
+	GetForwardLevelConsumption() int
+	GetBackwardLevelConsumption() int
+	GetForwardActivationLevelConsumption() int
+	GetBackwardActivationLevelConsumption() int
 }
 
 //=================================================
@@ -61,4 +69,11 @@ type Layer2D interface {
 	GetOutputSize() []int
 	IsTrainable() bool
 	HasActivation() bool
+
+	SetBootstrapOutput(set bool, direction string) // Direction "forward" or "backward"
+	SetBootstrapActivation(set bool, direction string) // Direction "forward" or "backward"
+	GetForwardLevelConsumption() int
+	GetBackwardLevelConsumption() int
+	GetForwardActivationLevelConsumption() int
+	GetBackwardActivationLevelConsumption() int
 }

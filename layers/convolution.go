@@ -181,14 +181,16 @@ func (k conv2dKernel) rotate180() conv2dKernel {
 //=================================================
 
 type Conv2D struct {
-	utils      utility.Utils
-	Kernels    []conv2dKernel
-	Bias       []ckks.Ciphertext
-	Strides    []int
-	Padding    bool
-	Activation *activations.Activation
-	InputSize  []int
-	batchSize  int
+	utils          utility.Utils
+	Kernels        []conv2dKernel
+	Bias           []ckks.Ciphertext
+	Strides        []int
+	Padding        bool
+	Activation     *activations.Activation
+	InputSize      []int
+	btspOutput     []bool
+	btspActivation []bool
+	batchSize      int
 }
 
 // Constructor for Convolutional layer struct
@@ -217,7 +219,7 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 		}
 	}
 
-	return Conv2D{utils: utils, Kernels: kernels, Bias: bias, Strides: strides, Padding: padding, Activation: activation, InputSize: inputSize, batchSize: batchSize}
+	return Conv2D{utils: utils, Kernels: kernels, Bias: bias, Strides: strides, Padding: padding, Activation: activation, InputSize: inputSize, batchSize: batchSize, btspOutput: []bool{false, false}, btspActivation: []bool{false, false}}
 
 }
 
@@ -294,13 +296,22 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 					c.utils.Add(c.Bias[k], *result, result)
 				}
 
+				output[outputRow][outputCol][k] = result
+
+				// Bootstrap output ciphertext
+				if c.btspOutput[0]{
+					c.utils.BootstrapInPlace(output[outputRow][outputCol][k])
+				}
+
 				var activatedResult ckks.Ciphertext
 
 				if c.Activation != nil {
 					activatedResult = (*c.Activation).Forward(*result, c.batchSize)
+					if c.btspActivation[0]{
+						c.utils.BootstrapInPlace(&activatedResult)
+					}
 				}
 
-				output[outputRow][outputCol][k] = result
 				activatedOutput[outputRow][outputCol][k] = &activatedResult
 
 			}
@@ -326,8 +337,21 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 					// Calculate ∂A/∂Z
 					activationGradient := (*c.Activation).Backward(*output[ri][ci][di], c.batchSize)
 
-					// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-					c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+					if activationGradient.Level() == 1 && c.btspActivation[1] {
+
+						c.utils.BootstrapInPlace(&activationGradient)
+
+						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
+						c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+
+					} else if c.btspActivation[1] {
+						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
+						c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+						c.utils.BootstrapInPlace(gradient[ri][ci][di])
+					} else {
+						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
+						c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+					}
 
 				}
 			}
@@ -462,6 +486,11 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 							}
 						}
 					}
+
+					if c.btspOutput[1]{
+						c.utils.BootstrapInPlace(gradients.InputGradient[row][col][d])
+					}
+					
 				}
 			}
 		}
@@ -514,4 +543,46 @@ func (c Conv2D) IsTrainable() bool {
 
 func (c Conv2D) HasActivation() bool {
 	return c.Activation != nil
+}
+
+func (c *Conv2D) SetBootstrapOutput(set bool, direction string){
+	switch direction{
+	case "forward":
+		c.btspOutput[0] = set
+	case "backward":
+		c.btspOutput[1] = set
+	}
+}
+
+func (c *Conv2D) SetBootstrapActivation(set bool, direction string){
+	switch direction{
+	case "forward":
+		c.btspActivation[0] = set
+	case "backward":
+		c.btspActivation[1] = set
+	}
+}
+
+func (c Conv2D) GetForwardOutputLevelConsumption() int {
+	return 1
+}
+
+func (c Conv2D) GetBackwardLevelConsumption() int {
+	return 1
+}
+
+func (c Conv2D) GetForwardActivationLevelConsumption() int {
+	if c.HasActivation() {
+		return (*c.Activation).GetForwardLevelConsumption()
+	} else {
+		return 0
+	}
+}
+
+func (c Conv2D) GetBackwardActivationLevelConsumption() int {
+	if c.HasActivation() {
+		return (*c.Activation).GetForwardLevelConsumption()
+	} else {
+		return 0
+	}
 }

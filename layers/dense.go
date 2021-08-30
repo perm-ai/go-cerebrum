@@ -12,13 +12,15 @@ import (
 //=================================================
 
 type Dense struct {
-	utils      utility.Utils
-	InputUnit  int
-	OutputUnit int
-	Weights    [][]*ckks.Ciphertext
-	Bias       []*ckks.Ciphertext
-	Activation *activations.Activation
-	batchSize  int
+	utils          utility.Utils
+	InputUnit      int
+	OutputUnit     int
+	Weights        [][]*ckks.Ciphertext
+	Bias           []*ckks.Ciphertext
+	Activation     *activations.Activation
+	btspOutput     []bool
+	btspActivation []bool
+	batchSize      int
 }
 
 func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int) Dense {
@@ -46,7 +48,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 	}
 
-	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, batchSize}
+	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, []bool{false, false}, []bool{false, false}, batchSize}
 
 }
 
@@ -63,9 +65,18 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 			d.utils.Add(*output[node], *d.Bias[node], output[node])
 		}
 
+		if d.btspOutput[0] {
+			d.utils.BootstrapInPlace(output[node])
+		}
+
 		if d.Activation != nil {
 			activated := (*d.Activation).Forward(*output[node], d.batchSize)
 			activatedOutput[node] = &activated
+
+			if d.btspActivation[0] {
+				d.utils.BootstrapInPlace(activatedOutput[node])
+			}
+
 		}
 
 	}
@@ -86,7 +97,16 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	if d.Activation != nil {
 		for b := range d.Bias {
 			activationGradient := (*d.Activation).Backward(*output[b], d.OutputUnit)
-			d.utils.Multiply(*gradient[b], activationGradient, gradient[b], true, false)
+
+			if activationGradient.Level() == 1 && d.btspActivation[1] {
+				d.utils.BootstrapInPlace(&activationGradient)
+			} else if d.btspActivation[1] {
+				d.utils.Multiply(*gradient[b], activationGradient, gradient[b], true, false)
+				d.utils.BootstrapInPlace(gradient[b])
+			} else {
+				d.utils.Multiply(*gradient[b], activationGradient, gradient[b], true, false)
+			}
+
 		}
 	}
 
@@ -101,6 +121,9 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 		for xi := range transposedWeight {
 			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false)
+			if d.btspOutput[1]{
+				d.utils.BootstrapInPlace(gradients.InputGradient[xi])
+			}
 		}
 
 	}
@@ -133,10 +156,52 @@ func (d Dense) GetOutputSize() int {
 	return d.OutputUnit
 }
 
-func (d Dense) IsTrainable() bool{
+func (d Dense) IsTrainable() bool {
 	return true
 }
 
-func (d Dense) HasActivation() bool{
+func (d Dense) HasActivation() bool {
 	return d.Activation != nil
+}
+
+func (d Dense) GetForwardLevelConsumption() int {
+	return 1
+}
+
+func (d Dense) GetBackwardLevelConsumption() int {
+	return 1
+}
+
+func (d Dense) GetForwardActivationLevelConsumption() int {
+	if d.HasActivation() {
+		return (*d.Activation).GetForwardLevelConsumption()
+	} else {
+		return 0
+	}
+}
+
+func (d Dense) GetBackwardActivationLevelConsumption() int {
+	if d.HasActivation() {
+		return (*d.Activation).GetForwardLevelConsumption()
+	} else {
+		return 0
+	}
+}
+
+func (d *Dense) SetBootstrapOutput(set bool, direction string) {
+	switch direction {
+	case "forward":
+		d.btspOutput[0] = set
+	case "backward":
+		d.btspOutput[1] = set
+	}
+}
+
+func (d *Dense) SetBootstrapActivation(set bool, direction string) {
+	switch direction {
+	case "forward":
+		d.btspActivation[0] = set
+	case "backward":
+		d.btspActivation[1] = set
+	}
 }

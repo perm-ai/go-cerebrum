@@ -5,23 +5,24 @@ import (
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-type AveragePooling2D struct{
-	utils 		utility.Utils
-	InputSize	[]int
-	Size		[]int
-	Strides 	[]int
+type AveragePooling2D struct {
+	utils      utility.Utils
+	InputSize  []int
+	Size       []int
+	Strides    []int
+	btspOutput []bool
 }
 
 func NewPoolingLayer(utils utility.Utils, inputSize []int, poolingSize []int, strides []int) AveragePooling2D {
 
-	return AveragePooling2D{utils, inputSize, poolingSize, strides}
+	return AveragePooling2D{utils, inputSize, poolingSize, strides, []bool{false, false}}
 
 }
 
-func (p AveragePooling2D) GetOutputSize() []int{
+func (p AveragePooling2D) GetOutputSize() []int {
 
-	row := int(float64(p.InputSize[0] - p.Size[0]) / float64(p.Strides[0])) + 1
-	column := int(float64(p.InputSize[1] - p.Size[1]) / float64(p.Strides[1])) + 1
+	row := int(float64(p.InputSize[0]-p.Size[0])/float64(p.Strides[0])) + 1
+	column := int(float64(p.InputSize[1]-p.Size[1])/float64(p.Strides[1])) + 1
 
 	return []int{row, column, p.InputSize[2]}
 
@@ -34,35 +35,39 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 	output := make([][][]*ckks.Ciphertext, outputSize[0])
 
 	// Loop through each input datapoint that corresponds to the first row of the pooling filter
-	for row := 0; row <= p.InputSize[0] - p.Size[0]; row += p.Strides[0]{
+	for row := 0; row <= p.InputSize[0]-p.Size[0]; row += p.Strides[0] {
 
 		currentOutCol := 0
 		output[currentOutRow] = make([][]*ckks.Ciphertext, outputSize[1])
 
 		// Loop through each input datapoint that corresponds to the first column of the pooling filter
-		for column := 0; column <= p.InputSize[1] - p.Size[1]; column += p.Strides[1]{
+		for column := 0; column <= p.InputSize[1]-p.Size[1]; column += p.Strides[1] {
 
 			output[currentOutRow][currentOutCol] = make([]*ckks.Ciphertext, outputSize[2])
 
 			// Loop through each depth of input
-			for depth := 0; depth < p.InputSize[2]; depth++{
+			for depth := 0; depth < p.InputSize[2]; depth++ {
 
 				// Compute pooling sum
-				for poolRow := 0; poolRow < p.Size[0]; poolRow++{
-					for poolCol := 0; poolCol < p.Size[1]; poolCol++{
+				for poolRow := 0; poolRow < p.Size[0]; poolRow++ {
+					for poolCol := 0; poolCol < p.Size[1]; poolCol++ {
 
-						if output[currentOutRow][currentOutCol][depth] == nil{
-							output[currentOutRow][currentOutCol][depth] = input[row + poolRow][column + poolCol][depth]
+						if output[currentOutRow][currentOutCol][depth] == nil {
+							output[currentOutRow][currentOutCol][depth] = input[row+poolRow][column+poolCol][depth]
 						} else {
-							p.utils.Add(*output[currentOutRow][currentOutCol][depth], *input[row + poolRow][column + poolCol][depth], output[currentOutRow][currentOutCol][depth])
+							p.utils.Add(*output[currentOutRow][currentOutCol][depth], *input[row+poolRow][column+poolCol][depth], output[currentOutRow][currentOutCol][depth])
 						}
 
 					}
 				}
 
 				// Compute pooling average
-				averager := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(p.Size[0] * p.Size[1])))
+				averager := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(p.Size[0]*p.Size[1])))
 				p.utils.MultiplyPlain(output[currentOutRow][currentOutCol][depth], &averager, output[currentOutRow][currentOutCol][depth], true, false)
+
+				if p.btspOutput[0]{
+					p.utils.BootstrapInPlace(output[currentOutRow][currentOutCol][depth])
+				}
 
 			}
 
@@ -85,10 +90,10 @@ func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) Gradient2d {
 	gradientSize := p.GetOutputSize()
 
 	// Divide each gradient by output size
-	divider := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(gradientSize[0] * gradientSize[1])))
-	for row := range gradient{
-		for col := range gradient[row]{
-			for depth := range gradient[row][col]{
+	divider := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(gradientSize[0]*gradientSize[1])))
+	for row := range gradient {
+		for col := range gradient[row] {
+			for depth := range gradient[row][col] {
 				p.utils.MultiplyPlain(gradient[row][col][depth], &divider, gradient[row][col][depth], true, false)
 			}
 		}
@@ -98,31 +103,31 @@ func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) Gradient2d {
 	upSampledGradient := make([][][]*ckks.Ciphertext, p.InputSize[0])
 
 	// Loop through each input datapoint that corresponds to the first row of the pooling filter
-	for row := 0; row <= p.InputSize[0] - p.Size[0]; row += p.Strides[0]{
+	for row := 0; row <= p.InputSize[0]-p.Size[0]; row += p.Strides[0] {
 
 		currentGradCol := 0
 
 		// Loop through each input datapoint that corresponds to the first column of the pooling filter
-		for column := 0; column <= p.InputSize[1] - p.Size[1]; column += p.Strides[1]{
+		for column := 0; column <= p.InputSize[1]-p.Size[1]; column += p.Strides[1] {
 
-			for poolRow := 0; poolRow < p.Size[0]; poolRow++{
+			for poolRow := 0; poolRow < p.Size[0]; poolRow++ {
 
 				// Make row slice if undeclared
-				if upSampledGradient[row + poolRow] == nil{
-					upSampledGradient[row + poolRow] = make([][]*ckks.Ciphertext, p.InputSize[1])
+				if upSampledGradient[row+poolRow] == nil {
+					upSampledGradient[row+poolRow] = make([][]*ckks.Ciphertext, p.InputSize[1])
 				}
-				
-				for poolCol := 0; poolCol < p.Size[1]; poolCol++{
+
+				for poolCol := 0; poolCol < p.Size[1]; poolCol++ {
 
 					// Make column slice if undeclared
-					if upSampledGradient[row + poolRow][column + poolCol] == nil{
-						upSampledGradient[row + poolRow][column + poolCol] = make([]*ckks.Ciphertext, p.InputSize[2])
+					if upSampledGradient[row+poolRow][column+poolCol] == nil {
+						upSampledGradient[row+poolRow][column+poolCol] = make([]*ckks.Ciphertext, p.InputSize[2])
 					}
 
 					// Loop through each depth of input
-					for depth := 0; depth < p.InputSize[2]; depth++{
+					for depth := 0; depth < p.InputSize[2]; depth++ {
 
-						if upSampledGradient[row+poolRow][column+poolCol][depth] == nil{
+						if upSampledGradient[row+poolRow][column+poolCol][depth] == nil {
 							upSampledGradient[row+poolRow][column+poolCol][depth] = gradient[currentGradRow][currentGradCol][depth]
 						} else {
 							p.utils.Add(*upSampledGradient[row+poolRow][column+poolCol][depth], *gradient[currentGradRow][currentGradCol][depth], upSampledGradient[row+poolRow][column+poolCol][depth])
@@ -143,6 +148,11 @@ func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) Gradient2d {
 
 	}
 
+	// Bootstrap output
+	if p.btspOutput[1]{
+		p.utils.Bootstrap3dInPlace(upSampledGradient)
+	}
+
 	return Gradient2d{InputGradient: upSampledGradient}
 
 }
@@ -155,4 +165,33 @@ func (p AveragePooling2D) IsTrainable() bool {
 
 func (p AveragePooling2D) HasActivation() bool {
 	return false
+}
+
+func (p AveragePooling2D) GetForwardLevelConsumption() int {
+	return 1
+}
+
+func (p AveragePooling2D) GetBackwardLevelConsumption() int {
+	return 1
+}
+
+func (p AveragePooling2D) GetForwardActivationLevelConsumption() int {
+	return 0
+}
+
+func (p AveragePooling2D) GetBackwardActivationLevelConsumption() int {
+	return 0
+}
+
+func (p *AveragePooling2D) SetBootstrapOutput(set bool, direction string) {
+	switch direction{
+	case "forward":
+		p.btspOutput[0] = set
+	case "backward":
+		p.btspOutput[1] = set
+	}
+}
+
+func (p *AveragePooling2D) SetBootstrapActivation(set bool, direction string) {
+
 }

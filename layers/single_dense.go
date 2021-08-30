@@ -19,7 +19,7 @@ func (n NeuralNetworkGradient) GroupGradients(utils utility.Utils, weightLength 
 
 	ctData := make([]utility.CiphertextData, len(n.WeightGradient)+1)
 
-	for i := range n.WeightGradient {
+	for i := range n.WeightGradient { 
 
 		ctData[i] = utility.CiphertextData{Ciphertext: n.WeightGradient[i], Length: weightLength}
 
