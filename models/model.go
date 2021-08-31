@@ -34,13 +34,7 @@ func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.La
 
 	in1D, in2D := model.setForwardBootstrapping()
 
-	fmt.Println(in2D)
-	fmt.Println(in1D)
-
-	grad1D, grad2D := model.setBackwardBootstrapping(in1D, in2D)
-
-	fmt.Println(grad2D)
-	fmt.Println(grad1D)
+	model.setBackwardBootstrapping(in1D, in2D)
 
 	return model
 
@@ -293,7 +287,6 @@ func (m Model) setForwardBootstrapping() ([]int, []int) {
 
 		// Calculate required level for this layer
 		requiredLevel := m.Layers1d[l].GetForwardLevelConsumption() + m.Layers1d[l].GetForwardActivationLevelConsumption()
-		fmt.Println(l, requiredLevel)
 
 		if (inputLevel1D[l] - requiredLevel) < 1 {
 
