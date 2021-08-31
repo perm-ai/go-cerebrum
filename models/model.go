@@ -16,24 +16,31 @@ import (
 //=================================================
 
 type Model struct {
-	utils          	utility.Utils
-	Layers1d		[]layers.Layer1D
-	Layers2d        []layers.Layer2D
-	Flatten 		layers.Flatten2D
-	Loss           	losses.Loss
+	utils    utility.Utils
+	Layers1d []layers.Layer1D
+	Layers2d []layers.Layer2D
+	Flatten  layers.Flatten2D
+	Loss     losses.Loss
 }
 
 func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.Layer2D, loss losses.Loss) Model {
 
 	var flatten layers.Flatten2D
-	if len(layer2d) != 0{
-		flatten = layers.NewFlatten(layer2d[len(layer2d) -1].GetOutputSize())
+	if len(layer2d) != 0 {
+		flatten = layers.NewFlatten(layer2d[len(layer2d)-1].GetOutputSize())
 	}
 
 	model := Model{utils, layer1d, layer2d, flatten, loss}
 
 	in1D, in2D := model.setForwardBootstrapping()
-	model.setBackwardBootstrapping(in1D, in2D)
+
+	fmt.Println(in2D)
+	fmt.Println(in1D)
+
+	grad1D, grad2D := model.setBackwardBootstrapping(in1D, in2D)
+
+	fmt.Println(grad2D)
+	fmt.Println(grad1D)
 
 	return model
 
@@ -51,7 +58,7 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 		}
 
 		// Initialize slice for storing output
-		output2D = make([]layers.Output2d, len(m.Layers2d) + 1)
+		output2D = make([]layers.Output2d, len(m.Layers2d)+1)
 
 		// Insert output of input layer
 		output2D[0] = layers.Output2d{Output: input2D}
@@ -59,11 +66,11 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 		prevLayerHasActivation := false
 
 		// Loop through each layer and calculate output
-		for layer := 0; layer < len(m.Layers2d); layer++{
+		for layer := 0; layer < len(m.Layers2d); layer++ {
 
 			// input of this layer is output[i]
 			// output of this layer i is stored at output[i+1]
-			
+
 			var prevOut [][][]*ckks.Ciphertext
 
 			if prevLayerHasActivation {
@@ -72,7 +79,7 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 				prevOut = output2D[layer].Output
 			}
 
-			output2D[layer + 1] = m.Layers2d[layer].Forward(utility.Clone3dCiphertext(prevOut))
+			output2D[layer+1] = m.Layers2d[layer].Forward(utility.Clone3dCiphertext(prevOut))
 
 			prevLayerHasActivation = m.Layers2d[layer].HasActivation()
 
@@ -81,15 +88,15 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 	}
 
 	// initialize slice for storing 1D output
-	output1D = make([]layers.Output1d, len(m.Layers1d) + 1)
+	output1D = make([]layers.Output1d, len(m.Layers1d)+1)
 
-	if output2D != nil{
+	if output2D != nil {
 
-		prevOut := output2D[len(output2D) - 1].Output
+		prevOut := output2D[len(output2D)-1].Output
 
 		// Check if last 2D layer has activation
-		if m.Layers2d[len(m.Layers2d) - 1].HasActivation() {
-			prevOut = output2D[len(output2D) - 1].ActivationOutput
+		if m.Layers2d[len(m.Layers2d)-1].HasActivation() {
+			prevOut = output2D[len(output2D)-1].ActivationOutput
 		}
 
 		// Insert flattened 2D output in as input array
@@ -104,8 +111,8 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 
 		prevLayerHasActivation := false
 
-		for layer := 0; layer <= len(m.Layers1d); layer++{
-			
+		for layer := 0; layer <= len(m.Layers1d); layer++ {
+
 			var prevOut []*ckks.Ciphertext
 
 			if prevLayerHasActivation {
@@ -128,46 +135,46 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 
 func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, y []*ckks.Ciphertext) ([]layers.Gradient2d, []layers.Gradient1d) {
 
-	gradient1D := make([]layers.Gradient1d, len(m.Layers1d) + 1)
-	gradient2D := make([]layers.Gradient2d, len(m.Layers2d) + 1)
+	gradient1D := make([]layers.Gradient1d, len(m.Layers1d)+1)
+	gradient2D := make([]layers.Gradient2d, len(m.Layers2d)+1)
 
 	// Calculate loss gradient
 	var finalOutput []*ckks.Ciphertext
 
 	// Get output of last layer
-	if len(m.Layers1d) != 0{
-		if m.Layers1d[len(m.Layers1d) - 1].HasActivation(){
+	if len(m.Layers1d) != 0 {
+		if m.Layers1d[len(m.Layers1d)-1].HasActivation() {
 			finalOutput = output1D[len(m.Layers1d)].ActivationOutput
 		} else {
 			finalOutput = output1D[len(m.Layers1d)].Output
 		}
-	}else{
+	} else {
 		finalOutput = output1D[len(output1D)-1].Output
 	}
 
-	gradient1D[len(gradient1D) - 1] = layers.Gradient1d{InputGradient: m.Loss.Backward(utility.Clone1dCiphertext(finalOutput), utility.Clone1dCiphertext(y), len(y))}
+	gradient1D[len(gradient1D)-1] = layers.Gradient1d{InputGradient: m.Loss.Backward(utility.Clone1dCiphertext(finalOutput), utility.Clone1dCiphertext(y), len(y))}
 
 	if len(m.Layers1d) != 0 {
 
-		for layer := len(m.Layers1d) - 1; layer >= 0; layer--{
+		for layer := len(m.Layers1d) - 1; layer >= 0; layer-- {
 
 			// input of layer index i is output[i]
 			// output of layer i is output[i+1]
 
 			// Get next layer's input gradient
-			nextLayerInputGrad := gradient1D[layer + 1].InputGradient
+			nextLayerInputGrad := gradient1D[layer+1].InputGradient
 
 			// Get layer's input
 			layerInput := output1D[layer].Output
-			if layer != 0{
-				if m.Layers1d[layer - 1].HasActivation(){
+			if layer != 0 {
+				if m.Layers1d[layer-1].HasActivation() {
 					layerInput = output1D[layer].ActivationOutput
 				}
 			}
-			
+
 			// Get layer's output
 			layerOutput := output1D[layer+1].Output
-			if m.Layers1d[layer].HasActivation(){
+			if m.Layers1d[layer].HasActivation() {
 				layerOutput = output1D[layer+1].ActivationOutput
 			}
 
@@ -180,27 +187,27 @@ func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, 
 	if len(m.Layers2d) != 0 {
 
 		// Backward flatten layer
-		gradient2D[len(gradient2D) - 1] = m.Flatten.Backward(utility.Clone1dCiphertext(gradient1D[0].InputGradient))
+		gradient2D[len(gradient2D)-1] = m.Flatten.Backward(utility.Clone1dCiphertext(gradient1D[0].InputGradient))
 
-		for layer := len(m.Layers2d) - 1; layer >= 0; layer--{
+		for layer := len(m.Layers2d) - 1; layer >= 0; layer-- {
 
 			// input of layer index i is output[i]
 			// output of layer i is output[i+1]
 
 			// Get next layer's input gradient
-			nextLayerInputGrad := gradient2D[layer + 1].InputGradient
+			nextLayerInputGrad := gradient2D[layer+1].InputGradient
 
 			// Get layer's input
 			layerInput := output2D[layer].Output
-			if layer != 0{
-				if m.Layers2d[layer - 1].HasActivation(){
+			if layer != 0 {
+				if m.Layers2d[layer-1].HasActivation() {
 					layerInput = output2D[layer].ActivationOutput
 				}
 			}
-			
+
 			// Get layer's output
 			layerOutput := output2D[layer+1].Output
-			if m.Layers2d[layer].HasActivation(){
+			if m.Layers2d[layer].HasActivation() {
 				layerOutput = output2D[layer+1].ActivationOutput
 			}
 
@@ -216,14 +223,14 @@ func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, 
 
 func (m *Model) UpdateGradient(gradients1d []layers.Gradient1d, gradients2d []layers.Gradient2d, lr float64) {
 
-	for layer := range m.Layers2d{
-		if m.Layers2d[layer].IsTrainable(){
+	for layer := range m.Layers2d {
+		if m.Layers2d[layer].IsTrainable() {
 			m.Layers2d[layer].UpdateGradient(gradients2d[layer], lr)
 		}
 	}
 
-	for layer := range m.Layers1d{
-		if m.Layers1d[layer].IsTrainable(){
+	for layer := range m.Layers1d {
+		if m.Layers1d[layer].IsTrainable() {
 			m.Layers1d[layer].UpdateGradient(gradients1d[layer], lr)
 		}
 	}
@@ -232,10 +239,10 @@ func (m *Model) UpdateGradient(gradients1d []layers.Gradient1d, gradients2d []la
 
 func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int) {
 
-	for i := 0; i < int(dataLoader.GetLength() / batchSize); i++{
+	for i := 0; i < int(dataLoader.GetLength()/batchSize); i++ {
 
-		x, y := dataLoader.Load2D(i * batchSize, batchSize)
-		
+		x, y := dataLoader.Load2D(i*batchSize, batchSize)
+
 		outputs2D, outputs1D := m.Forward(x, []*ckks.Ciphertext{})
 		gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
 		m.UpdateGradient(gradients1D, gradients2D, learningRate)
@@ -246,20 +253,20 @@ func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 func (m Model) setForwardBootstrapping() ([]int, []int) {
 
-	inputLevel2D := make([]int, len(m.Layers2d) + 1)
-	inputLevel1D := make([]int, len(m.Layers1d) + 1)
+	inputLevel2D := make([]int, len(m.Layers2d)+1)
+	inputLevel1D := make([]int, len(m.Layers1d)+1)
 	inputLevel2D[0] = 9
 
 	// Calculate when to bootstrap for 2D forward propagation
-	for l := 0; l < len(m.Layers2d); l++{
+	for l := 0; l < len(m.Layers2d); l++ {
 
 		// Calculate required level for this layer
 		requiredLevel := m.Layers2d[l].GetForwardLevelConsumption() + m.Layers2d[l].GetForwardActivationLevelConsumption()
 
-		if (inputLevel2D[l] - requiredLevel) < 1{
+		if (inputLevel2D[l] - requiredLevel) < 1 {
 
 			// If not enough level bootstrap output of previous layer
-			if m.Layers2d[l-1].HasActivation(){
+			if m.Layers2d[l-1].HasActivation() {
 				m.Layers2d[l-1].SetBootstrapActivation(true, "forward")
 			} else {
 				m.Layers2d[l-1].SetBootstrapOutput(true, "forward")
@@ -275,22 +282,23 @@ func (m Model) setForwardBootstrapping() ([]int, []int) {
 
 	}
 
-	if len(m.Layers2d) == 0{
+	if len(m.Layers2d) == 0 {
 		inputLevel1D[0] = 9
-	} else{
-		inputLevel1D[0] = inputLevel2D[len(inputLevel2D) - 1]
+	} else {
+		inputLevel1D[0] = inputLevel2D[len(inputLevel2D)-1]
 	}
 
 	// Calculate when to bootstrap for 1D forward propagation
-	for l := 0; l < len(m.Layers1d); l++{
+	for l := 0; l < len(m.Layers1d); l++ {
 
 		// Calculate required level for this layer
 		requiredLevel := m.Layers1d[l].GetForwardLevelConsumption() + m.Layers1d[l].GetForwardActivationLevelConsumption()
+		fmt.Println(l, requiredLevel)
 
-		if (inputLevel1D[l] - requiredLevel) < 1{
+		if (inputLevel1D[l] - requiredLevel) < 1 {
 
 			// If not enough level bootstrap output of previous layer
-			if m.Layers1d[l-1].HasActivation(){
+			if m.Layers1d[l-1].HasActivation() {
 				m.Layers1d[l-1].SetBootstrapActivation(true, "forward")
 			} else {
 				m.Layers1d[l-1].SetBootstrapOutput(true, "forward")
@@ -307,13 +315,13 @@ func (m Model) setForwardBootstrapping() ([]int, []int) {
 	}
 
 	// Set bootstrap output for last layer
-	if m.Layers1d[len(m.Layers1d) - 1].HasActivation(){
-		m.Layers1d[len(m.Layers1d) - 1].SetBootstrapActivation(true, "forward")
+	if m.Layers1d[len(m.Layers1d)-1].HasActivation() {
+		m.Layers1d[len(m.Layers1d)-1].SetBootstrapActivation(true, "forward")
 	} else {
-		m.Layers1d[len(m.Layers1d) - 1].SetBootstrapOutput(true, "forward")
+		m.Layers1d[len(m.Layers1d)-1].SetBootstrapOutput(true, "forward")
 	}
 
-	inputLevel1D[len(inputLevel1D) - 1] = 9
+	inputLevel1D[len(inputLevel1D)-1] = 9
 
 	return inputLevel1D, inputLevel2D
 
@@ -321,39 +329,39 @@ func (m Model) setForwardBootstrapping() ([]int, []int) {
 
 func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) ([]int, []int) {
 
-	gradientLevel1D := make([]int, len(m.Layers1d) + 1)
-	gradientLevel2D := make([]int, len(m.Layers2d) + 1)
+	gradientLevel1D := make([]int, len(m.Layers1d)+1)
+	gradientLevel2D := make([]int, len(m.Layers2d)+1)
 
-	gradientLevel1D[len(gradientLevel1D) - 1] = inputLevel1D[len(inputLevel1D) - 1]
+	gradientLevel1D[len(gradientLevel1D)-1] = inputLevel1D[len(inputLevel1D)-1]
 
 	// Loop throught each layer backward
-	for l := len(m.Layers1d) - 1; l <= 0; l--{
-		
+	for l := len(m.Layers1d) - 1; l >= 0; l-- {
+
 		// Get the loss gradient wrt input on the next layer
-		gradientLevel := gradientLevel1D[l + 1]
+		gradientLevel := gradientLevel1D[l+1]
 
 		// Get level of input of this layer
 		inputLevel := inputLevel1D[l]
 
-		if m.Layers1d[l].HasActivation() && m.Layers1d[l].IsTrainable(){
+		if m.Layers1d[l].GetBackwardActivationLevelConsumption() > 0 && m.Layers1d[l].IsTrainable() {
 
 			activationLevel := inputLevel - m.Layers1d[l].GetForwardLevelConsumption() - m.Layers1d[l].GetBackwardActivationLevelConsumption()
 
 			// Check if loss gradient wrt input has enough level to multiply once with gradient of activation wrt output
-			if gradientLevel < 2{
+			if gradientLevel < 2 {
 				// if not enough bootstrap output of previous layer
-				m.Layers1d[l + 1].SetBootstrapOutput(true, "backward")
-				gradientLevel1D[l + 1] = 9
-				gradientLevel = gradientLevel1D[l + 1]
+				m.Layers1d[l+1].SetBootstrapOutput(true, "backward")
+				gradientLevel1D[l+1] = 9
+				gradientLevel = gradientLevel1D[l+1]
 			}
 
 			activationLossGradientLevel := 0
-			if activationLevel > 1{
+			if activationLevel > 1 {
 				// Calculate level of loss gradient wrt output
 				activationLossGradientLevel = int(math.Min(float64(gradientLevel), float64(activationLevel)) - 1)
 			} else {
 				// Bootstrap activation gradient wrt output before computing loss gradient wrt output if not enough level is reached
-				m.Layers1d[l].SetBootstrapActivation(true, "backward")	
+				m.Layers1d[l].SetBootstrapActivation(true, "backward")
 				activationLossGradientLevel = int(math.Min(float64(gradientLevel), 9.0) - 1)
 			}
 
@@ -361,11 +369,11 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 			gradientLevel1D[l] = int(math.Min(float64(inputLevel), float64(activationLossGradientLevel)) - float64(m.Layers1d[l].GetBackwardLevelConsumption()))
 
 			// Check if loss gradient wrt input is less than one
-			if gradientLevel1D[l] < 1 && activationLossGradientLevel < inputLevel{
+			if gradientLevel1D[l] < 1 && activationLossGradientLevel < inputLevel {
 				// Bootstrap loss gradient wrt output if it is responsible for making the level of loss wrt input less than 1
 				m.Layers1d[l].SetBootstrapActivation(true, "backward")
 				activationLossGradientLevel = 9
-				
+
 				// recalculate level of loss gradient wrt input
 				gradientLevel1D[l] = int(math.Min(float64(inputLevel), float64(activationLossGradientLevel)) - float64(m.Layers1d[l].GetBackwardLevelConsumption()))
 			}
@@ -376,7 +384,7 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 			gradientLevel1D[l] = int(math.Min(float64(inputLevel), float64(gradientLevel)) - float64(m.Layers1d[l].GetBackwardLevelConsumption()))
 
 			// Bootstrap loss gradient wrt input of next layer if level is not enough
-			if gradientLevel1D[l] < 1{
+			if gradientLevel1D[l] < 1 {
 				m.Layers1d[l-1].SetBootstrapOutput(true, "backward")
 				gradientLevel1D[l-1] = 9
 				gradientLevel1D[l] = int(math.Min(float64(inputLevel), float64(gradientLevel1D[l-1])) - float64(m.Layers1d[l].GetBackwardLevelConsumption()))
@@ -388,7 +396,7 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 			gradientLevel1D[l] = gradientLevel - m.Layers1d[l].GetBackwardLevelConsumption()
 
 			// Bootstrap loss gradient wrt input of next layer if level is not enough
-			if gradientLevel1D[l] < 1{
+			if gradientLevel1D[l] < 1 {
 				m.Layers1d[l-1].SetBootstrapOutput(true, "backward")
 				gradientLevel1D[l-1] = 9
 				gradientLevel1D[l] = int(math.Min(float64(inputLevel), float64(gradientLevel1D[l-1])) - float64(m.Layers1d[l].GetBackwardLevelConsumption()))
@@ -398,36 +406,40 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 
 	}
 
-	gradientLevel2D[len(gradientLevel2D) - 1] = gradientLevel1D[0]
+	gradientLevel2D[len(gradientLevel2D)-1] = gradientLevel1D[0]
+
+	if len(m.Layers2d) == 0 {
+		return gradientLevel1D, gradientLevel2D
+	}
 
 	// Loop throught each layer backward
-	for l := len(m.Layers2d) - 1; l <= 0; l--{
-		
+	for l := len(m.Layers2d) - 1; l >= 0; l-- {
+
 		// Get the loss gradient wrt input on the next layer
-		gradientLevel := gradientLevel2D[l + 1]
+		gradientLevel := gradientLevel2D[l+1]
 
 		// Get level of input of this layer
 		inputLevel := inputLevel2D[l]
 
-		if m.Layers2d[l].HasActivation() && m.Layers2d[l].IsTrainable(){
+		if m.Layers2d[l].HasActivation() && m.Layers2d[l].IsTrainable() {
 
 			activationLevel := inputLevel - m.Layers2d[l].GetForwardLevelConsumption() - m.Layers2d[l].GetBackwardActivationLevelConsumption()
 
 			// Check if loss gradient wrt input has enough level to multiply once with gradient of activation wrt output
-			if gradientLevel < 2{
+			if gradientLevel < 2 {
 				// if not enough bootstrap output of previous layer
-				m.Layers2d[l + 1].SetBootstrapOutput(true, "backward")
-				gradientLevel2D[l + 1] = 9
-				gradientLevel = gradientLevel2D[l + 1]
+				m.Layers2d[l+1].SetBootstrapOutput(true, "backward")
+				gradientLevel2D[l+1] = 9
+				gradientLevel = gradientLevel2D[l+1]
 			}
 
 			activationLossGradientLevel := 0
-			if activationLevel > 1{
+			if activationLevel > 1 {
 				// Calculate level of loss gradient wrt output
 				activationLossGradientLevel = int(math.Min(float64(gradientLevel), float64(activationLevel)) - 1)
 			} else {
 				// Bootstrap activation gradient wrt output before computing loss gradient wrt output if not enough level is reached
-				m.Layers2d[l].SetBootstrapActivation(true, "backward")	
+				m.Layers2d[l].SetBootstrapActivation(true, "backward")
 				activationLossGradientLevel = int(math.Min(float64(gradientLevel), 9.0) - 1)
 			}
 
@@ -435,11 +447,11 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 			gradientLevel2D[l] = int(math.Min(float64(inputLevel), float64(activationLossGradientLevel)) - float64(m.Layers2d[l].GetBackwardLevelConsumption()))
 
 			// Check if loss gradient wrt input is less than one
-			if gradientLevel2D[l] < 1 && activationLossGradientLevel < inputLevel{
+			if gradientLevel2D[l] < 1 && activationLossGradientLevel < inputLevel {
 				// Bootstrap loss gradient wrt output if it is responsible for making the level of loss wrt input less than 1
 				m.Layers2d[l].SetBootstrapActivation(true, "backward")
 				activationLossGradientLevel = 9
-				
+
 				// recalculate level of loss gradient wrt input
 				gradientLevel2D[l] = int(math.Min(float64(inputLevel), float64(activationLossGradientLevel)) - float64(m.Layers2d[l].GetBackwardLevelConsumption()))
 			}
@@ -450,7 +462,7 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 			gradientLevel2D[l] = int(math.Min(float64(inputLevel), float64(gradientLevel)) - float64(m.Layers2d[l].GetBackwardLevelConsumption()))
 
 			// Bootstrap loss gradient wrt input of next layer if level is not enough
-			if gradientLevel2D[l] < 1{
+			if gradientLevel2D[l] < 1 {
 				m.Layers2d[l-1].SetBootstrapOutput(true, "backward")
 				gradientLevel2D[l-1] = 9
 				gradientLevel2D[l] = int(math.Min(float64(inputLevel), float64(gradientLevel2D[l-1])) - float64(m.Layers2d[l].GetBackwardLevelConsumption()))
@@ -462,7 +474,7 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 			gradientLevel2D[l] = gradientLevel - m.Layers2d[l].GetBackwardLevelConsumption()
 
 			// Bootstrap loss gradient wrt input of next layer if level is not enough
-			if gradientLevel2D[l] < 1{
+			if gradientLevel2D[l] < 1 {
 				m.Layers2d[l-1].SetBootstrapOutput(true, "backward")
 				gradientLevel2D[l-1] = 9
 				gradientLevel2D[l] = int(math.Min(float64(inputLevel), float64(gradientLevel2D[l-1])) - float64(m.Layers2d[l].GetBackwardLevelConsumption()))

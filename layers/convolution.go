@@ -563,7 +563,7 @@ func (c *Conv2D) SetBootstrapActivation(set bool, direction string){
 	}
 }
 
-func (c Conv2D) GetForwardOutputLevelConsumption() int {
+func (c Conv2D) GetForwardLevelConsumption() int {
 	return 1
 }
 
