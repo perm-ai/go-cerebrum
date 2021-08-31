@@ -72,3 +72,15 @@ func (s Softmax) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertex
 	return input
 
 }
+
+func (s Softmax) GetForwardLevelConsumption() int {
+
+	return 7
+
+}
+
+func (s Softmax) GetBackwardLevelConsumption() int {
+
+	return 0
+
+}

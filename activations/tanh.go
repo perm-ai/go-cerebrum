@@ -10,8 +10,14 @@ import (
 //=================================================
 
 type Tanh struct {
-	U        		utility.Utils
-	backwardDeg0	map[int]ckks.Plaintext
+	U            utility.Utils
+	backwardDeg0 map[int]ckks.Plaintext
+}
+
+func NewTanh(utils utility.Utils) Tanh {
+
+	return Tanh{utils, make(map[int]ckks.Plaintext)}
+
 }
 
 func (t Tanh) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
@@ -54,5 +60,17 @@ func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
 	result := t.U.AddPlainNew(deg2, deg0)
 
 	return result
+
+}
+
+func (t Tanh) GetForwardLevelConsumption() int {
+
+	return 2
+
+}
+
+func (t Tanh) GetBackwardLevelConsumption() int {
+
+	return 2
 
 }
