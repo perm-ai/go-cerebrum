@@ -85,7 +85,9 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 
 }
 
-func (p AveragePooling2D) Backward(gradient [][][]*ckks.Ciphertext) Gradient2d {
+// Calculate loss gradient wrt input of a pooling layer
+// input and output params aren't used and can be nil
+func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Ciphertext, gradient [][][]*ckks.Ciphertext, hasPrevLayer bool) Gradient2d {
 
 	gradientSize := p.GetOutputSize()
 
