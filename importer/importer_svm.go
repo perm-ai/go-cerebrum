@@ -1,4 +1,4 @@
-package svm
+package importer
 
 import (
 	"encoding/json"
