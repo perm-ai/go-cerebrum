@@ -581,7 +581,7 @@ func (c Conv2D) GetForwardActivationLevelConsumption() int {
 
 func (c Conv2D) GetBackwardActivationLevelConsumption() int {
 	if c.HasActivation() {
-		return (*c.Activation).GetForwardLevelConsumption()
+		return (*c.Activation).GetBackwardLevelConsumption()
 	} else {
 		return 0
 	}

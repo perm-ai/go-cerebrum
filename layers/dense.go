@@ -182,7 +182,7 @@ func (d Dense) GetForwardActivationLevelConsumption() int {
 
 func (d Dense) GetBackwardActivationLevelConsumption() int {
 	if d.HasActivation() {
-		return (*d.Activation).GetForwardLevelConsumption()
+		return (*d.Activation).GetBackwardLevelConsumption()
 	} else {
 		return 0
 	}
