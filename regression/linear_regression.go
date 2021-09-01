@@ -34,7 +34,7 @@ func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 
 }
 
-func (l LinearRegression) Forward(input []ckks.Ciphertext) ckks.Ciphertext {
+func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
 
 	// prepare result ciphertesxt
 
@@ -43,29 +43,29 @@ func (l LinearRegression) Forward(input []ckks.Ciphertext) ckks.Ciphertext {
 	// W*X for each feature, add sum in result
 
 	for i := range input {
-		dot := l.utils.MultiplyNew(input[i], l.Weight[i], true, false)
+		dot := l.utils.MultiplyNew(*input[i], l.Weight[i], true, false)
 		l.utils.Add(result, dot, &result)
 	}
 
 	l.utils.Add(result, l.Bias, &result)
 
-	return result
+	return &result
 
 }
 
-func (l LinearRegression) Backward(input []ckks.Ciphertext, output ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
+func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
 
 	// Calculate backward gradient using the following equation
 	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
 	// dB = (-2/n) * sum(label - prediction) * learning_rate
 
-	err := l.utils.SubNew(*y, output)
+	err := l.utils.SubNew(*y, *output)
 
 	dM := make([]ckks.Ciphertext, len(input))
 	multiplier := l.utils.EncodePlaintextFromArray(l.utils.GenerateFilledArraySize((-2.0/float64(size))*learningRate, size))
 
 	for i := range input {
-		dM[i] = l.utils.MultiplyNew(input[i], *err.CopyNew(), true, false)
+		dM[i] = l.utils.MultiplyNew(*input[i], *err.CopyNew(), true, false)
 		l.utils.SumElementsInPlace(&dM[i])
 		l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
 	}
@@ -88,7 +88,7 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 }
 
 // pack data in array of ciphertexts
-func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
+func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
 
 	log := logger.NewLogger(true)
 
@@ -97,10 +97,10 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 	for i := 0; i < epoch; i++ {
 
 		log.Log(fmt.Sprintf("Forward propagating %d/%d (current lvl: %d)", i+1, epoch,  x[0].Level()))
-		fwd := model.Forward(x)
+		fwd := model.Forward(utility.Clone1dCiphertext(x))
 
 		log.Log(fmt.Sprintf("Backward propagating %d/%d(current lvl: %d)", i+1, epoch,  fwd.Level()))
-		grad := model.Backward(x, fwd, y, size, learningRate)
+		grad := model.Backward(utility.Clone1dCiphertext(x), fwd, y.CopyNew(), size, learningRate)
 
 		log.Log(fmt.Sprintf("Updating gradient %d/%d(current lvl: %d)\n", i+1, epoch,  grad.DM[0].Level()))
 		model.UpdateGradient(grad)
