@@ -11,8 +11,8 @@ import (
 
 type LinearRegression struct {
 	utils  utility.Utils
-	Weight []ckks.Ciphertext
-	Bias   ckks.Ciphertext
+	Weight []*ckks.Ciphertext
+	Bias   *ckks.Ciphertext
 }
 
 type LinearRegressionGradient struct {
@@ -24,11 +24,11 @@ type LinearRegressionGradient struct {
 func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 
 	zeros := u.GenerateFilledArray(0.0)
-	m := make([]ckks.Ciphertext, numOfFeatures)
+	m := make([]*ckks.Ciphertext, numOfFeatures)
 	for i := 0; i < numOfFeatures; i++ {
-		m[i] = u.Encrypt(zeros)
+		m[i] = u.EncryptToPointer(zeros)
 	}
-	b := u.Encrypt(zeros)
+	b := u.EncryptToPointer(zeros)
 
 	return LinearRegression{u, m, b}
 
@@ -43,11 +43,11 @@ func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
 	// W*X for each feature, add sum in result
 
 	for i := range input {
-		dot := l.utils.MultiplyNew(*input[i], l.Weight[i], true, false)
+		dot := l.utils.MultiplyNew(*input[i], *l.Weight[i], true, false)
 		l.utils.Add(result, dot, &result)
 	}
 
-	l.utils.Add(result, l.Bias, &result)
+	l.utils.Add(result, *l.Bias, &result)
 
 	return &result
 
@@ -80,10 +80,10 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	for i := range gradient.DM {
-		l.utils.Sub(l.Weight[i], gradient.DM[i], &l.Weight[i])
+		l.utils.Sub(*l.Weight[i], gradient.DM[i], l.Weight[i])
 	}
 
-	l.utils.Sub(l.Bias, gradient.DB, &l.Bias)
+	l.utils.Sub(*l.Bias, gradient.DB, l.Bias)
 
 }
 
@@ -108,7 +108,7 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
 			if model.Bias.Level() != 1 {
-				model.utils.Evaluator.DropLevel(&model.Bias, model.Bias.Level()-1)
+				model.utils.Evaluator.DropLevel(model.Bias, model.Bias.Level()-1)
 			}
 
 			// Generate wait group for concurrency execution
@@ -121,11 +121,11 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 					defer wg.Done()
 					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
 
-					beforeBtp := model.utils.Decrypt(&model.Weight[i])[0]
+					beforeBtp := model.utils.Decrypt(model.Weight[i])[0]
 
-					model.utils.BootstrapInPlace(&model.Weight[i])
+					model.utils.BootstrapInPlace(model.Weight[i])
 					
-					afterBtp := model.utils.Decrypt(&model.Weight[i])[0]
+					afterBtp := model.utils.Decrypt(model.Weight[i])[0]
 
 					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d; %f difference)", i, model.Weight[i].Level(), afterBtp - beforeBtp))
 				}(w)
@@ -135,9 +135,9 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 			go func() {
 				defer wg.Done()
 				log.Log("Bootstrapping bias")
-				beforeBtp := model.utils.Decrypt(&model.Bias)[0]
-				model.utils.BootstrapInPlace(&model.Bias)
-				afterBtp := model.utils.Decrypt(&model.Bias)[0]
+				beforeBtp := model.utils.Decrypt(model.Bias)[0]
+				model.utils.BootstrapInPlace(model.Bias)
+				afterBtp := model.utils.Decrypt(model.Bias)[0]
 				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d; %f difference)", model.Bias.Level(), afterBtp - beforeBtp))
 			}()
 			
