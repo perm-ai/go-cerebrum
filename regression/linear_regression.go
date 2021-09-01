@@ -120,14 +120,18 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 				// Execute anonymous function for bootstrapping of weight with concurrency
 				go func(i int) {
 					defer wg.Done()
+					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
 					model.utils.BootstrapInPlace(&model.Weight[i])
+					log.Log(fmt.Sprintf("Bootstrap of weight %d completed", i))
 				}(i)
 			}
 
 			// Execute anonymous function for bootstrapping of bias with concurrency
 			go func() {
 				defer wg.Done()
+				log.Log("Bootstrapping bias")
 				model.utils.BootstrapInPlace(&model.Bias)
+				log.Log("Bootstrap of bias completed")
 			}()
 			
 			wg.Wait()
