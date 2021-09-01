@@ -3,6 +3,7 @@ package regression
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -110,10 +111,26 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 			if model.Bias.Level() != 1 {
 				model.utils.Evaluator.DropLevel(&model.Bias, model.Bias.Level()-1)
 			}
+
+			// Generate wait group for concurrency execution
+			var wg sync.WaitGroup
+			wg.Add(len(x) + 1)
+
 			for i := range x {
-				model.utils.BootstrapInPlace(&model.Weight[i])
+				// Execute anonymous function for bootstrapping of weight with concurrency
+				go func(i int) {
+					defer wg.Done()
+					model.utils.BootstrapInPlace(&model.Weight[i])
+				}(i)
 			}
-			model.utils.BootstrapInPlace(&model.Bias)
+
+			// Execute anonymous function for bootstrapping of bias with concurrency
+			go func() {
+				defer wg.Done()
+				model.utils.BootstrapInPlace(&model.Bias)
+			}()
+			
+			wg.Wait()
 		}
 
 	}
