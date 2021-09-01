@@ -121,13 +121,13 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 					defer wg.Done()
 					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
 
-					beforeBtp := model.utils.Decrypt(model.Weight[i])[0]
+					beforeBtp := model.utils.Decrypt(model.Weight[i])
 
 					model.utils.BootstrapInPlace(model.Weight[i])
 					
-					afterBtp := model.utils.Decrypt(model.Weight[i])[0]
+					afterBtp := model.utils.Decrypt(model.Weight[i])
 
-					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d; %f difference)", i, model.Weight[i].Level(), afterBtp - beforeBtp))
+					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d; %f difference)", i, model.Weight[i].Level(), afterBtp[0] - beforeBtp[0]))
 				}(w)
 			}
 
