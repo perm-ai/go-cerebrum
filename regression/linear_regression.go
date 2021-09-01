@@ -115,33 +115,36 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 			var wg sync.WaitGroup
 			wg.Add(len(x) + 1)
 
+			beforeBtp0 := model.utils.Decrypt(model.Weight[0])[0]
+			beforeBtp1 := model.utils.Decrypt(model.Weight[1])[1]
+			beforeBtp2 := model.utils.Decrypt(model.Bias)[2]
+
 			for w := range model.Weight {
+
 				// Execute anonymous function for bootstrapping of weight with concurrency
 				go func(i int) {
 					defer wg.Done()
+
 					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
-
-					beforeBtp := model.utils.Decrypt(model.Weight[i])
-
 					model.utils.BootstrapInPlace(model.Weight[i])
-					
-					afterBtp := model.utils.Decrypt(model.Weight[i])
+					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d)", i, model.Weight[i].Level()))
 
-					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d; %f difference)", i, model.Weight[i].Level(), afterBtp[0] - beforeBtp[0]))
 				}(w)
+
 			}
 
 			// Execute anonymous function for bootstrapping of bias with concurrency
 			go func() {
 				defer wg.Done()
 				log.Log("Bootstrapping bias")
-				beforeBtp := model.utils.Decrypt(model.Bias)[0]
 				model.utils.BootstrapInPlace(model.Bias)
-				afterBtp := model.utils.Decrypt(model.Bias)[0]
-				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d; %f difference)", model.Bias.Level(), afterBtp - beforeBtp))
+				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d)", model.Bias.Level()))
 			}()
 			
 			wg.Wait()
+			
+			log.Log(fmt.Sprintf("Bootstrap error: %f %f %f", model.utils.Decrypt(model.Weight[0])[0] - beforeBtp0, model.utils.Decrypt(model.Weight[1])[1] - beforeBtp1, model.utils.Decrypt(model.Bias)[2] - beforeBtp2))
+
 		}
 
 	}

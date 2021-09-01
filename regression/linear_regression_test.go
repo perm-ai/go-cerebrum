@@ -14,7 +14,7 @@ import (
 func TestLinearRegression(t *testing.T) {
 
 	// Insert data path here
-	data := importer.GetHousingData("")
+	data := importer.GetHousingData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/housing_test.json")
 
 	fmt.Println(len(data.Housing_median_age))
 	fmt.Println(len(data.Median_income))
@@ -24,12 +24,17 @@ func TestLinearRegression(t *testing.T) {
 	keysChain := key.GenerateKeys(0, true, true)
 	utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
 
-	data1 := utils.Encrypt(data.Housing_median_age)
-	data2 := utils.Encrypt(data.Median_income)
-	data3 := utils.Encrypt(data.Median_house_value)
+	data1 := utils.EncryptToPointer(data.Housing_median_age)
+	data2 := utils.EncryptToPointer(data.Median_income)
+	data3 := utils.EncryptToPointer(data.Median_house_value)
 	model := NewLinearRegression(utils, 2)
-	independentVar := []*ckks.Ciphertext{&data1, &data2}
-	model.Train(independentVar, &data3, 0.1, len(data.Median_income), 20)
+
+	utils.Evaluator.DropLevel(data1, data1.Level()-9)
+	utils.Evaluator.DropLevel(data2, data2.Level()-9)
+	utils.Evaluator.DropLevel(data3, data3.Level()-9)
+
+	independentVar := []*ckks.Ciphertext{data1, data2}
+	model.Train(independentVar, data3, 0.1, len(data.Median_income), 20)
 	slope := make([]float64, 2)
 	for i := 0; i < 2; i++ {
 		slope[i] = utils.Decrypt(model.Weight[i])[0]
