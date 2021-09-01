@@ -2,7 +2,6 @@ package regression
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
