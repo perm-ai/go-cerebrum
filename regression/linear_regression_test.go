@@ -1,19 +1,20 @@
-package main
+package regression
 
 import (
 	"fmt"
 	"math"
+	"testing"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/importer"
 	"github.com/perm-ai/go-cerebrum/key"
-	"github.com/perm-ai/go-cerebrum/regression"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-func main() {
+func TestLinearRegression(t *testing.T) {
 
-	data := importer.GetHousingData("importer/test-data/housing_test.json")
+	// Insert data path here
+	data := importer.GetHousingData("")
 
 	fmt.Println(len(data.Housing_median_age))
 	fmt.Println(len(data.Median_income))
@@ -26,7 +27,7 @@ func main() {
 	data1 := utils.Encrypt(data.Housing_median_age)
 	data2 := utils.Encrypt(data.Median_income)
 	data3 := utils.Encrypt(data.Median_house_value)
-	model := regression.NewLinearRegression(utils, 2)
+	model := NewLinearRegression(utils, 2)
 	independentVar := []ckks.Ciphertext{data1, data2}
 	model.Train(independentVar, &data3, 0.1, len(data.Median_income), 20)
 	slope := make([]float64, 2)
@@ -36,4 +37,5 @@ func main() {
 	bias := utils.Decrypt(&model.Bias)
 
 	fmt.Printf("The weights are biases are %f and %f", slope, bias[0])
+
 }
