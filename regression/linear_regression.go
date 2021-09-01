@@ -97,13 +97,13 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 
 	for i := 0; i < epoch; i++ {
 
-		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		log.Log(fmt.Sprintf("Forward propagating %d/%d (current lvl: %d)", i+1, epoch,  x[0].Level()))
 		fwd := model.Forward(x)
 
-		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		log.Log(fmt.Sprintf("Backward propagating %d/%d(current lvl: %d)", i+1, epoch,  fwd.Level()))
 		grad := model.Backward(x, fwd, y, size, learningRate)
 
-		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
+		log.Log(fmt.Sprintf("Updating gradient %d/%d(current lvl: %d)\n", i+1, epoch,  grad.DM[0].Level()))
 		model.UpdateGradient(grad)
 
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
@@ -116,14 +116,14 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 			var wg sync.WaitGroup
 			wg.Add(len(x) + 1)
 
-			for i := range x {
+			for w := range model.Weight {
 				// Execute anonymous function for bootstrapping of weight with concurrency
 				go func(i int) {
 					defer wg.Done()
 					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
 					model.utils.BootstrapInPlace(&model.Weight[i])
-					log.Log(fmt.Sprintf("Bootstrap of weight %d completed", i))
-				}(i)
+					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d)", i, model.Weight[i].Level()))
+				}(w)
 			}
 
 			// Execute anonymous function for bootstrapping of bias with concurrency
@@ -131,7 +131,7 @@ func (model *LinearRegression) Train(x []ckks.Ciphertext, y *ckks.Ciphertext, le
 				defer wg.Done()
 				log.Log("Bootstrapping bias")
 				model.utils.BootstrapInPlace(&model.Bias)
-				log.Log("Bootstrap of bias completed")
+				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d)", model.Bias.Level()))
 			}()
 			
 			wg.Wait()
