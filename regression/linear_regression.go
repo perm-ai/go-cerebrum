@@ -121,11 +121,13 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 					defer wg.Done()
 					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
 
-					beforebtp := model.utils.Decrypt(&model.Weight[i])[0]
+					beforeBtp := model.utils.Decrypt(&model.Weight[i])[0]
 
 					model.utils.BootstrapInPlace(&model.Weight[i])
 					
-					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d; %f difference)", i, model.Weight[i].Level(), model.utils.Decrypt(&model.Weight[i])[0] - beforebtp))
+					afterBtp := model.utils.Decrypt(&model.Weight[i])[0]
+
+					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d; %f difference)", i, model.Weight[i].Level(), afterBtp - beforeBtp))
 				}(w)
 			}
 
@@ -133,9 +135,10 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 			go func() {
 				defer wg.Done()
 				log.Log("Bootstrapping bias")
-				beforebtp := model.utils.Decrypt(&model.Bias)[0]
+				beforeBtp := model.utils.Decrypt(&model.Bias)[0]
 				model.utils.BootstrapInPlace(&model.Bias)
-				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d; %f difference)", model.Bias.Level(), model.utils.Decrypt(&model.Bias)[0] - beforebtp))
+				afterBtp := model.utils.Decrypt(&model.Bias)[0]
+				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d; %f difference)", model.Bias.Level(), afterBtp - beforeBtp))
 			}()
 			
 			wg.Wait()
