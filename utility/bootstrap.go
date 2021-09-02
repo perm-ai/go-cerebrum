@@ -1,6 +1,10 @@
 package utility
 
-import "github.com/ldsec/lattigo/v2/ckks"
+import (
+	"fmt"
+
+	"github.com/ldsec/lattigo/v2/ckks"
+)
 
 func (u Utils) BootstrapIfNecessary(ct *ckks.Ciphertext) bool {
 
@@ -32,12 +36,7 @@ func (u Utils) Bootstrap1dInPlace(ct []*ckks.Ciphertext, concurrent bool) {
 		for i := range ct{
 
 			channels[i] = make(chan ckks.Ciphertext)
-
-			go func(ciphertext ckks.Ciphertext, c chan ckks.Ciphertext){
-
-				c <- *u.Bootstrapper.Bootstrapp(&ciphertext)
-
-			}(*ct[i], channels[i])
+			go bootstrapGoRoutine(*ct[i], u, channels[i])
 
 		}
 
@@ -50,6 +49,13 @@ func (u Utils) Bootstrap1dInPlace(ct []*ckks.Ciphertext, concurrent bool) {
 			*ct[i] = *u.Bootstrapper.Bootstrapp(ct[i])
 		}
 	}
+
+}
+
+func bootstrapGoRoutine (ciphertext ckks.Ciphertext, utils Utils, c chan ckks.Ciphertext){
+
+	cpy := ciphertext.CopyNew()
+	c <- *utils.Bootstrapper.Bootstrapp(cpy)
 
 }
 
