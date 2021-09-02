@@ -87,8 +87,8 @@ func (model SingleDense) Forward(input *ckks.Ciphertext) (ckks.Ciphertext, ckks.
 	model.utils.Add(z, model.Bias, &z)
 
 	if model.UseActivation {
-		a := model.Activation.Forward(z, model.OutputUnit)
-		return z, a
+		a := model.Activation.Forward([]*ckks.Ciphertext{&z}, model.OutputUnit)
+		return z, *a[0]
 	} else {
 		return z, z
 	}
@@ -103,7 +103,7 @@ func (model SingleDense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertex
 
 		if model.UseActivation {
 
-			activationGradient := model.Activation.Backward(*output, model.OutputUnit)
+			activationGradient := *model.Activation.Backward([]*ckks.Ciphertext{output}, model.OutputUnit)[0]
 			gradients.BiasGradient = model.utils.MultiplyNew(gradient, activationGradient, true, false)
 
 		} else {
@@ -147,7 +147,7 @@ func (model SingleDense) Backward(input *ckks.Ciphertext, output *ckks.Ciphertex
 
 		// Apply activation gradient
 		if model.UseActivation {
-			activationGradient := model.Activation.Backward(*output, model.OutputUnit)
+			activationGradient := *model.Activation.Backward([]*ckks.Ciphertext{output}, model.OutputUnit)[0]
 			gradients.BiasGradient = model.utils.MultiplyNew(activationGradient, sum, true, false)
 		} else {
 			gradients.BiasGradient = sum

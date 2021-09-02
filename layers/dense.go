@@ -69,14 +69,15 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 			d.utils.BootstrapInPlace(output[node])
 		}
 
-		if d.Activation != nil {
-			activated := (*d.Activation).Forward(*output[node], d.batchSize)
-			activatedOutput[node] = &activated
+	}
 
-			if d.btspActivation[0] {
-				d.utils.BootstrapInPlace(activatedOutput[node])
-			}
+	if d.Activation != nil {
+		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
 
+		if d.btspActivation[0] {
+			for a := range activatedOutput{
+				d.utils.BootstrapInPlace(activatedOutput[a])
+			}	
 		}
 
 	}
@@ -95,16 +96,18 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 	// Calculate gradients for last layer
 	if d.Activation != nil {
-		for b := range d.Bias {
-			activationGradient := (*d.Activation).Backward(*output[b], d.OutputUnit)
 
-			if activationGradient.Level() == 1 && d.btspActivation[1] {
-				d.utils.BootstrapInPlace(&activationGradient)
+		activationGradient := (*d.Activation).Backward(output, d.OutputUnit)
+
+		for b := range d.Bias {
+
+			if activationGradient[b].Level() == 1 && d.btspActivation[1] {
+				d.utils.BootstrapInPlace(activationGradient[b])
 			} else if d.btspActivation[1] {
-				d.utils.Multiply(*gradient[b], activationGradient, gradient[b], true, false)
+				d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
 				d.utils.BootstrapInPlace(gradient[b])
 			} else {
-				d.utils.Multiply(*gradient[b], activationGradient, gradient[b], true, false)
+				d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
 			}
 
 		}

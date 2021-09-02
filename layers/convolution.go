@@ -302,19 +302,18 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 				if c.btspOutput[0]{
 					c.utils.BootstrapInPlace(output[outputRow][outputCol][k])
 				}
+			}
 
-				var activatedResult ckks.Ciphertext
+			if c.Activation != nil {
 
-				if c.Activation != nil {
-					activatedResult = (*c.Activation).Forward(*result, c.batchSize)
-					if c.btspActivation[0]{
-						c.utils.BootstrapInPlace(&activatedResult)
-					}
+				activatedOutput[outputRow][outputCol] = (*c.Activation).Forward(output[outputRow][outputCol], c.batchSize)
+
+				if c.btspActivation[0]{
+					c.utils.Bootstrap1dInPlace(activatedOutput[outputRow][outputCol], false)
 				}
 
-				activatedOutput[outputRow][outputCol][k] = &activatedResult
-
 			}
+
 			outputCol++
 		}
 		outputRow++
@@ -332,25 +331,26 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	if c.Activation != nil {
 		for ri := range gradient {
 			for ci := range gradient[ri] {
-				for di := range gradient[ri][ci] {
 
-					// Calculate ∂A/∂Z
-					activationGradient := (*c.Activation).Backward(*output[ri][ci][di], c.batchSize)
+				// Calculate ∂A/∂Z
+				activationGradient := (*c.Activation).Backward(output[ri][ci], c.batchSize)
 
-					if activationGradient.Level() == 1 && c.btspActivation[1] {
+				for di := range activationGradient {
 
-						c.utils.BootstrapInPlace(&activationGradient)
+					if activationGradient[di].Level() == 1 && c.btspActivation[1] {
+
+						c.utils.BootstrapInPlace(activationGradient[di])
 
 						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-						c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+						c.utils.Multiply(*gradient[ri][ci][di], *activationGradient[di], gradient[ri][ci][di], true, false)
 
 					} else if c.btspActivation[1] {
 						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-						c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+						c.utils.Multiply(*gradient[ri][ci][di], *activationGradient[di], gradient[ri][ci][di], true, false)
 						c.utils.BootstrapInPlace(gradient[ri][ci][di])
 					} else {
 						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-						c.utils.Multiply(*gradient[ri][ci][di], activationGradient, gradient[ri][ci][di], true, false)
+						c.utils.Multiply(*gradient[ri][ci][di], *activationGradient[di], gradient[ri][ci][di], true, false)
 					}
 
 				}
