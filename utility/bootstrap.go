@@ -23,10 +23,32 @@ func (u Utils) BootstrapInPlace(ct *ckks.Ciphertext) {
 
 }
 
-func (u Utils) Bootstrap1dInPlace(ct []*ckks.Ciphertext) {
+func (u Utils) Bootstrap1dInPlace(ct []*ckks.Ciphertext, concurrent bool) {
 
-	for i := range ct{
-		*ct[i] = *u.Bootstrapper.Bootstrapp(ct[i])
+	if concurrent{
+
+		channels := make([]chan ckks.Ciphertext, len(ct))
+
+		for i := range ct{
+
+			channels[i] = make(chan ckks.Ciphertext)
+
+			go func(ciphertext ckks.Ciphertext, c chan ckks.Ciphertext){
+
+				c <- *u.Bootstrapper.Bootstrapp(&ciphertext)
+
+			}(*ct[i], channels[i])
+
+		}
+
+		for c := range channels{
+			*ct[c] = <- channels[c]
+		}
+
+	} else {
+		for i := range ct{
+			*ct[i] = *u.Bootstrapper.Bootstrapp(ct[i])
+		}
 	}
 
 }

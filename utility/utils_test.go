@@ -470,6 +470,38 @@ func TestBootstrapping(t *testing.T) {
 
 }
 
+func TestConcurrentBootstrapping(t *testing.T){
+
+	ct1 := utils.EncryptToPointer(utils.GenerateFilledArray(3.12))
+	ct2 := utils.EncryptToPointer(utils.GenerateFilledArray(4.20))
+	ct3 := utils.EncryptToPointer(utils.GenerateFilledArray(6.9))
+	maxLevel := ct1.Level()
+
+	utils.Evaluator.DropLevel(ct1, ct1.Level()-1)
+	preBootstrap := ct1.Level()
+
+	data := []*ckks.Ciphertext{ct1, ct2, ct3}
+
+	utils.Bootstrap1dInPlace(data, true)
+
+	ct1 = data[0]
+	decrypted1 := utils.Decrypt(ct1)
+
+	ct2 = data[1]
+	decrypted2 := utils.Decrypt(ct2)
+
+	ct3 = data[2]
+	decrypted3 := utils.Decrypt(ct3)
+
+	log.Log(fmt.Sprintf("Max Level: %d, Post Bootstrapping level: %d", maxLevel, ct1.Level()))
+
+	// Test if bootstrap increase level and correctly decrypt
+	if ct1.Level() <= preBootstrap || !ValidateResult(decrypted1, utils.GenerateFilledArray(3.12), false, 1, log) || !ValidateResult(decrypted2, utils.GenerateFilledArray(3.12), false, 1, log) || !ValidateResult(decrypted3, utils.GenerateFilledArray(3.12), false, 1, log) {
+		t.Error("Wasn't bootstrapped correctly")
+	}
+
+}
+
 func TestTranspose(t *testing.T) {
 
 	// Test case:										Expected result:
