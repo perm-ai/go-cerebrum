@@ -13,7 +13,7 @@ import (
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
-var keyChain = key.GenerateKeys(2, false, true)
+var keyChain = key.GenerateKeys(2, true, true)
 var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 
@@ -482,7 +482,11 @@ func TestConcurrentBootstrapping(t *testing.T){
 
 	data := []*ckks.Ciphertext{ct1, ct2, ct3}
 
+	timer := logger.StartTimer("TestConcurrentBootstrapping")
+
 	utils.Bootstrap1dInPlace(data, true)
+
+	timer.LogTimeTaken()
 
 	ct1 = data[0]
 	decrypted1 := utils.Decrypt(ct1)
