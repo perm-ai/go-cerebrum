@@ -47,7 +47,7 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	sigmoid := activations.Sigmoid{U: model.utils}
 	//w[i]*x[i]
 	for i := range data.x {
-		Weight := model.utils.MultiplyNew(model.Weight[i], data.x[i], true, false)
+		Weight := model.utils.MultiplyNew(*model.Weight[i].CopyNew(), *data.x[i].CopyNew(), true, false)
 		model.utils.Add(Weight, result, &result)
 
 	}
@@ -65,13 +65,13 @@ func (model LogisticRegression) Backward(data Data, predict ckks.Ciphertext, lr 
 	err := model.utils.SubNew(predict, data.target)
 	multiplier := model.utils.EncodePlaintextFromArray(model.utils.GenerateFilledArraySize((2.0/float64(data.datalength))*lr, data.datalength))
 	for i := range model.Weight {
-		dw[i] = model.utils.MultiplyNew(data.x[i], err, true, false)
+		dw[i] = model.utils.MultiplyNew(*data.x[i].CopyNew(), *err.CopyNew(), true, false)
 		model.utils.SumElementsInPlace(&dw[i])
-		model.utils.MultiplyPlain(&dw[i], &multiplier, &dw[i], true, false)
+		model.utils.MultiplyPlain(dw[i].CopyNew(), &multiplier, &dw[i], true, false)
 	}
 
 	db := model.utils.SumElementsNew(err)
-	model.utils.MultiplyPlain(&db, &multiplier, &db, true, false)
+	model.utils.MultiplyPlain(db.CopyNew(), &multiplier, &db, true, false)
 
 	return LogisticRegressionGradient{dw, db}
 
