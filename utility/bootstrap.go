@@ -1,8 +1,7 @@
 package utility
 
 import (
-	"fmt"
-
+	"github.com/jinzhu/copier"
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
@@ -36,7 +35,7 @@ func (u Utils) Bootstrap1dInPlace(ct []*ckks.Ciphertext, concurrent bool) {
 		for i := range ct{
 
 			channels[i] = make(chan ckks.Ciphertext)
-			go bootstrapGoRoutine(*ct[i], u, channels[i])
+			go bootstrapGoRoutine(*ct[i], *u.Bootstrapper, channels[i])
 
 		}
 
@@ -52,10 +51,14 @@ func (u Utils) Bootstrap1dInPlace(ct []*ckks.Ciphertext, concurrent bool) {
 
 }
 
-func bootstrapGoRoutine (ciphertext ckks.Ciphertext, utils Utils, c chan ckks.Ciphertext){
+func bootstrapGoRoutine (ciphertext ckks.Ciphertext, btp ckks.Bootstrapper, c chan ckks.Ciphertext){
+
+	newBtp := ckks.Bootstrapper{}
+
+	copier.CopyWithOption(newBtp, btp, copier.Option{DeepCopy: true})
 
 	cpy := ciphertext.CopyNew()
-	c <- *utils.Bootstrapper.Bootstrapp(cpy)
+	c <- *newBtp.Bootstrapp(cpy)
 
 }
 

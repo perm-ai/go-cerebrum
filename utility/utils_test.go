@@ -477,10 +477,12 @@ func TestConcurrentBootstrapping(t *testing.T){
 	ct3 := utils.EncryptToPointer(utils.GenerateFilledArray(6.9))
 	maxLevel := ct1.Level()
 
-	utils.Evaluator.DropLevel(ct1, ct1.Level()-1)
+	utils.Evaluator.DropLevel(ct1, ct1.Level()-9)
+	utils.Evaluator.DropLevel(ct2, ct2.Level()-9)
+	utils.Evaluator.DropLevel(ct3, ct3.Level()-9)
 	preBootstrap := ct1.Level()
 
-	data := []*ckks.Ciphertext{ct1, ct2, ct3}
+	data := []*ckks.Ciphertext{ct1, ct2}
 
 	timer := logger.StartTimer("TestConcurrentBootstrapping")
 
@@ -500,7 +502,7 @@ func TestConcurrentBootstrapping(t *testing.T){
 	log.Log(fmt.Sprintf("Max Level: %d, Post Bootstrapping level: %d", maxLevel, ct1.Level()))
 
 	// Test if bootstrap increase level and correctly decrypt
-	if ct1.Level() <= preBootstrap || !ValidateResult(decrypted1, utils.GenerateFilledArray(3.12), false, 1, log) || !ValidateResult(decrypted2, utils.GenerateFilledArray(3.12), false, 1, log) || !ValidateResult(decrypted3, utils.GenerateFilledArray(3.12), false, 1, log) {
+	if ct1.Level() <= preBootstrap || !ValidateResult(decrypted1, utils.GenerateFilledArray(3.12), false, 1, log) || !ValidateResult(decrypted2, utils.GenerateFilledArray(4.20), false, 1, log) || !ValidateResult(decrypted3, utils.GenerateFilledArray(6.9), false, 1, log) {
 		t.Error("Wasn't bootstrapped correctly")
 	}
 
