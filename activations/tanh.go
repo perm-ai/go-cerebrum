@@ -20,46 +20,52 @@ func NewTanh(utils utility.Utils) Tanh {
 
 }
 
-func (t Tanh) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
 	// y = (-0.00752x^3) + (0.37x)
+	output := make([]*ckks.Ciphertext, len(input))
+	for i, inputEach := range input {
 
-	// Calculate degree three
-	xSquared := t.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
-	deg3 := t.U.MultiplyConstNew(input.CopyNew(), -0.00752, true, false)
-	t.U.Multiply(xSquared, deg3, &deg3, true, false)
+		// Calculate degree three
+		xSquared := t.U.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
+		deg3 := t.U.MultiplyConstNew(inputEach.CopyNew(), -0.00752, true, false)
+		t.U.Multiply(xSquared, deg3, &deg3, true, false)
 
-	// Calculate degree one
-	deg1 := t.U.MultiplyConstNew(input.CopyNew(), 0.37, true, false)
+		// Calculate degree one
+		deg1 := t.U.MultiplyConstNew(inputEach.CopyNew(), 0.37, true, false)
 
-	// Add all degree together
-	result := t.U.AddNew(deg3, deg1)
-
-	return result
+		// Add all degree together
+		result := t.U.AddNew(deg3, deg1)
+		output[i] = &result
+	}
+	return output
 
 }
 
-func (t Tanh) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
 	// (-0.02256x^2) + 0.37
+	output := make([]*ckks.Ciphertext, len(input))
+	for i, inputEach := range input {
 
-	// Calculate degree three
-	xSquared := t.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
-	deg2 := t.U.MultiplyConstNew(&xSquared, -0.02256, true, false)
+		// Calculate degree three
+		xSquared := t.U.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
+		deg2 := t.U.MultiplyConstNew(&xSquared, -0.02256, true, false)
 
-	// Encode deg0 as plaintext
-	var deg0 ckks.Plaintext
+		// Encode deg0 as plaintext
+		var deg0 ckks.Plaintext
 
-	if _, ok := t.backwardDeg0[inputLength]; ok {
-		deg0 = t.backwardDeg0[inputLength]
-	} else {
-		deg0 = *t.U.Encoder.EncodeNTTNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.LogSlots())
+		if _, ok := t.backwardDeg0[inputLength]; ok {
+			deg0 = t.backwardDeg0[inputLength]
+		} else {
+			deg0 = *t.U.Encoder.EncodeNTTNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.LogSlots())
+		}
+
+		// Add all degree together
+		result := t.U.AddPlainNew(deg2, deg0)
+		output[i] = &result
 	}
-
-	// Add all degree together
-	result := t.U.AddPlainNew(deg2, deg0)
-
-	return result
+	return output
 
 }
 
