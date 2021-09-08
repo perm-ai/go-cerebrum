@@ -161,3 +161,16 @@ func (u Utils) ReEncodeAsNTT(a *ckks.Plaintext) {
 	}
 
 }
+
+func (u Utils)MultiplyConcurrent(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, c chan ckks.Ciphertext) {
+	
+	eval := u.Evaluator.ShallowCopy()
+	u.SwitchToSameModCoeff(&a, &b)
+	result := eval.MulRelinNew(&a, &b)
+	
+	if rescale {
+		eval.Rescale(result, RESCALE_THRESHOLD, result)
+	}
+
+	c <- *result
+}

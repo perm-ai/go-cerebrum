@@ -48,3 +48,5 @@ func (u Utils) DotProductNew(a ckks.Ciphertext, b ckks.Ciphertext, bootstrap boo
 	return result
 
 }
+
+

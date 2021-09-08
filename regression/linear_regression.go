@@ -128,7 +128,7 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
 					model.utils.BootstrapInPlace(model.Weight[i])
 					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d)", i, model.Weight[i].Level()))
-
+					
 				}(w)
 
 			}
