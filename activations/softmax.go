@@ -73,7 +73,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 }
 
-func (s Softmax) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Softmax) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
 	// Not implemented, won't be used
 	return input

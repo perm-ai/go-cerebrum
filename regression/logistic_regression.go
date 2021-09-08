@@ -1,7 +1,6 @@
 package regression
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -55,7 +54,9 @@ func (model LogisticRegression) Forward(data Data) ckks.Ciphertext {
 	if result.Level() < 6 {
 		model.utils.BootstrapInPlace(&result)
 	}
-	return sigmoid.Forward(result, data.datalength)
+	Arrresult := make([]*ckks.Ciphertext, 1)
+	Arrresult[0] = &result
+	return *sigmoid.Forward(Arrresult, data.datalength)[0]
 
 }
 
@@ -123,16 +124,4 @@ func (model *LogisticRegression) Train(x []ckks.Ciphertext, target ckks.Cipherte
 
 	}
 	log.Log("Trainning complete")
-}
-
-func (m LogisticRegression) showall(str string, show bool) {
-	if show {
-		log := logger.NewLogger(true)
-		log.Log("Weight 1 after " + str + ": " + fmt.Sprint(m.utils.Decrypt(m.Weight[0].CopyNew())[0]))
-		log.Log("Weight 2 after " + str + ": " + fmt.Sprint(m.utils.Decrypt(m.Weight[1].CopyNew())[0]))
-		log.Log("Bias after " + str + ": " + fmt.Sprint(m.utils.Decrypt(m.Bias.CopyNew())[0]))
-		log.Log("Weight 1 level after " + str + ": " + fmt.Sprint(m.Weight[0].Level()))
-		log.Log("Weight 2 level after " + str + ": " + fmt.Sprint(m.Weight[1].Level()))
-		log.Log("Bias level after " + str + ": " + fmt.Sprint(m.Bias.Level()))
-	}
 }
