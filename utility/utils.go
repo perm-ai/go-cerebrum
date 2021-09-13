@@ -19,7 +19,7 @@ type Utils struct {
 
 	BootstrappingParams ckks.BootstrappingParameters
 	Params              ckks.Parameters
-	KeyChain            key.KeyChain
+	KeyChain            *key.KeyChain
 
 	Bootstrapper *ckks.Bootstrapper
 	Encoder      ckks.Encoder
@@ -85,7 +85,7 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 		bootstrapEnabled,
 		*bootstrappingParams,
 		Params,
-		keyChain,
+		&keyChain,
 		bootstrapper,
 		encoder,
 		evaluator,
@@ -112,7 +112,7 @@ func NewDecryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) U
 		false,
 		*bootstrappingParams,
 		Params,
-		keyChain,
+		&keyChain,
 		nil,
 		encoder,
 		nil,
