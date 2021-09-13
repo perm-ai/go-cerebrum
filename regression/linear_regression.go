@@ -35,43 +35,11 @@ func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 
 func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
 
-	// prepare result ciphertesxt
+	result := l.utils.InterDotProduct(input, l.Weight, true, false, true)
 
-	result := l.utils.Encrypt(l.utils.GenerateFilledArray(0.0))
+	l.utils.Add(*result, *l.Bias, result)
 
-	dotResult := make([]ckks.Ciphertext, len(input))
-
-	// for i := range input {
-	// 	dotResult[i] = l.utils.Encrypt(l.utils.GenerateFilledArray(0.0))
-	// }
-
-	// create channels to accept data
-
-	channels := make([]chan ckks.Ciphertext, len(input))
-
-	// W*X for each feature, add sum in result
-
-	for i := range input {
-		channels[i] = make(chan ckks.Ciphertext)
-		go l.utils.MultiplyConcurrent(*input[i], *l.Weight[i], true, channels[i])
-
-	}
-
-	// return values back into channels
-
-	for c := range channels {
-		dotResult[c] = <-channels[c]
-	}
-
-	// sum all dotted values
-
-	for j := range input {
-		l.utils.Add(result, dotResult[j], &result)
-	}
-
-	l.utils.Add(result, *l.Bias, &result)
-
-	return &result
+	return result
 
 }
 
