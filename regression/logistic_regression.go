@@ -95,7 +95,6 @@ func (model *LogisticRegression) Train(x []ckks.Ciphertext, target ckks.Cipherte
 
 		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		fwd := model.Forward(data)
-		model.showall("forward", false)
 
 		if fwd.Level() < 5 {
 			model.utils.BootstrapInPlace(&fwd)
@@ -103,18 +102,15 @@ func (model *LogisticRegression) Train(x []ckks.Ciphertext, target ckks.Cipherte
 		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
 		grad := model.Backward(data, fwd, learningRate)
 
-		model.showall("backward", false)
 		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
 
 		model.UpdateGradient(grad)
 
-		model.showall("updating gradient", false)
 		if i != epoch-1 {
 			if model.Weight[0].Level() < 8 {
 				for i := range model.Weight {
 					model.utils.BootstrapInPlace(&model.Weight[i])
 				}
-				model.showall("bootstrapping Weight", false)
 			}
 
 			if model.Bias.Level() < 5 {
