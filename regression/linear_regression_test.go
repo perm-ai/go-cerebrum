@@ -29,9 +29,9 @@ func TestLinearRegression(t *testing.T) {
 	data3 := utils.EncryptToPointer(data.Median_house_value)
 	model := NewLinearRegression(utils, 2)
 
-	utils.Evaluator.DropLevel(data1, data1.Level()-9)
-	utils.Evaluator.DropLevel(data2, data2.Level()-9)
-	utils.Evaluator.DropLevel(data3, data3.Level()-9)
+	// utils.Evaluator.DropLevel(data1, data1.Level()-9)
+	// utils.Evaluator.DropLevel(data2, data2.Level()-9)
+	// utils.Evaluator.DropLevel(data3, data3.Level()-9)
 
 	independentVar := []*ckks.Ciphertext{data1, data2}
 	model.Train(independentVar, data3, 0.1, len(data.Median_income), 20)
