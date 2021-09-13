@@ -59,7 +59,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	for node := range d.Weights {
 
-		output[node] = d.utils.InterDotProduct(input, d.Weights[node], true, false)
+		output[node] = d.utils.InterDotProduct(input, d.Weights[node], true, false, true)
 
 		if len(d.Bias) != 0 {
 			d.utils.Add(*output[node], *d.Bias[node], output[node])
@@ -114,7 +114,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	}
 
 	gradients.BiasGradient = gradient
-	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input)
+	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input, true)
 	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
@@ -123,7 +123,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		transposedWeight := d.utils.InterTranspose(d.Weights)
 
 		for xi := range transposedWeight {
-			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false)
+			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false, true)
 			if d.btspOutput[1]{
 				d.utils.BootstrapInPlace(gradients.InputGradient[xi])
 			}

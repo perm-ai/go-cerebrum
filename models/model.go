@@ -16,11 +16,13 @@ import (
 //=================================================
 
 type Model struct {
-	utils    utility.Utils
-	Layers1d []layers.Layer1D
-	Layers2d []layers.Layer2D
-	Flatten  layers.Flatten2D
-	Loss     losses.Loss
+	utils    		utility.Utils
+	Layers1d 		[]layers.Layer1D
+	Layers2d 		[]layers.Layer2D
+	Flatten  		layers.Flatten2D
+	Loss     		losses.Loss
+	ForwardLevel	[][]int
+	BackwardLevel	[][]int
 }
 
 func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.Layer2D, loss losses.Loss) Model {
@@ -30,11 +32,10 @@ func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.La
 		flatten = layers.NewFlatten(layer2d[len(layer2d)-1].GetOutputSize())
 	}
 
-	model := Model{utils, layer1d, layer2d, flatten, loss}
+	model := Model{utils: utils, Layers1d: layer1d, Layers2d: layer2d, Flatten: flatten, Loss: loss}
 
-	in1D, in2D := model.setForwardBootstrapping()
-
-	model.setBackwardBootstrapping(in1D, in2D)
+	model.setForwardBootstrapping()
+	model.setBackwardBootstrapping(model.ForwardLevel[0], model.ForwardLevel[1])
 
 	return model
 
@@ -245,7 +246,7 @@ func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 }
 
-func (m Model) setForwardBootstrapping() ([]int, []int) {
+func (m *Model) setForwardBootstrapping() {
 
 	inputLevel2D := make([]int, len(m.Layers2d)+1)
 	inputLevel1D := make([]int, len(m.Layers1d)+1)
@@ -316,11 +317,11 @@ func (m Model) setForwardBootstrapping() ([]int, []int) {
 
 	inputLevel1D[len(inputLevel1D)-1] = 9
 
-	return inputLevel1D, inputLevel2D
+	m.ForwardLevel = [][]int{inputLevel1D, inputLevel2D}
 
 }
 
-func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) ([]int, []int) {
+func (m *Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) {
 
 	gradientLevel1D := make([]int, len(m.Layers1d)+1)
 	gradientLevel2D := make([]int, len(m.Layers2d)+1)
@@ -402,7 +403,8 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 	gradientLevel2D[len(gradientLevel2D)-1] = gradientLevel1D[0]
 
 	if len(m.Layers2d) == 0 {
-		return gradientLevel1D, gradientLevel2D
+		m.BackwardLevel = [][]int{gradientLevel1D, gradientLevel2D}
+		return 
 	}
 
 	// Loop throught each layer backward
@@ -477,6 +479,6 @@ func (m Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int) 
 
 	}
 
-	return gradientLevel1D, gradientLevel2D
+	m.BackwardLevel = [][]int{gradientLevel1D, gradientLevel2D}
 
 }

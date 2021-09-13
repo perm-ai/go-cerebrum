@@ -8,7 +8,7 @@ import (
 
 // This files houses inter-ciphertext operations
 
-func (u Utils) InterDotProduct(a []ckks.Ciphertext, b []ckks.Ciphertext, rescale bool, bootstrap bool, concurrent bool) ckks.Ciphertext {
+func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, rescale bool, bootstrap bool, concurrent bool) *ckks.Ciphertext {
 
 	if len(a) != len(b) {
 		panic("Unequal length")
@@ -26,7 +26,7 @@ func (u Utils) InterDotProduct(a []ckks.Ciphertext, b []ckks.Ciphertext, rescale
 			fmt.Printf("starting element number %d \n", i)
 			channels[i] = make(chan ckks.Ciphertext)
 
-			go u.MultiplyConcurrent(a[i], b[i], true, channels[i])
+			go u.MultiplyConcurrent(*a[i], *b[i], true, channels[i])
 
 		}
 
@@ -42,7 +42,7 @@ func (u Utils) InterDotProduct(a []ckks.Ciphertext, b []ckks.Ciphertext, rescale
 
 		for i := range a {
 
-			prod := u.MultiplyNew(a[i], b[i], rescale, bootstrap)
+			prod := u.MultiplyNew(*a[i], *b[i], rescale, bootstrap)
 
 			if i == 0 {
 				sum = prod
@@ -53,7 +53,7 @@ func (u Utils) InterDotProduct(a []ckks.Ciphertext, b []ckks.Ciphertext, rescale
 		}
 	}
 
-	return sum
+	return &sum
 
 }
 

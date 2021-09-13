@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -32,15 +33,15 @@ func TestSigmoid(t *testing.T) {
 
 	sigmoid := Sigmoid{U: utils}
 
-	fwdResult := sigmoid.Forward(encryptedInput, 100)
+	fwdResult := sigmoid.Forward([]*ckks.Ciphertext{&encryptedInput}, 100)
 
-	if !utility.ValidateResult(utils.Decrypt(&fwdResult), forwardExpected, false, 1, log) {
+	if !utility.ValidateResult(utils.Decrypt(fwdResult[0]), forwardExpected, false, 1, log) {
 		t.Error("Sigmoid forward wasn't evaluated properly")
 	}
 
-	backwardResult := sigmoid.Backward(encryptedInput, 100)
+	backwardResult := sigmoid.Backward([]*ckks.Ciphertext{&encryptedInput}, 100)
 
-	if !utility.ValidateResult(utils.Decrypt(&backwardResult), backwardExpected, false, 1, log) {
+	if !utility.ValidateResult(utils.Decrypt(backwardResult[0]), backwardExpected, false, 1, log) {
 		t.Error("Sigmoid backward wasn't evaluated properly")
 	}
 
@@ -64,15 +65,15 @@ func TestTanh(t *testing.T) {
 
 	tanh := Tanh{U: utils}
 
-	fwdResult := tanh.Forward(encryptedInput, 100)
+	fwdResult := tanh.Forward([]*ckks.Ciphertext{&encryptedInput}, 100)
 
-	if !utility.ValidateResult(utils.Decrypt(&fwdResult), forwardExpected, false, 1, log) {
+	if !utility.ValidateResult(utils.Decrypt(fwdResult[0]), forwardExpected, false, 1, log) {
 		t.Error("Tanh forward wasn't evaluated properly")
 	}
 
-	backwardResult := tanh.Backward(encryptedInput, 100)
+	backwardResult := tanh.Backward([]*ckks.Ciphertext{&encryptedInput}, 100)
 
-	if !utility.ValidateResult(utils.Decrypt(&backwardResult), backwardExpected, false, 1, log) {
+	if !utility.ValidateResult(utils.Decrypt(backwardResult[0]), backwardExpected, false, 1, log) {
 		t.Error("Tanh backward wasn't evaluated properly")
 	}
 
@@ -108,12 +109,12 @@ func TestSoftmax(t *testing.T) {
 	softmax := NewSoftmax(utils)
 
 	// Calculate softmax forward
-	result := softmax.Forward(encInput, 10)
+	result := softmax.Forward([]*ckks.Ciphertext{&encInput}, 10)[0]
 
 	fmt.Printf("Used: %d levels (%d - %d)\n", startingLevel-result.Level(), startingLevel, result.Level())
 
 	// Evaluate correctness with precision 0.5
-	if !utility.ValidateResult(utils.Decrypt(&result)[0:10], expected[0:10], false, -0.3, log) {
+	if !utility.ValidateResult(utils.Decrypt(result)[0:10], expected[0:10], false, -0.3, log) {
 		t.Error("Softmax forward wasn't evaluated properly")
 	}
 

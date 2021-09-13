@@ -12,7 +12,7 @@ import (
 )
 
 
-func modelCreationExample() {
+func ModelCreationExample() {
 
 	/*
 	_________________________________________________________________
@@ -68,10 +68,13 @@ func modelCreationExample() {
 	fmt.Println("Dense 2 generating")
 	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 10, &smx, true, 30000)
 
-	NewModel(utils, []layers.Layer1D{
+	model := NewModel(utils, []layers.Layer1D{
 		&dense1, &dense2,
 	}, []layers.Layer2D{
 		&conv1, &pool1, &conv2, &pool2, &conv3,
 	}, losses.CrossEntropy{U: utils})
 	
+	fmt.Println(model.ForwardLevel)
+	fmt.Println(model.BackwardLevel)
+
 }
