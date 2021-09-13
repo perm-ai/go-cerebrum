@@ -2,7 +2,6 @@ package regression
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -40,11 +39,34 @@ func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
 
 	result := l.utils.Encrypt(l.utils.GenerateFilledArray(0.0))
 
+	dotResult := make([]ckks.Ciphertext, len(input))
+
+	// for i := range input {
+	// 	dotResult[i] = l.utils.Encrypt(l.utils.GenerateFilledArray(0.0))
+	// }
+
+	// create channels to accept data
+
+	channels := make([]chan ckks.Ciphertext, len(input))
+
 	// W*X for each feature, add sum in result
 
 	for i := range input {
-		dot := l.utils.MultiplyNew(*input[i], *l.Weight[i], true, false)
-		l.utils.Add(result, dot, &result)
+		channels[i] = make(chan ckks.Ciphertext)
+		go l.utils.MultiplyConcurrent(*input[i], *l.Weight[i], true, channels[i])
+
+	}
+
+	// return values back into channels
+
+	for c := range channels {
+		dotResult[c] = <-channels[c]
+	}
+
+	// sum all dotted values
+
+	for j := range input {
+		l.utils.Add(result, dotResult[j], &result)
 	}
 
 	l.utils.Add(result, *l.Bias, &result)
@@ -96,13 +118,13 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 
 	for i := 0; i < epoch; i++ {
 
-		log.Log(fmt.Sprintf("Forward propagating %d/%d (current lvl: %d)", i+1, epoch,  x[0].Level()))
+		log.Log(fmt.Sprintf("Forward propagating %d/%d (current lvl: %d)", i+1, epoch, x[0].Level()))
 		fwd := model.Forward(utility.Clone1dCiphertext(x))
 
-		log.Log(fmt.Sprintf("Backward propagating %d/%d(current lvl: %d)", i+1, epoch,  fwd.Level()))
+		log.Log(fmt.Sprintf("Backward propagating %d/%d(current lvl: %d)", i+1, epoch, fwd.Level()))
 		grad := model.Backward(utility.Clone1dCiphertext(x), fwd, y.CopyNew(), size, learningRate)
 
-		log.Log(fmt.Sprintf("Updating gradient %d/%d(current lvl: %d)\n", i+1, epoch,  grad.DM[0].Level()))
+		log.Log(fmt.Sprintf("Updating gradient %d/%d(current lvl: %d)\n", i+1, epoch, grad.DM[0].Level()))
 		model.UpdateGradient(grad)
 
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
@@ -110,40 +132,10 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 			if model.Bias.Level() != 1 {
 				model.utils.Evaluator.DropLevel(model.Bias, model.Bias.Level()-1)
 			}
-
-			// Generate wait group for concurrency execution
-			var wg sync.WaitGroup
-			wg.Add(len(x) + 1)
-
-			beforeBtp0 := model.utils.Decrypt(model.Weight[0])[0]
-			beforeBtp1 := model.utils.Decrypt(model.Weight[1])[1]
-			beforeBtp2 := model.utils.Decrypt(model.Bias)[2]
-
-			for w := range model.Weight {
-
-				// Execute anonymous function for bootstrapping of weight with concurrency
-				go func(i int) {
-					defer wg.Done()
-
-					log.Log(fmt.Sprintf("Bootstrapping weight %d", i))
-					model.utils.BootstrapInPlace(model.Weight[i])
-					log.Log(fmt.Sprintf("Bootstrap of weight %d completed (new lvl: %d)", i, model.Weight[i].Level()))
-					
-				}(w)
-
+			for i := range x {
+				model.utils.BootstrapInPlace(model.Weight[i])
 			}
-
-			// Execute anonymous function for bootstrapping of bias with concurrency
-			go func() {
-				defer wg.Done()
-				log.Log("Bootstrapping bias")
-				model.utils.BootstrapInPlace(model.Bias)
-				log.Log(fmt.Sprintf("Bootstrap of bias completed (new lvl: %d)", model.Bias.Level()))
-			}()
-			
-			wg.Wait()
-			
-			log.Log(fmt.Sprintf("Bootstrap error: %f %f %f", model.utils.Decrypt(model.Weight[0])[0] - beforeBtp0, model.utils.Decrypt(model.Weight[1])[1] - beforeBtp1, model.utils.Decrypt(model.Bias)[2] - beforeBtp2))
+			model.utils.BootstrapInPlace(model.Bias)
 
 		}
 

@@ -1,28 +1,14 @@
-package main
+package utility
 
-<<<<<<< Updated upstream
-import "github.com/perm-ai/go-cerebrum/models"
-
-func main(){
-
-	models.ModelCreationExample()
-
-}
-=======
 import (
 	"fmt"
-	"math"
+	"testing"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
-	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-func main() {
-
-	var keyChain = key.GenerateKeys(0, true, true)
-	var utils = utility.NewUtils(keyChain, math.Pow(2, 35), 100, true)
+func TestInter(t *testing.T) {
 
 	a1 := utils.GenerateFilledArray(1)
 	a2 := utils.GenerateFilledArray(2)
@@ -34,11 +20,11 @@ func main() {
 	a3ct := utils.Encrypt(a3)
 	a4ct := utils.Encrypt(a4)
 
-	a := make([]ckks.Ciphertext, 4)
-	a[0] = a1ct
-	a[1] = a2ct
-	a[2] = a3ct
-	a[3] = a4ct
+	a := make([]*ckks.Ciphertext, 4)
+	*a[0] = a1ct
+	*a[1] = a2ct
+	*a[2] = a3ct
+	*a[3] = a4ct
 
 	b1 := utils.GenerateFilledArray(1)
 	b2 := utils.GenerateFilledArray(2)
@@ -50,11 +36,11 @@ func main() {
 	b3ct := utils.Encrypt(b3)
 	b4ct := utils.Encrypt(b4)
 
-	b := make([]ckks.Ciphertext, 4)
-	b[0] = b1ct
-	b[1] = b2ct
-	b[2] = b3ct
-	b[3] = b4ct
+	b := make([]*ckks.Ciphertext, 4)
+	*b[0] = b1ct
+	*b[1] = b2ct
+	*b[2] = b3ct
+	*b[3] = b4ct
 
 	timer1 := logger.StartTimer("nonConcurrency")
 	nonConcur := utils.InterDotProduct(a, b, true, false, false)
@@ -64,10 +50,10 @@ func main() {
 	Concur := utils.InterDotProduct(a, b, true, false, true)
 	timer2.LogTimeTaken()
 
-	plainNonConcur := utils.Decrypt(&nonConcur)
-	plainConcur := utils.Decrypt(&Concur)
+	plainNonConcur := utils.Decrypt(nonConcur)
+	plainConcur := utils.Decrypt(Concur)
 
-	fmt.Printf("The result for Non concurrency is %f\n", plainNonConcur[0:3])
-	fmt.Printf("The result for concurrency is %f\n", plainConcur[0:3])
+	fmt.Printf("The result for Non concurrency is %f\n", plainNonConcur)
+	fmt.Printf("The result for concurrency is %f\n", plainConcur)
+
 }
->>>>>>> Stashed changes
