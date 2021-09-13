@@ -328,33 +328,52 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 	gradients := Gradient2d{}
 
 	// Calculate ∂L/∂Z
-	if c.Activation != nil {
-		for ri := range gradient {
-			for ci := range gradient[ri] {
+	if c.Activation != nil{
+		if (*c.Activation).GetType() != "softmax"{
 
-				// Calculate ∂A/∂Z
-				activationGradient := (*c.Activation).Backward(output[ri][ci], c.batchSize)
+			for ri := range gradient {
+				for ci := range gradient[ri] {
+	
+					// Calculate ∂A/∂Z
+					activationGradient := (*c.Activation).Backward(output[ri][ci], c.batchSize)
 
-				for di := range activationGradient {
+					// store data if ct has been bootstrapped, so there're not double bootstrapping
+					columnBootstrapped := false
 
-					if activationGradient[di].Level() == 1 && c.btspActivation[1] {
-
-						c.utils.BootstrapInPlace(activationGradient[di])
-
-						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-						c.utils.Multiply(*gradient[ri][ci][di], *activationGradient[di], gradient[ri][ci][di], true, false)
-
-					} else if c.btspActivation[1] {
-						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-						c.utils.Multiply(*gradient[ri][ci][di], *activationGradient[di], gradient[ri][ci][di], true, false)
-						c.utils.BootstrapInPlace(gradient[ri][ci][di])
-					} else {
-						// Calculate ∂L/∂Z = ∂L/∂A * ∂A/∂Z
-						c.utils.Multiply(*gradient[ri][ci][di], *activationGradient[di], gradient[ri][ci][di], true, false)
+					// Bootstrapp concurrently
+					if activationGradient[0].Level() == 1 && c.btspActivation[1] {
+						c.utils.Bootstrap1dInPlace(activationGradient, true)
+						columnBootstrapped = true
 					}
 
+					productChannels := make([]chan ckks.Ciphertext, len(activationGradient))
+
+					// Create go routine to multiply concurrently
+					for di := range activationGradient {
+
+						productChannels[di] = make(chan ckks.Ciphertext)
+						go func(a *ckks.Ciphertext, b *ckks.Ciphertext, utils utility.Utils, c chan ckks.Ciphertext){
+
+							utils.MultiplyConcurrent(*a, *b, true, c)
+
+						}(gradient[ri][ci][di], activationGradient[di], c.utils, productChannels[di])
+
+					}
+
+					// Wait for go routine to complete and save values sent through channels
+					for di := range productChannels {
+						prod := <-productChannels[di]
+						gradient[ri][ci][di] = &prod
+					}
+
+					// Bootstrapp if required and haven't been done yet
+					if c.btspActivation[1] && !columnBootstrapped{
+						c.utils.Bootstrap1dInPlace(activationGradient, true)
+					}
+	
 				}
 			}
+			
 		}
 	}
 

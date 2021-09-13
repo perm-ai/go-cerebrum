@@ -97,20 +97,23 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	// Calculate gradients for last layer
 	if d.Activation != nil {
 
-		activationGradient := (*d.Activation).Backward(output, d.OutputUnit)
+		if (*d.Activation).GetType() != "softmax"{
+			activationGradient := (*d.Activation).Backward(output, d.OutputUnit)
 
-		for b := range d.Bias {
+			for b := range d.Bias {
 
-			if activationGradient[b].Level() == 1 && d.btspActivation[1] {
-				d.utils.BootstrapInPlace(activationGradient[b])
-			} else if d.btspActivation[1] {
-				d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
-				d.utils.BootstrapInPlace(gradient[b])
-			} else {
-				d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
+				if activationGradient[b].Level() == 1 && d.btspActivation[1] {
+					d.utils.BootstrapInPlace(activationGradient[b])
+				} else if d.btspActivation[1] {
+					d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
+					d.utils.BootstrapInPlace(gradient[b])
+				} else {
+					d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
+				}
+
 			}
-
 		}
+		
 	}
 
 	gradients.BiasGradient = gradient
