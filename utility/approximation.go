@@ -25,36 +25,42 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
 
 	//deg2
 	x2 := u.MultiplyNew(*x.CopyNew(), *x.CopyNew(), true, false)
-	deg2 := u.MultiplyConstNew(x2.CopyNew(), 0.5, true, false)
+	deg2Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(0.5))
+	deg2 := u.MultiplyPlainNew(x2.CopyNew(), &deg2Coeff, true, false)
 	sum := u.AddNew(*deg1, deg2)
 
 	//deg3
 	x3 := u.MultiplyNew(*x.CopyNew(), *x2.CopyNew(), true, false)
-	deg3 := u.MultiplyConstNew(x3.CopyNew(), 1.0/6, true, false)
+	deg3Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 6))
+	deg3 := u.MultiplyPlainNew(x3.CopyNew(), &deg3Coeff, true, false)
 	sum = u.AddNew(deg3, sum)
 
 	//deg4
 	x4 := u.MultiplyNew(*x2.CopyNew(), *x2.CopyNew(), true, false)
-	deg4 := u.MultiplyConstNew(x4.CopyNew(), 1.0/24, true, false)
+	deg4Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 24))
+	deg4 := u.MultiplyPlainNew(x4.CopyNew(), &deg4Coeff, true, false)
 	sum = u.AddNew(deg4, sum)
 
 	//deg5
 	x5 := u.MultiplyNew(*x.CopyNew(), *x4.CopyNew(), true, false)
-	deg5 := u.MultiplyConstNew(x5.CopyNew(), 1.0/120, true, false)
+	deg5Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 120))
+	deg5 := u.MultiplyPlainNew(x5.CopyNew(), &deg5Coeff, true, false)
 	sum = u.AddNew(deg5, sum)
 
 	//deg6
 	x6 := u.MultiplyNew(*x4.CopyNew(), *x2.CopyNew(), true, false)
-	deg6 := u.MultiplyConstNew(x6.CopyNew(), 1.0/720, true, false)
+	deg6Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 720))
+	deg6 := u.MultiplyPlainNew(x6.CopyNew(), &deg6Coeff, true, false)
 	sum = u.AddNew(deg6, sum)
 
 	//deg7
 	x7 := u.MultiplyNew(*x4.CopyNew(), *x3.CopyNew(), true, false) //now deg6
-	deg7 := u.MultiplyConstNew(x7.CopyNew(), 1.0/5040, true, false)
+	deg7Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 5040))
+	deg7 := u.MultiplyPlainNew(x7.CopyNew(), &deg7Coeff, true, false)
 	sum = u.AddNew(deg7, sum)
 
 	//add 1
-	sum = *u.AddConstNew(&sum, u.GenerateFilledArray(1.0))
+	sum = u.AddPlainNew(sum, u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0)))
 
 	return &sum
 
@@ -67,40 +73,47 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float6
 
 	//deg1
 	x := ciphertext
-	deg1 := u.MultiplyConstNew(x.CopyNew(), stretchScale*-28.0, true, false)
+	deg1Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(stretchScale * -28.0))
+	deg1 := u.MultiplyPlainNew(x.CopyNew(), &deg1Coeff, true, false)
 
 	//deg2
 	x2 := u.MultiplyNew(*x.CopyNew(), *x.CopyNew(), true, false)
-	deg2 := u.MultiplyConstNew(x2.CopyNew(), math.Pow(stretchScale, 2)*56.0, true, false)
+	deg2Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 2) * 56.0))
+	deg2 := u.MultiplyPlainNew(x2.CopyNew(), &deg2Coeff, true, false)
 	sum := u.AddNew(deg1, deg2)
 
 	//deg3
 	x3 := u.MultiplyNew(*x.CopyNew(), *x2.CopyNew(), true, false)
-	deg3 := u.MultiplyConstNew(x3.CopyNew(), math.Pow(stretchScale, 3)*-70.0, true, false)
+	deg3Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 3) * -70.0))
+	deg3 := u.MultiplyPlainNew(x3.CopyNew(), &deg3Coeff, true, false)
 	sum = u.AddNew(deg3, sum)
 
 	//deg4
 	x4 := u.MultiplyNew(*x2.CopyNew(), *x2.CopyNew(), true, false)
-	deg4 := u.MultiplyConstNew(x4.CopyNew(), math.Pow(stretchScale, 4)*56.0, true, false)
+	deg4Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 4) * 56.0))
+	deg4 := u.MultiplyPlainNew(x4.CopyNew(), &deg4Coeff, true, false)
 	sum = u.AddNew(deg4, sum)
 
 	//deg5
 	x5 := u.MultiplyNew(*x.CopyNew(), *x4.CopyNew(), true, false)
-	deg5 := u.MultiplyConstNew(x5.CopyNew(), math.Pow(stretchScale, 5)*-28.0, true, false)
+	deg5Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 5) * -28.0))
+	deg5 := u.MultiplyPlainNew(x5.CopyNew(), &deg5Coeff, true, false)
 	sum = u.AddNew(deg5, sum)
 
 	//deg6
 	x6 := u.MultiplyNew(*x4.CopyNew(), *x2.CopyNew(), true, false)
-	deg6 := u.MultiplyConstNew(x6.CopyNew(), math.Pow(stretchScale, 6)*8.0, true, false)
+	deg6Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 6) * 8.0))
+	deg6 := u.MultiplyPlainNew(x6.CopyNew(), &deg6Coeff, true, false)
 	sum = u.AddNew(deg6, sum)
 
 	//deg7
 	x7 := u.MultiplyNew(*x4.CopyNew(), *x3.CopyNew(), true, false) //now deg6
-	deg7 := u.MultiplyConstNew(x7.CopyNew(), math.Pow(stretchScale, 7)*-1.0, true, false)
+	deg7Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 7) * -1.0))
+	deg7 := u.MultiplyPlainNew(x7.CopyNew(), &deg7Coeff, true, false)
 	sum = u.AddNew(deg7, sum)
 
 	//add 1
-	sum = *u.AddConstNew(&sum, u.GenerateFilledArray(8.0))
+	sum = u.AddPlainNew(sum, u.EncodePlaintextFromArray(u.GenerateFilledArray(8.0)))
 
 	return &sum
 
