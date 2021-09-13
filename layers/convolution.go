@@ -243,8 +243,12 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 	kernelDim := [2]int{c.Kernels[0].Row, c.Kernels[0].Column}
 
 	// Generate array to store output
-	output := make([][][]*ckks.Ciphertext, outputSize[0])
-	activatedOutput := make([][][]*ckks.Ciphertext, outputSize[0])
+	output3d := make([][][]*ckks.Ciphertext, outputSize[0])
+	activatedOutput3d := make([][][]*ckks.Ciphertext, outputSize[0])
+
+	// Generate array of 2d channels for parallel computation
+	output3dChannels := make([]chan [][]*ckks.Ciphertext, outputSize[0])
+	activation3dChannels := make([]chan [][]*ckks.Ciphertext, outputSize[0])
 
 	// Store the current row of output
 	outputRow := 0
@@ -252,74 +256,125 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 	// Loop through each row for kernel start position
 	for row := start; row+kernelDim[0]-1 <= c.InputSize[0]+(-1*start)-1; row += c.Strides[0] {
 
-		output[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
-		activatedOutput[outputRow] = make([][]*ckks.Ciphertext, outputSize[1])
+		output3dChannels[outputRow] = make(chan [][]*ckks.Ciphertext)
+		activation3dChannels[outputRow] = make(chan [][]*ckks.Ciphertext)
 
-		// Store the current column of output
-		outputCol := 0
+		go func(output2dChannel chan [][]*ckks.Ciphertext, activation2dChannel chan [][]*ckks.Ciphertext){
 
-		// Loop through each column for kernel start position
-		for col := start; col+kernelDim[1]-1 <= c.InputSize[1]+(-1*start)-1; col += c.Strides[1] {
+			// Store the current column of output
+			outputCol := 0
 
-			output[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
-			activatedOutput[outputRow][outputCol] = make([]*ckks.Ciphertext, len(c.Kernels))
+			// Generate array to store output
+			output2d := make([][]*ckks.Ciphertext, outputSize[1])
+			activatedOutput2d := make([][]*ckks.Ciphertext, outputSize[1])
 
-			// Loop through each kernel
-			for k := range c.Kernels {
+			// Generate array of channels for concurrent computation
+			output2dChannels := make([]chan []*ckks.Ciphertext, outputSize[1])
+			activation2dChannels := make([]chan []*ckks.Ciphertext, outputSize[1])
 
-				// Declare result to store the dot product of kernel and that region of input
-				var result *ckks.Ciphertext
+			// Loop through each column for kernel start position
+			for col := start; col+kernelDim[1]-1 <= c.InputSize[1]+(-1*start)-1; col += c.Strides[1] {
 
-				for krow := 0; krow < c.Kernels[k].Row; krow++ {
-					for kcol := 0; kcol < c.Kernels[k].Column; kcol++ {
+				output2dChannels[outputCol] = make(chan []*ckks.Ciphertext)
+				activation2dChannels[outputCol] = make(chan []*ckks.Ciphertext)
 
-						// Check if in padding
-						if row+krow == -1 || col+kcol == -1 || row+krow == c.InputSize[0] || col+kcol == c.InputSize[1] {
-							continue
-						}
+				go func(output2dChannel chan []*ckks.Ciphertext, activation2dChannel chan []*ckks.Ciphertext){
 
-						for kdep := 0; kdep < c.Kernels[k].Depth; kdep++ {
+					// Generate array to store output
+					output1d := make([]*ckks.Ciphertext, outputSize[2])
+					activatedOutput1d := make([]*ckks.Ciphertext, outputSize[2])
 
-							product := c.utils.MultiplyNew(*c.Kernels[k].Data[krow][kcol][kdep], *input[row+krow][col+kcol][kdep], true, false)
+					// Generate array of channels for concurrent computation
+					output1dChannels := make([]chan *ckks.Ciphertext, outputSize[2])
 
-							if result == nil {
-								result = &product
-							} else {
-								c.utils.Add(product, *result, result)
+					// Loop through each kernel
+					for k := range c.Kernels {
+
+						output1dChannels[k] = make(chan *ckks.Ciphertext)
+
+						go func(kernelIndex int, output1dChannel chan *ckks.Ciphertext){
+
+							// Declare result to store the dot product of kernel and that region of input
+							// var result *ckks.Ciphertext
+							kernelCiphertext := []*ckks.Ciphertext{}
+							inputCiphertext := []*ckks.Ciphertext{}
+
+							for krow := 0; krow < c.Kernels[kernelIndex].Row; krow++ {
+								for kcol := 0; kcol < c.Kernels[kernelIndex].Column; kcol++ {
+
+									// Check if in padding
+									if row+krow == -1 || col+kcol == -1 || row+krow == c.InputSize[0] || col+kcol == c.InputSize[1] {
+										continue
+									}
+
+									for kdep := 0; kdep < c.Kernels[kernelIndex].Depth; kdep++ {
+
+										kernelCiphertext = append(kernelCiphertext, c.Kernels[kernelIndex].Data[krow][kcol][kdep])
+										inputCiphertext = append(inputCiphertext, input[row+krow][col+kcol][kdep])
+
+									}
+								}
 							}
 
-						}
+							result := c.utils.InterDotProduct(kernelCiphertext, inputCiphertext, true, false, true)
+
+							if len(c.Bias) != 0 {
+								c.utils.Add(c.Bias[kernelIndex], *result, result)
+							}
+	
+							output1dChannel <- result
+
+						}(k, output1dChannels[k])
+
 					}
-				}
 
-				if len(c.Bias) != 0 {
-					c.utils.Add(c.Bias[k], *result, result)
-				}
+					for k := range output1dChannels{
+						output1d[k] = <- output1dChannels[k]
+					}
 
-				output[outputRow][outputCol][k] = result
+					// Bootstrap output ciphertext
+					if c.btspOutput[0]{
+						c.utils.Bootstrap1dInPlace(output1d, true)
+					}
 
-				// Bootstrap output ciphertext
-				if c.btspOutput[0]{
-					c.utils.BootstrapInPlace(output[outputRow][outputCol][k])
-				}
+					if c.Activation != nil {
+
+						activatedOutput1d = (*c.Activation).Forward(output1d, c.batchSize)
+
+						if c.btspActivation[0]{
+							c.utils.Bootstrap1dInPlace(activatedOutput1d, true)
+						}
+
+					}
+
+					output2dChannel <- output1d
+					activation2dChannel <- activatedOutput1d
+
+				}(output2dChannels[outputCol], activation2dChannels[outputCol])
+
+				outputCol++
 			}
 
-			if c.Activation != nil {
-
-				activatedOutput[outputRow][outputCol] = (*c.Activation).Forward(output[outputRow][outputCol], c.batchSize)
-
-				if c.btspActivation[0]{
-					c.utils.Bootstrap1dInPlace(activatedOutput[outputRow][outputCol], false)
-				}
-
+			for col := 0; col < outputSize[1]; col++{
+				output2d[col] = <- output2dChannels[col]
+				activatedOutput2d[col] = <- activation2dChannels[col]
 			}
 
-			outputCol++
-		}
+			output2dChannel <- output2d
+			activation2dChannel <- activatedOutput2d
+
+		}(output3dChannels[outputRow], activation3dChannels[outputRow])
+
 		outputRow++
+
 	}
 
-	return Output2d{output, activatedOutput}
+	for row := 0; row < outputSize[0]; row++{
+		output3d[row] = <- output3dChannels[row]
+		activatedOutput3d[row] = <- activation3dChannels[row]
+	}
+
+	return Output2d{output3d, activatedOutput3d}
 
 }
 
