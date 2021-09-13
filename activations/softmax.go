@@ -63,13 +63,30 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	// Calculate inverse of sum of e^input
 	inverseSum := s.U.InverseApproxNew(&sum, stretchScale) // Level input - 4
 
+	output := make([]*ckks.Ciphertext, len(arrexp))
+	outputChannels := make([]chan *ckks.Ciphertext, len(arrexp))
+
 	//multiply the arrexp with stretchscale and the inverse, which will be the result that the function return
 	for i := range arrexp {
-		s.U.MultiplyPlain(arrexp[i], &plainStretch, arrexp[i], true, false) // Level input - 3
-		s.U.Multiply(*arrexp[i], *inverseSum, arrexp[i], false, false)
+
+		outputChannels[i] = make(chan *ckks.Ciphertext)
+
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+
+			result := utils.MultiplyPlainNew(inputEach, &plainStretch, true, false) // Level input - 3
+			s.U.Multiply(result, *inverseSum, &result, false, false)
+			c <- &result
+
+		}(arrexp[i], s.U.CopyUtilsWithClonedEval(), outputChannels[i])
+		
+
 	}
 
-	return arrexp // Level input - 5
+	for i := range outputChannels{
+		output[i] = <-outputChannels[i]
+	}
+
+	return output // Level input - 5
 
 }
 
@@ -90,4 +107,8 @@ func (s Softmax) GetBackwardLevelConsumption() int {
 
 	return 0
 
+}
+
+func (s Softmax) GetType() string {
+	return "softmax"
 }

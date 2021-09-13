@@ -262,6 +262,26 @@ func (u Utils) Decrypt(ciphertext *ckks.Ciphertext) []float64 {
 
 }
 
+func (u Utils) CopyUtilsWithClonedEval() Utils {
+
+	return Utils{
+		hasSecretKey: 			u.hasSecretKey,
+		bootstrapEnabled: 		u.bootstrapEnabled,
+		BootstrappingParams:	u.BootstrappingParams,
+		Params: 				u.Params,
+		KeyChain:				u.KeyChain,
+		Bootstrapper: 			u.Bootstrapper,
+		Encoder: 				u.Encoder,
+		Evaluator: 				u.Evaluator.ShallowCopy(),
+		Encryptor: 				u.Encryptor,
+		Decryptor: 				u.Decryptor,
+		Filters: 				u.Filters,
+		Scale: 					u.Scale,
+		log: 					u.log,
+	}
+
+}
+
 func ValidateResult(evalData []float64, expected []float64, isDot bool, decimalPrecision float64, log logger.Logger) bool {
 
 	precision := math.Pow(10, float64(-1*decimalPrecision))

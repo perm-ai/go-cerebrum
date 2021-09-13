@@ -25,7 +25,7 @@ func TestSigmoid(t *testing.T) {
 	backwardExpected := make([]float64, utils.Params.Slots())
 
 	for i := 0; i < 100; i++ {
-		forwardExpected[i] = 0.5 + (0.197 * inputArrray[i]) + (0.004 * math.Pow(inputArrray[i], 3))
+		forwardExpected[i] = 0.5 + (0.197 * inputArrray[i]) - (0.004 * math.Pow(inputArrray[i], 3))
 		backwardExpected[i] = (0.012 * math.Pow(inputArrray[i], 2)) + 0.197
 	}
 
@@ -38,6 +38,8 @@ func TestSigmoid(t *testing.T) {
 	if !utility.ValidateResult(utils.Decrypt(fwdResult[0]), forwardExpected, false, 1, log) {
 		t.Error("Sigmoid forward wasn't evaluated properly")
 	}
+
+	fmt.Println("Starting backward")
 
 	backwardResult := sigmoid.Backward([]*ckks.Ciphertext{&encryptedInput}, 100)
 

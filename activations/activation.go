@@ -9,4 +9,5 @@ type Activation interface {
 	Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext
 	GetForwardLevelConsumption() int
 	GetBackwardLevelConsumption() int
+	GetType() string
 }
