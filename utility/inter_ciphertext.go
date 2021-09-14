@@ -61,7 +61,7 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 }
 
-func (u Utils) InterOuter(a []ckks.Ciphertext, b []ckks.Ciphertext, concurrent bool) [][]*ckks.Ciphertext {
+func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent bool) [][]*ckks.Ciphertext {
 
 	output := make([][]*ckks.Ciphertext, len(a))
 
@@ -82,7 +82,7 @@ func (u Utils) InterOuter(a []ckks.Ciphertext, b []ckks.Ciphertext, concurrent b
 
 					colChannels[j] = make(chan ckks.Ciphertext)
 
-					go u.MultiplyConcurrent(a[row], b[j], true, colChannels[j])
+					go u.MultiplyConcurrent(*a[row], *b[j], true, colChannels[j])
 					
 				}
 
@@ -108,7 +108,7 @@ func (u Utils) InterOuter(a []ckks.Ciphertext, b []ckks.Ciphertext, concurrent b
 
 			for j := range b {
 
-				product := u.MultiplyNew(a[i], b[j], true, false)
+				product := u.MultiplyNew(*a[i], *b[j], true, false)
 				output[i][j] = &product
 
 			}
