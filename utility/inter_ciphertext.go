@@ -14,7 +14,7 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 		panic("Unequal length")
 	}
 
-	sum := u.Encrypt(u.GenerateFilledArraySize(0, len(a)))
+	var sum ckks.Ciphertext
 
 	if concurrent {
 		ans := make([]ckks.Ciphertext, len(a))
@@ -35,7 +35,11 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 		}
 
 		for i := range ans {
-			sum = u.AddNew(sum, ans[i])
+			if i == 0{
+				sum = ans[i]
+			} else {
+				u.Add(sum, ans[i], &sum)
+			}
 		}
 		
 	} else {
@@ -57,34 +61,55 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 }
 
-func (u Utils) InterOuter(a []ckks.Ciphertext, b []ckks.Ciphertext, concurrent bool) [][]ckks.Ciphertext {
+func (u Utils) InterOuter(a []ckks.Ciphertext, b []ckks.Ciphertext, concurrent bool) [][]*ckks.Ciphertext {
 
-	output := make([][]ckks.Ciphertext, len(a))
+	output := make([][]*ckks.Ciphertext, len(a))
 
 	if concurrent {
-		channels := make([][]chan ckks.Ciphertext, len(a))
+
+		outputChannels := make([]chan []*ckks.Ciphertext, len(a))
+
 		for i := range a {
-			channels[i] = make([]chan ckks.Ciphertext, len(b))
-			for j := range b {
-				fmt.Printf("i = %d, and j = %d", i, j)
-				output[i][j] = u.Encrypt(u.GenerateFilledArraySize(0, len(a)))
-				go u.MultiplyConcurrent(a[i], b[i], true, channels[i][j])
-				for c := range channels[i] {
-					// output is currently data
-					output[i][c] = <-channels[i][c]
+
+			outputChannels[i] = make(chan []*ckks.Ciphertext)
+
+			go func(row int, rowChannel chan []*ckks.Ciphertext){
+
+				colOutput := make([]*ckks.Ciphertext, len(b))
+				colChannels := make([]chan ckks.Ciphertext, len(b))
+
+				for j := range b {
+
+					colChannels[j] = make(chan ckks.Ciphertext)
+
+					go u.MultiplyConcurrent(a[row], b[j], true, colChannels[j])
+					
 				}
-			}
+
+				for j := range colChannels{
+					prod := <- colChannels[j]
+					colOutput[j] = &prod
+				}
+
+				rowChannel <- colOutput
+
+			}(i, outputChannels[i])
+
+		}
+
+		for i := range outputChannels{
+			output[i] = <-outputChannels[i]
 		}
 
 	} else {
 		for i := range a {
 
-			output[i] = make([]ckks.Ciphertext, len(b))
+			output[i] = make([]*ckks.Ciphertext, len(b))
 
 			for j := range b {
 
 				product := u.MultiplyNew(a[i], b[j], true, false)
-				output[i][j] = product
+				output[i][j] = &product
 
 			}
 
