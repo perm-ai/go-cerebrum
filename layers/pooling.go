@@ -33,51 +33,96 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 	currentOutRow := 0
 	outputSize := p.GetOutputSize()
 	output := make([][][]*ckks.Ciphertext, outputSize[0])
+	outputChannels := make([]chan [][]*ckks.Ciphertext, outputSize[0])
+	averager := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(p.Size[0]*p.Size[1])))
 
 	// Loop through each input datapoint that corresponds to the first row of the pooling filter
 	for row := 0; row <= p.InputSize[0]-p.Size[0]; row += p.Strides[0] {
 
-		currentOutCol := 0
-		output[currentOutRow] = make([][]*ckks.Ciphertext, outputSize[1])
+		outputChannels[row] = make(chan [][]*ckks.Ciphertext)
 
-		// Loop through each input datapoint that corresponds to the first column of the pooling filter
-		for column := 0; column <= p.InputSize[1]-p.Size[1]; column += p.Strides[1] {
+		go func(rowIndex int, outputChannel chan [][]*ckks.Ciphertext) {
 
-			output[currentOutRow][currentOutCol] = make([]*ckks.Ciphertext, outputSize[2])
+			// Create array of channels for sending array of depth in each column in a concurrent operations
+			outputColumnChannels := make([]chan []*ckks.Ciphertext, outputSize[1])
 
-			// Loop through each depth of input
-			for depth := 0; depth < p.InputSize[2]; depth++ {
+			// Loop through each input datapoint that corresponds to the first column of the pooling filter
+			for column := 0; column <= p.InputSize[1]-p.Size[1]; column += p.Strides[1] {
 
-				// Compute pooling sum
-				for poolRow := 0; poolRow < p.Size[0]; poolRow++ {
-					for poolCol := 0; poolCol < p.Size[1]; poolCol++ {
+				outputColumnChannels[column] = make(chan []*ckks.Ciphertext)
 
-						if output[currentOutRow][currentOutCol][depth] == nil {
-							output[currentOutRow][currentOutCol][depth] = input[row+poolRow][column+poolCol][depth]
-						} else {
-							p.utils.Add(*output[currentOutRow][currentOutCol][depth], *input[row+poolRow][column+poolCol][depth], output[currentOutRow][currentOutCol][depth])
-						}
+				go func(rowIndex int, colIndex int, outputColumnChannel chan []*ckks.Ciphertext) {
+
+					outputDepthChannels := make([]chan *ckks.Ciphertext, outputSize[2])
+
+					// Loop through each depth of input
+					for depth := 0; depth < p.InputSize[2]; depth++ {
+
+						outputDepthChannels[depth] = make(chan *ckks.Ciphertext)
+
+						go func(rowIndex int, colIndex int, depIndex int, utils utility.Utils, outputDepthChannel chan *ckks.Ciphertext) {
+
+							var poolResult *ckks.Ciphertext
+
+							// Compute pooling sum
+							for poolRow := 0; poolRow < p.Size[0]; poolRow++ {
+								for poolCol := 0; poolCol < p.Size[1]; poolCol++ {
+
+									if poolResult == nil {
+										poolResult = input[rowIndex+poolRow][colIndex+poolCol][depIndex]
+									} else {
+										utils.Add(*poolResult, *input[rowIndex+poolRow][colIndex+poolCol][depIndex], poolResult)
+									}
+
+								}
+							}
+
+							// Compute pooling average
+							utils.MultiplyPlain(poolResult, &averager, poolResult, true, false)
+
+							// Return avg pooling result from that pool
+							outputDepthChannel <- poolResult
+
+						}(rowIndex, colIndex, depth, p.utils.CopyUtilsWithClonedEval(), outputDepthChannels[depth])
 
 					}
-				}
 
-				// Compute pooling average
-				averager := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(p.Size[0]*p.Size[1])))
-				p.utils.MultiplyPlain(output[currentOutRow][currentOutCol][depth], &averager, output[currentOutRow][currentOutCol][depth], true, false)
+					outputColumn := make([]*ckks.Ciphertext, outputSize[2])
 
-				if p.btspOutput[0]{
-					p.utils.BootstrapInPlace(output[currentOutRow][currentOutCol][depth])
-				}
+					for depth := range outputDepthChannels {
+						outputColumn[depth] = <- outputDepthChannels[depth]
+					}
+
+					if p.btspOutput[0] {
+						p.utils.Bootstrap1dInPlace(outputColumn, true)
+					}
+
+					outputColumnChannel <- outputColumn
+
+				}(rowIndex, column, outputColumnChannels[column])
 
 			}
 
-			// Increment current output column
-			currentOutCol++
+			outputRow := make([][]*ckks.Ciphertext, outputSize[1])
 
-		}
+			// Capture and store value of columns in this row in to a row array
+			for col := range outputColumnChannels {
+				outputRow[col] = <-outputColumnChannels[col]
+			}
+
+			// Send row array back through channel
+			outputChannel <- outputRow
+
+		}(row, outputChannels[row])
 
 		// Increment current output row
 		currentOutRow++
+
+	}
+
+	for row := range outputChannels {
+
+		output[row] = <-outputChannels[row]
 
 	}
 
@@ -151,7 +196,7 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 	}
 
 	// Bootstrap output
-	if p.btspOutput[1]{
+	if p.btspOutput[1] {
 		p.utils.Bootstrap3dInPlace(upSampledGradient)
 	}
 
@@ -186,7 +231,7 @@ func (p AveragePooling2D) GetBackwardActivationLevelConsumption() int {
 }
 
 func (p *AveragePooling2D) SetBootstrapOutput(set bool, direction string) {
-	switch direction{
+	switch direction {
 	case "forward":
 		p.btspOutput[0] = set
 	case "backward":
