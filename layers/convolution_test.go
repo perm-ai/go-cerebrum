@@ -10,10 +10,10 @@ import (
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-var keychain = key.GenerateKeys(2, false, true)
-var utils = utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
-
 func TestConv2dForward(t *testing.T) {
+
+	keychain := key.GenerateKeys(0, false, true)
+	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
 
 	testInput := [][][]*ckks.Ciphertext{
 		{

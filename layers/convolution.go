@@ -259,7 +259,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 		output3dChannels[outputRow] = make(chan [][]*ckks.Ciphertext)
 		activation3dChannels[outputRow] = make(chan [][]*ckks.Ciphertext)
 
-		go func(output2dChannel chan [][]*ckks.Ciphertext, activation2dChannel chan [][]*ckks.Ciphertext){
+		go func(rowIndex int, output2dChannel chan [][]*ckks.Ciphertext, activation2dChannel chan [][]*ckks.Ciphertext){
 
 			// Store the current column of output
 			outputCol := 0
@@ -278,7 +278,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 				output2dChannels[outputCol] = make(chan []*ckks.Ciphertext)
 				activation2dChannels[outputCol] = make(chan []*ckks.Ciphertext)
 
-				go func(output2dChannel chan []*ckks.Ciphertext, activation2dChannel chan []*ckks.Ciphertext){
+				go func(rowIndex int, colIndex int, output2dChannel chan []*ckks.Ciphertext, activation2dChannel chan []*ckks.Ciphertext){
 
 					// Generate array to store output
 					output1d := make([]*ckks.Ciphertext, outputSize[2])
@@ -292,7 +292,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 
 						output1dChannels[k] = make(chan *ckks.Ciphertext)
 
-						go func(kernelIndex int, output1dChannel chan *ckks.Ciphertext){
+						go func(rowIndex int, colIndex int, kernelIndex int, output1dChannel chan *ckks.Ciphertext){
 
 							// Declare result to store the dot product of kernel and that region of input
 							// var result *ckks.Ciphertext
@@ -303,14 +303,14 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 								for kcol := 0; kcol < c.Kernels[kernelIndex].Column; kcol++ {
 
 									// Check if in padding
-									if row+krow == -1 || col+kcol == -1 || row+krow == c.InputSize[0] || col+kcol == c.InputSize[1] {
+									if rowIndex+krow == -1 || colIndex+kcol == -1 || rowIndex+krow == c.InputSize[0] || colIndex+kcol == c.InputSize[1] {
 										continue
 									}
 
 									for kdep := 0; kdep < c.Kernels[kernelIndex].Depth; kdep++ {
 
 										kernelCiphertext = append(kernelCiphertext, c.Kernels[kernelIndex].Data[krow][kcol][kdep])
-										inputCiphertext = append(inputCiphertext, input[row+krow][col+kcol][kdep])
+										inputCiphertext = append(inputCiphertext, input[rowIndex+krow][colIndex+kcol][kdep])
 
 									}
 								}
@@ -324,7 +324,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 	
 							output1dChannel <- result
 
-						}(k, output1dChannels[k])
+						}(rowIndex, colIndex, k, output1dChannels[k])
 
 					}
 
@@ -350,7 +350,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 					output2dChannel <- output1d
 					activation2dChannel <- activatedOutput1d
 
-				}(output2dChannels[outputCol], activation2dChannels[outputCol])
+				}(rowIndex, col, output2dChannels[outputCol], activation2dChannels[outputCol])
 
 				outputCol++
 			}
@@ -363,7 +363,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 			output2dChannel <- output2d
 			activation2dChannel <- activatedOutput2d
 
-		}(output3dChannels[outputRow], activation3dChannels[outputRow])
+		}(row, output3dChannels[outputRow], activation3dChannels[outputRow])
 
 		outputRow++
 
