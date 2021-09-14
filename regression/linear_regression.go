@@ -54,10 +54,42 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 	dM := make([]ckks.Ciphertext, len(input))
 	multiplier := l.utils.EncodePlaintextFromArray(l.utils.GenerateFilledArraySize((-2.0/float64(size))*learningRate, size))
 
+	// for i := range input {
+	// 	dM[i] = l.utils.MultiplyNew(*input[i], *err.CopyNew(), true, false)
+	// 	l.utils.SumElementsInPlace(&dM[i])
+	// 	l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
+	// }
+
+	// multiply input with error -> store in product1
+
+	product1 := make([]ckks.Ciphertext, len(input))
+
+	channel1 := make([]chan ckks.Ciphertext, len(input))
+
 	for i := range input {
-		dM[i] = l.utils.MultiplyNew(*input[i], *err.CopyNew(), true, false)
-		l.utils.SumElementsInPlace(&dM[i])
-		l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
+		go l.utils.MultiplyConcurrent(*input[i], *err.CopyNew(), true, channel1[i])
+	}
+
+	for c := range channel1 {
+		product1[c] = <-channel1[c]
+	}
+
+	// sum elements in products
+
+	for i := range product1 {
+		l.utils.SumElementsInPlace(&product1[i])
+	}
+
+	// multiply previous summed product with multiplier (-2/n * l_rate) -> store in dM
+
+	channel2 := make([]chan ckks.Ciphertext, len(input))
+
+	for i := range input {
+		go l.utils.MultiplyPlainConcurrent(product1[i], multiplier, true, channel2[i])
+	}
+
+	for c := range channel2 {
+		dM[c] = <-channel2[c]
 	}
 
 	dB := l.utils.SumElementsNew(err)
