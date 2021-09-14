@@ -136,15 +136,65 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 
 	gradientSize := p.GetOutputSize()
 
-	// Divide each gradient by output size
+	// ===================================================
+	// ======= Divide each gradient by output size =======
+	// ===================================================
 	divider := p.utils.EncodePlaintextFromArray(p.utils.GenerateFilledArray(1.0 / float64(gradientSize[0]*gradientSize[1])))
+
+	// Declare array of channels to recieve value from each Goroutine
+	rowChannels := make([]chan [][]*ckks.Ciphertext, len(gradient))
+
+	// loop through each row and start Goroutine
 	for row := range gradient {
-		for col := range gradient[row] {
-			for depth := range gradient[row][col] {
-				p.utils.MultiplyPlain(gradient[row][col][depth], &divider, gradient[row][col][depth], true, false)
+	
+		rowChannels[row] = make(chan [][]*ckks.Ciphertext)
+		
+		go func(rowIndex int, rowChannel chan [][]*ckks.Ciphertext){
+			
+			colChannels := make([]chan []*ckks.Ciphertext, len(gradient[rowIndex]))
+
+			for col := range gradient[rowIndex] {
+
+				colChannels[col] = make(chan []*ckks.Ciphertext)
+
+				go func(rowIndex int, colIndex int, colChannel chan []*ckks.Ciphertext){
+
+					depChannels := make([]chan *ckks.Ciphertext, len(gradient[rowIndex][colIndex]))
+					for depth := range gradient[rowIndex][colIndex] {
+						depChannels[depth] = make(chan *ckks.Ciphertext)
+						p.utils.MultiplyPlainConcurrent(gradient[rowIndex][colIndex][depth], &divider, true, depChannels[depth])
+					}
+
+					colOutput := make([]*ckks.Ciphertext, len(gradient[rowIndex][colIndex]))
+
+					for depth := range depChannels{
+						colOutput[depth] = <- depChannels[depth]
+					}
+
+					colChannel <- colOutput
+
+				}(rowIndex, col, colChannels[col])
+
 			}
-		}
+			
+			// Capture value from next and send back to previous
+			rowOutput := make([][]*ckks.Ciphertext, len(gradient[rowIndex]))
+			for col := range colChannels{
+				rowOutput[col] = <- colChannels[col]
+			}
+			rowChannel <- rowOutput
+
+		}(row, rowChannels[row])
+
 	}
+
+	for row := range rowChannels{
+		gradient[row] = <- rowChannels[row]
+	}
+
+	// ===================================================
+	// ==============  calculate  backward  ==============
+	// ===================================================
 
 	currentGradRow := 0
 	upSampledGradient := make([][][]*ckks.Ciphertext, p.InputSize[0])
