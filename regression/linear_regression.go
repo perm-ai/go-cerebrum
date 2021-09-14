@@ -60,18 +60,16 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 	// 	l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
 	// }
 
-	// multiply input with error -> store in product1
-
 	channels := make([]chan ckks.Ciphertext, len(input))
 
 	for i := range input {
 		channels[i] = make(chan ckks.Ciphertext)
 		go func(index int, utils utility.Utils, channel chan ckks.Ciphertext) {
-			product := l.utils.MultiplyNew(*input[index], *err.CopyNew(), true, false)
-			l.utils.SumElementsInPlace(&product)
-			l.utils.MultiplyPlain(&product, &multiplier, &product, true, false)
+			product := utils.MultiplyNew(*input[index], *err.CopyNew(), true, false)
+			utils.SumElementsInPlace(&product)
+			result := utils.MultiplyPlainNew(&product, &multiplier, true, false)
 
-			channel <- product
+			channel <- result
 		}(i, l.utils.CopyUtilsWithClonedEval(), channels[i])
 	}
 
