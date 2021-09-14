@@ -7,6 +7,7 @@ import (
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/key"
+	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -212,7 +213,9 @@ func TestConv2dForward(t *testing.T) {
 	convLayer := NewConv2D(utils, 1, []int{3,3}, []int{2,2}, true, nil, false, []int{5,5,3}, int(math.Pow(2, 15)))
 	convLayer.LoadKernels([]conv2dKernel{kernel})
 
+	timer := logger.StartTimer("Conv forward")
 	out := convLayer.Forward(testInput).Output
+	timer.LogTimeTaken()
 
 	for r := range out{
 		one := (utils.Decrypt(out[r][0][0])[0])

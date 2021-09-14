@@ -23,7 +23,6 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 		for i := range a {
 
-			fmt.Printf("starting element number %d \n", i)
 			channels[i] = make(chan ckks.Ciphertext)
 
 			go u.MultiplyConcurrent(*a[i], *b[i], true, channels[i])
