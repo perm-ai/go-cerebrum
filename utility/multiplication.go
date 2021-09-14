@@ -1,7 +1,6 @@
 package utility
 
 import (
-	
 	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -175,17 +174,15 @@ func (u Utils)MultiplyConcurrent(a ckks.Ciphertext, b ckks.Ciphertext, rescale b
 	c <- *result
 }
 
-func (u Utils)MultiplyPlainConcurrent(a ckks.Ciphertext, b ckks.Plaintext, rescale bool, c chan ckks.Ciphertext) {
+func (u Utils)MultiplyPlainConcurrent(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, c chan *ckks.Ciphertext) {
 	
-	u.ReEncodeAsNTT(&b)
-	
+	u.ReEncodeAsNTT(b)
 	eval := u.Evaluator.ShallowCopy()
-	result := eval.MulRelinNew(&a, &b)
-
+	result := eval.MulRelinNew(a, b)
+	
 	if rescale {
 		eval.Rescale(result, RESCALE_THRESHOLD, result)
 	}
 
-	c <- *result
-
+	c <- result
 }
