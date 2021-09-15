@@ -1,6 +1,8 @@
 package layers
 
 import (
+	"sync"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/array"
@@ -75,9 +77,9 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
 
 		if d.btspActivation[0] {
-			for a := range activatedOutput{
+			for a := range activatedOutput {
 				d.utils.BootstrapInPlace(activatedOutput[a])
-			}	
+			}
 		}
 
 	}
@@ -97,23 +99,40 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	// Calculate gradients for last layer
 	if d.Activation != nil {
 
-		if (*d.Activation).GetType() != "softmax"{
+		if (*d.Activation).GetType() != "softmax" {
 			activationGradient := (*d.Activation).Backward(output, d.OutputUnit)
 
+			hasBootstrapped := false
+
+			if activationGradient[0].Level() == 1 && d.btspActivation[1] {
+				d.utils.Bootstrap1dInPlace(activationGradient, true)
+				hasBootstrapped = true
+			}
+
+			var wg sync.WaitGroup
+
+			channels := make([]chan *ckks.Ciphertext, len(d.Bias))
 			for b := range d.Bias {
 
-				if activationGradient[b].Level() == 1 && d.btspActivation[1] {
-					d.utils.BootstrapInPlace(activationGradient[b])
-				} else if d.btspActivation[1] {
-					d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
-					d.utils.BootstrapInPlace(gradient[b])
-				} else {
-					d.utils.Multiply(*gradient[b], *activationGradient[b], gradient[b], true, false)
-				}
+				wg.Add(1)
+				channels[b] = make(chan *ckks.Ciphertext)
+
+				go func(index int, utils utility.Utils) {
+					defer wg.Done()
+					utils.Multiply(*gradient[index], *activationGradient[index], gradient[index], true, false)
+
+				}(b, d.utils.CopyUtilsWithClonedEval())
 
 			}
+
+			wg.Wait()
+
+			if d.btspActivation[1] && !hasBootstrapped {
+				d.utils.Bootstrap1dInPlace(activationGradient, true)
+			}
+			
 		}
-		
+
 	}
 
 	gradients.BiasGradient = gradient
@@ -127,7 +146,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 		for xi := range transposedWeight {
 			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false, true)
-			if d.btspOutput[1]{
+			if d.btspOutput[1] {
 				d.utils.BootstrapInPlace(gradients.InputGradient[xi])
 			}
 		}

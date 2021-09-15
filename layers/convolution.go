@@ -1,6 +1,8 @@
 package layers
 
 import (
+	"sync"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/array"
@@ -661,8 +663,8 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 						inputColumnGradient := make([]*ckks.Ciphertext, c.InputSize[2])
 
 						// Capture and store values through channels
-						for d := range inputGradientDepthChannels{
-							inputColumnGradient[d] = <- inputGradientDepthChannels[d]
+						for d := range inputGradientDepthChannels {
+							inputColumnGradient[d] = <-inputGradientDepthChannels[d]
 						}
 
 						// Bootstrap if necessary
@@ -706,21 +708,33 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 
 	batchAverager := c.utils.EncodePlaintextFromArray(c.utils.GenerateFilledArraySize(lr/float64(c.batchSize), c.batchSize))
 
+	// create weight group
+	var wg sync.WaitGroup
+
 	for k := range c.Kernels {
 
-		if len(c.Bias) != 0 {
-			// Calculate average gradient of bias in a batch
-			c.utils.SumElementsInPlace(gradient.BiasGradient[k])
-			c.utils.MultiplyPlain(gradient.BiasGradient[k], &batchAverager, gradient.BiasGradient[k], true, false)
+		wg.Add(1)
 
-			// Update bias
-			c.utils.Sub(c.Bias[k], *gradient.BiasGradient[k], &c.Bias[k])
-		}
+		go func(index int, utils utility.Utils) {
 
-		// Update weight
-		c.Kernels[k].updateWeight(gradient.WeightGradient[k], batchAverager, c.utils)
+			defer wg.Done()
+
+			if len(c.Bias) != 0 {
+
+				utils.SumElementsInPlace(gradient.BiasGradient[index])
+				utils.MultiplyPlain(gradient.BiasGradient[index], &batchAverager, gradient.BiasGradient[index], true, false)
+				utils.Sub(c.Bias[index], *gradient.BiasGradient[index], &c.Bias[index])
+
+			}
+
+			// Update weight
+			c.Kernels[index].updateWeight(gradient.WeightGradient[index], batchAverager, utils)
+
+		}(k, c.utils.CopyUtilsWithClonedEval())
+
 	}
 
+	wg.Wait()
 }
 
 func (c *Conv2D) GetOutputSize() []int {
