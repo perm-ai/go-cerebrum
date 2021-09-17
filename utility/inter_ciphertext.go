@@ -125,7 +125,7 @@ func (u Utils) InterTranspose(a [][]*ckks.Ciphertext) [][]*ckks.Ciphertext {
 
 		transposed[row] = make([]*ckks.Ciphertext, len(a))
 
-		for col := range transposed {
+		for col := range transposed[row] {
 			transposed[row][col] = a[col][row]
 		}
 

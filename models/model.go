@@ -106,7 +106,7 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 
 		prevLayerHasActivation := false
 
-		for layer := 0; layer <= len(m.Layers1d); layer++ {
+		for layer := 0; layer < len(m.Layers1d); layer++ {
 
 			var prevOut []*ckks.Ciphertext
 
@@ -234,13 +234,17 @@ func (m *Model) UpdateGradient(gradients1d []layers.Gradient1d, gradients2d []la
 
 func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int) {
 
-	for i := 0; i < int(dataLoader.GetLength()/batchSize); i++ {
+	for e := 0; e < epoch; e++{
 
-		x, y := dataLoader.Load2D(i*batchSize, batchSize)
+		for i := 0; i < int(dataLoader.GetLength()/batchSize); i++ {
 
-		outputs2D, outputs1D := m.Forward(x, []*ckks.Ciphertext{})
-		gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
-		m.UpdateGradient(gradients1D, gradients2D, learningRate)
+			x, y := dataLoader.Load2D(i*batchSize, batchSize)
+	
+			outputs2D, outputs1D := m.Forward(x, []*ckks.Ciphertext{})
+			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
+			m.UpdateGradient(gradients1D, gradients2D, learningRate)
+	
+		}
 
 	}
 
