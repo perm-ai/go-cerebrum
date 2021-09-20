@@ -142,18 +142,18 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 
 		} else if toLoad[i] && i >= 3 {
 
-			// filekey, err := os.Open(dirName + "/" + fileNames[i])
-			// check(err)
+			filekey, err := os.Open(dirName + "/" + fileNames[i])
+			check(err)
 
-			// switch i {
-			// case 3:
-			// 	galkey = &rlwe.RotationKeySet{}
-			// 	err = UnmarshalBinaryBatch(galkey, filekey)
-			// case 4:
-			// 	btpRotKey = &rlwe.RotationKeySet{}
-			// 	err = UnmarshalBinaryBatch(btpRotKey, filekey)
-			// }
-			// check(err)
+			switch i {
+			case 3:
+				galkey = &rlwe.RotationKeySet{}
+				err = UnmarshalBinaryBatch(galkey, filekey)
+			case 4:
+				btpRotKey = &rlwe.RotationKeySet{}
+				err = UnmarshalBinaryBatch(btpRotKey, filekey)
+			}
+			check(err)
 		}
 
 	}
