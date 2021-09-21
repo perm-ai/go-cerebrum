@@ -6,136 +6,64 @@ import (
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
-func (u Utils) ExpNew(ciphertext *ckks.Ciphertext) *ckks.Ciphertext {
-	//1 + x + x^2/2 + x^3/6 + x^4/24 + x^5/120 + x^6/720 + x^7/5040
-	// coeffs := []complex128{
-	// 	complex(1.0, 0),
-	// 	complex(1.0, 0),
-	// 	complex(1.0/2, 0),
-	// 	complex(1.0/6, 0),
-	// 	complex(1.0/24, 0),
-	// 	complex(1.0/120, 0),
-	// 	complex(1.0/720, 0),
-	// 	complex(1.0/5040, 0),
-	// }
+func (u Utils) ExpNew(ciphertext *ckks.Ciphertext, size int) *ckks.Ciphertext {
 
-	//deg1
-	x := ciphertext
-	deg1 := x.CopyNew()
+	// 1 + x + x^2/2 + x^3/6 + x^4/24 + x^5/120 + x^6/720 + x^7/5040
+	coeffs := []float64{
+		1.0,
+		1.0,
+		1.0/2.0,
+		1.0/6.0,
+		1.0/24.0,
+		1.0/120.0,
+		1.0/720.0,
+		1.0/5040.0,
+	}
 
-	//deg2
-	x2 := u.MultiplyNew(*x.CopyNew(), *x.CopyNew(), true, false)
-	deg2Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(0.5))
-	deg2 := u.MultiplyPlainNew(x2.CopyNew(), &deg2Coeff, true, false)
-	sum := u.AddNew(*deg1, deg2)
-
-	//deg3
-	x3 := u.MultiplyNew(*x.CopyNew(), *x2.CopyNew(), true, false)
-	deg3Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 6))
-	deg3 := u.MultiplyPlainNew(x3.CopyNew(), &deg3Coeff, true, false)
-	sum = u.AddNew(deg3, sum)
-
-	//deg4
-	x4 := u.MultiplyNew(*x2.CopyNew(), *x2.CopyNew(), true, false)
-	deg4Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 24))
-	deg4 := u.MultiplyPlainNew(x4.CopyNew(), &deg4Coeff, true, false)
-	sum = u.AddNew(deg4, sum)
-
-	//deg5
-	x5 := u.MultiplyNew(*x.CopyNew(), *x4.CopyNew(), true, false)
-	deg5Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 120))
-	deg5 := u.MultiplyPlainNew(x5.CopyNew(), &deg5Coeff, true, false)
-	sum = u.AddNew(deg5, sum)
-
-	//deg6
-	x6 := u.MultiplyNew(*x4.CopyNew(), *x2.CopyNew(), true, false)
-	deg6Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 720))
-	deg6 := u.MultiplyPlainNew(x6.CopyNew(), &deg6Coeff, true, false)
-	sum = u.AddNew(deg6, sum)
-
-	//deg7
-	x7 := u.MultiplyNew(*x4.CopyNew(), *x3.CopyNew(), true, false) //now deg6
-	deg7Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0 / 5040))
-	deg7 := u.MultiplyPlainNew(x7.CopyNew(), &deg7Coeff, true, false)
-	sum = u.AddNew(deg7, sum)
-
-	//add 1
-	sum = u.AddPlainNew(sum, u.EncodePlaintextFromArray(u.GenerateFilledArray(1.0)))
-
-	return &sum
+	poly := NewPolynomial(coeffs, u)
+	return poly.EvaluateDegree7(ciphertext, size)
 
 }
 
 // This function is used to calculate 1 / (n * stretchScale)
-func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float64) *ckks.Ciphertext {
+func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float64, size int) *ckks.Ciphertext {
 
 	// Degree 7 approximation of inverse function
 
-	//deg1
-	x := ciphertext
-	deg1Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(stretchScale * -28.0))
-	deg1 := u.MultiplyPlainNew(x.CopyNew(), &deg1Coeff, true, false)
+	coeff := []float64{
+		8,
+		-28,
+		56,
+		-70,
+		56,
+		-28,
+		8,
+		-1,
+	}
 
-	//deg2
-	x2 := u.MultiplyNew(*x.CopyNew(), *x.CopyNew(), true, false)
-	deg2Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 2) * 56.0))
-	deg2 := u.MultiplyPlainNew(x2.CopyNew(), &deg2Coeff, true, false)
-	sum := u.AddNew(deg1, deg2)
+	for c := range coeff{
+		coeff[c] = math.Pow(stretchScale, float64(c)) * coeff[c]
+	}
 
-	//deg3
-	x3 := u.MultiplyNew(*x.CopyNew(), *x2.CopyNew(), true, false)
-	deg3Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 3) * -70.0))
-	deg3 := u.MultiplyPlainNew(x3.CopyNew(), &deg3Coeff, true, false)
-	sum = u.AddNew(deg3, sum)
-
-	//deg4
-	x4 := u.MultiplyNew(*x2.CopyNew(), *x2.CopyNew(), true, false)
-	deg4Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 4) * 56.0))
-	deg4 := u.MultiplyPlainNew(x4.CopyNew(), &deg4Coeff, true, false)
-	sum = u.AddNew(deg4, sum)
-
-	//deg5
-	x5 := u.MultiplyNew(*x.CopyNew(), *x4.CopyNew(), true, false)
-	deg5Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 5) * -28.0))
-	deg5 := u.MultiplyPlainNew(x5.CopyNew(), &deg5Coeff, true, false)
-	sum = u.AddNew(deg5, sum)
-
-	//deg6
-	x6 := u.MultiplyNew(*x4.CopyNew(), *x2.CopyNew(), true, false)
-	deg6Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 6) * 8.0))
-	deg6 := u.MultiplyPlainNew(x6.CopyNew(), &deg6Coeff, true, false)
-	sum = u.AddNew(deg6, sum)
-
-	//deg7
-	x7 := u.MultiplyNew(*x4.CopyNew(), *x3.CopyNew(), true, false) //now deg6
-	deg7Coeff := u.EncodePlaintextFromArray(u.GenerateFilledArray(math.Pow(stretchScale, 7) * -1.0))
-	deg7 := u.MultiplyPlainNew(x7.CopyNew(), &deg7Coeff, true, false)
-	sum = u.AddNew(deg7, sum)
-
-	//add 1
-	sum = u.AddPlainNew(sum, u.EncodePlaintextFromArray(u.GenerateFilledArray(8.0)))
-
-	return &sum
+	poly := NewPolynomial(coeff, u)
+	return poly.EvaluateDegree7(ciphertext, size)
 
 }
 
-func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64) ckks.Ciphertext {
+func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64, size int) ckks.Ciphertext {
 
-	// Calculate approximate inverse of a ciphertext. only works within the bound of [0.175, 1.5]
-	// Costs 3 mutiplicative depth
-	// horizontalStretchScale is applied to get the number between wanted bound
-	// This function, if used with correct ciphertext and stretching params, will return 1/n.
+	// Calculate approximate inverse of a ciphertext
 
 	if horizontalStretchScale != 1 {
 
 		// Calculate inverse
-		inversed := u.InverseApproxNew(ct, horizontalStretchScale)
+		inversed := u.InverseApproxNew(ct, horizontalStretchScale, size)
 
 		// Apply vertical stretch
 		return u.MultiplyConstNew(inversed, horizontalStretchScale, true, false)
 
 	} else {
-		return *u.InverseApproxNew(ct, 1)
+		return *u.InverseApproxNew(ct, 1, size)
 	}
 
 }

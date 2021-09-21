@@ -20,7 +20,7 @@ func TestSigmoid(t *testing.T) {
 	// y = 0.5 + 0.197x + 0.004x^3
 	// 0.012x^2 + 0.197
 
-	inputArrray := utils.GenerateRandomNormalArray(100)
+	inputArrray := utils.GenerateRandomNormalArray(100,1)
 	forwardExpected := make([]float64, utils.Params.Slots())
 	backwardExpected := make([]float64, utils.Params.Slots())
 
@@ -54,7 +54,7 @@ func TestTanh(t *testing.T) {
 	// y = (-0.00752x^3) + (0.37x)
 	// (-0.02256x^2) + 0.37
 
-	inputArrray := utils.GenerateRandomNormalArray(100)
+	inputArrray := utils.GenerateRandomNormalArray(100,1)
 	forwardExpected := make([]float64, utils.Params.Slots())
 	backwardExpected := make([]float64, utils.Params.Slots())
 

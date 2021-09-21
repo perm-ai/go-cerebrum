@@ -13,7 +13,7 @@ import (
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
-var keyChain = key.GenerateKeys(0, true, true)
+var keyChain = key.GenerateKeys(0, false, true)
 var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
 var log = logger.NewLogger(true)
 
@@ -296,7 +296,7 @@ func TestExponential(t *testing.T) {
 
 	ct := utils.EncryptToScale(random, math.Pow(2, 40))
 
-	expCt := utils.ExpNew(&ct)
+	expCt := utils.ExpNew(&ct, 100)
 
 	fmt.Println(ct.Level(), expCt.Level())
 
@@ -319,7 +319,7 @@ func TestInverse(t *testing.T) {
 
 	ct := utils.Encrypt(randomArr)
 
-	inverse := utils.InverseNew(&ct, (float64(1) / float64(50)))
+	inverse := utils.InverseNew(&ct, (float64(1) / float64(50)), 100)
 
 	fmt.Printf("Cost: %d Levels\n", ct.Level()-inverse.Level())
 
@@ -335,7 +335,7 @@ func TestInverse(t *testing.T) {
 
 	ct2 := utils.EncryptToScale(randomArr, 2475880078665336141973028864.0)
 
-	inverseApprox := utils.InverseApproxNew(&ct2, (float64(1) / float64(50)))
+	inverseApprox := utils.InverseApproxNew(&ct2, (float64(1) / float64(50)), 100)
 	fmt.Printf("Consumed %d levels\n", ct.Level()-inverseApprox.Level())
 
 	utils.MultiplyConstArray(inverseApprox, utils.GenerateFilledArray((float64(1) / float64(50))), inverseApprox, true, false)
