@@ -1,6 +1,7 @@
 package layers
 
 import (
+	"math"
 	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -31,11 +32,20 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 	weights := make([][]*ckks.Ciphertext, outputUnit)
 	bias := make([]*ckks.Ciphertext, outputUnit)
 
-	randomBias := array.GenerateRandomNormalArray(outputUnit)
+	// Determine the standard deviation of initial random weight distribution
+	weightStdDev := 0.0
+
+	if (*activation).GetType() == "relu"{
+		weightStdDev = math.Sqrt(1.0/float64(inputUnit))
+	}else{
+		weightStdDev = math.Sqrt(1.0/float64(inputUnit + outputUnit))
+	}
+
+	randomBias := array.GeneratePlainArray(0.0, outputUnit)
 
 	for node := 0; node < outputUnit; node++ {
 
-		randomWeight := array.GenerateRandomNormalArray(inputUnit)
+		randomWeight := array.GenerateRandomNormalArray(inputUnit, weightStdDev)
 		weights[node] = make([]*ckks.Ciphertext, inputUnit)
 
 		if useBias {

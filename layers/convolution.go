@@ -1,6 +1,7 @@
 package layers
 
 import (
+	"math"
 	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -22,7 +23,8 @@ type conv2dKernel struct {
 
 func generateRandomNormal2dKernel(row int, col int, depth int, utils utility.Utils) conv2dKernel {
 
-	randomNums := array.GenerateRandomNormalArray(row * col * depth)
+	weightStdDev := math.Sqrt(2.0/float64(row * col * depth))
+	randomNums := array.GenerateRandomNormalArray(row * col * depth, weightStdDev)
 	data := make([][][]*ckks.Ciphertext, row)
 
 	for r := 0; r < row; r++ {
@@ -214,7 +216,7 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 
 	bias := []ckks.Ciphertext{}
 	if useBias {
-		randomBias := utils.GenerateRandomNormalArray(filters)
+		randomBias := utils.GenerateFilledArraySize(0, filters)
 		bias = make([]ckks.Ciphertext, filters)
 		for i := range bias {
 			bias[i] = utils.Encrypt(utils.GenerateFilledArraySize(randomBias[i], batchSize))

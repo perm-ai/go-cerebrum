@@ -160,13 +160,13 @@ func GenFilledArraysofArrays(value float64, size1 int, size2 int) [][]float64 {
 	return output
 }
 
-func GenerateRandomNormalArray(length int) []float64 {
+func GenerateRandomNormalArray(length int, stdDev float64) []float64 {
 
 	randomArr := make([]float64, length)
 	rand.Seed(time.Now().UnixNano())
 
 	for i := range randomArr {
-		randomArr[i] = rand.NormFloat64()
+		randomArr[i] = rand.NormFloat64() * stdDev
 	}
 
 	return randomArr
