@@ -72,14 +72,14 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 
 			var colWg sync.WaitGroup
 
-			for col := range gradient[row] {
+			for col := range gradient[rowIndex] {
 
 				colWg.Add(1)
 
 				go func(colIndex int, colUtils utility.Utils){
 					defer colWg.Done()
 					
-					averagedLrGradient := colUtils.MultiplyPlainNew(gradient[row][col], &lr, true, false)
+					averagedLrGradient := colUtils.MultiplyPlainNew(gradient[rowIndex][colIndex], &lr, true, false)
 
 					if averagedLrGradient.Level() < weightLevel{
 						colUtils.BootstrapInPlace(&averagedLrGradient)
@@ -87,12 +87,12 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 
 					var depWg sync.WaitGroup
 
-					for d := range k.Data[row][col] {
+					for d := range k.Data[rowIndex][colIndex] {
 						depWg.Add(1)
 
 						go func(depIndex int, depUtils utility.Utils){
 							defer depWg.Done()
-							utils.Sub(*k.Data[row][col][d], averagedLrGradient, k.Data[row][col][d])
+							utils.Sub(*k.Data[rowIndex][colIndex][depIndex], averagedLrGradient, k.Data[rowIndex][colIndex][depIndex])
 						}(d, colUtils.ShallowCopy())
 						
 					}
