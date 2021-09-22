@@ -15,6 +15,11 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 	output := make([]*ckks.Ciphertext, len(input))
 	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 
+	deg4coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((-1.0 / 120.0), inputLength))
+	deg2coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((5.0 / 24.0), inputLength))
+	deg1coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((0.5), inputLength))
+	deg0coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((0.3), inputLength))
+
 	for i := range input {
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
@@ -24,19 +29,13 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 			// calculate degree 4
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
 			xForthed := utils.MultiplyNew(xSquared, xSquared, true, false)
-			deg4coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((-1.0 / 120.0), inputLength))
 			deg4 := utils.MultiplyPlainNew(&xForthed, &deg4coeff, true, false)
 
 			// calculate degree 2
-			deg2coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((5.0 / 24.0), inputLength))
 			deg2 := utils.MultiplyPlainNew(&xSquared, &deg2coeff, true, false)
 
 			// calculate degree 1
-			deg1coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((0.5), inputLength))
 			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1coeff, true, false)
-
-			// calculate degree 0
-			deg0coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((0.3), inputLength))
 
 			// put everything together
 			result1 := utils.AddNew(deg4, deg2)
@@ -63,6 +62,10 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 	output := make([]*ckks.Ciphertext, len(input))
 	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 
+	deg3coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((-4.0 / 120.0), inputLength))
+	deg1coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((10.0 / 24.0), inputLength))
+	deg0coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((0.5), inputLength))
+
 	for i := range input {
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
@@ -71,18 +74,11 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 
 			//calculate deg3
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
-			deg3coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((-4.0 / 120.0), inputLength))
 			xAndDeg3coeff := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg3coeff, true, false)
 			deg3 := utils.MultiplyNew(xSquared, xAndDeg3coeff, true, false)
 
 			//calculate deg1
-
-			deg1coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((10.0 / 24.0), inputLength))
 			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1coeff, true, false)
-
-			//calculate deg0
-
-			deg0coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize((0.5), inputLength))
 
 			//add everything together
 

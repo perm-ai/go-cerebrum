@@ -18,6 +18,10 @@ func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 	output := make([]*ckks.Ciphertext, len(input))
 
+	deg3Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(-0.004, inputLength))
+	deg1Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.197, inputLength))
+	deg0 := *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.5, inputLength)), s.U.Params.LogSlots())
+
 	for i := range input {
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
@@ -27,16 +31,11 @@ func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 			// y := 0.5 + 0.197x - 0.004x^3
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
-			deg3Coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize(-0.004, inputLength))
 			deg3 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg3Coeff, true, false)
 			utils.Multiply(xSquared, deg3, &deg3, true, false)
 
 			// Calculate degree one
-			deg1Coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize(0.197, inputLength))
 			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1Coeff, true, false)
-
-			// Encode deg0 as plaintext
-			deg0 := *utils.Encoder.EncodeNTTNew(utils.Float64ToComplex128(utils.GenerateFilledArraySize(0.5, inputLength)), utils.Params.LogSlots())
 
 			// Add all degree together
 			result := utils.AddNew(deg3, deg1)
@@ -59,6 +58,9 @@ func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cip
 
 	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 	output := make([]*ckks.Ciphertext, len(input))
+	
+	deg2Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.012, inputLength))
+	deg0 := *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.197, inputLength)), s.U.Params.LogSlots())
 
 	for i := range input {
 		// 0.012x^2 + 0.197
@@ -69,11 +71,7 @@ func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cip
 
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
-			deg2Coeff := utils.EncodePlaintextFromArray(utils.GenerateFilledArraySize(0.012, inputLength))
 			deg2 := utils.MultiplyPlainNew(&xSquared, &deg2Coeff, true, false)
-
-			// Encode deg0 as plaintext
-			deg0 := *utils.Encoder.EncodeNTTNew(utils.Float64ToComplex128(utils.GenerateFilledArraySize(0.197, inputLength)), utils.Params.LogSlots())
 
 			// Add all degree together
 			result := utils.AddPlainNew(deg2, deg0)
