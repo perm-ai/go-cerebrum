@@ -39,6 +39,25 @@ func getMnistData(filepath string) mnistDatas {
 	return data
 }
 
+func GetMnistData(filepath string) []MnistData {
+
+	datas := getMnistData(filepath)
+	result := make([]MnistData, len(datas.Data))
+
+	for i := range datas.Data {
+
+		label := make([]float64, 10)
+		label[datas.Data[i].Label] = 1
+
+		result[i] = MnistData{datas.Data[i].Image, label}
+
+	}
+
+	return result
+
+
+}
+
 type MnistDataLoader struct {
 	utils             utility.Utils
 	RawData           []MnistData
