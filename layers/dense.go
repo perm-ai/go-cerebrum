@@ -1,6 +1,8 @@
 package layers
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"math"
 	"sync"
 
@@ -300,4 +302,34 @@ func (d *Dense) SetBootstrapActivation(set bool, direction string) {
 
 func (d *Dense) SetWeightLevel(lvl int) {
 	d.weightLevel = lvl
+}
+
+type denseWeight struct {
+	Weight		[][]float64
+	Bias		[]float64
+}
+
+func (d *Dense) ExportWeights(filename string){
+
+	plainWeights := make([][]float64, len(d.Weights))
+
+	for node := range d.Weights{
+		plainWeights[node] = make([]float64, len(d.Weights[node]))
+		for i := range plainWeights[node]{
+			plainWeights[node][i] = d.utils.Decrypt(d.Weights[node][i])[0]
+		}
+	}
+
+	bias := make([]float64, len(d.Bias))
+
+	for node := range bias{
+		bias[node] = d.utils.Decrypt(d.Bias[node])[0]
+	}
+
+	weight := denseWeight{plainWeights, bias}
+
+	file, _ := json.MarshalIndent(weight, "", " ")
+ 
+	_ = ioutil.WriteFile(filename, file, 0644)
+
 }

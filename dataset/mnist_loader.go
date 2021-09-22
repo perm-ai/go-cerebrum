@@ -14,6 +14,12 @@ type MnistLoader struct {
 
 }
 
+func NewMnistLoader(utils utility.Utils, filePath string) MnistLoader {
+
+	return MnistLoader{utils, importer.GetMnistData(filePath)}
+	
+}
+
 func (m MnistLoader) GetLength() int{
 	return len(m.RawData)
 }

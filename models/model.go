@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"math"
+	"path"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/dataset"
@@ -246,6 +247,36 @@ func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSi
 	
 		}
 
+	}
+
+}
+
+func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int) {
+
+	totalBatch := int(dataLoader.GetLength()/batchSize)
+
+	for e := 0; e < epoch; e++{
+
+		for i := 0; i < totalBatch; i++ {
+
+			fmt.Printf("Epoch : %d/%d\t\tBatch : %d/%d\n", e+1, epoch, i+1, totalBatch)
+
+			x, y := dataLoader.Load1D(i*batchSize, batchSize)
+	
+			outputs2D, outputs1D := m.Forward([][][]*ckks.Ciphertext{}, x)
+			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
+			m.UpdateGradient(gradients1D, gradients2D, learningRate)
+	
+		}
+
+	}
+
+}
+
+func (m Model) ExportModel1D(dirPath string){
+
+	for layer := range m.Layers1d{
+		m.Layers1d[layer].ExportWeights(path.Join(dirPath, fmt.Sprintf("layer_%d.json", layer)))
 	}
 
 }

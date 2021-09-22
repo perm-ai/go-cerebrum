@@ -57,6 +57,8 @@ type Layer1D interface {
 	GetForwardActivationLevelConsumption() int
 	GetBackwardActivationLevelConsumption() int
 	SetWeightLevel(lvl int)
+
+	ExportWeights(filename string)
 }
 
 //=================================================

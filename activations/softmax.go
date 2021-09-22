@@ -42,7 +42,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	fmt.Printf("Exp used: %d (%d - %d) Scale: %f\n", input[0].Level()-arrexp[0].Level(), input[0].Level(), arrexp[0].Level(), arrexp[0].Scale)
 
 	// Declare stretch scale as 1/40
-	stretchScale := (float64(1) / float64(40))
+	stretchScale := (float64(1) / float64(20))
 	plainStretch := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(stretchScale, inputLength))
 
 	// Calculate inverse of sum of e^input
