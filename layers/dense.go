@@ -50,12 +50,12 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 		weights[node] = make([]*ckks.Ciphertext, inputUnit)
 
 		if useBias {
-			bias[node] = utils.EncryptToPointer(utils.GenerateFilledArraySize(randomBias[node], batchSize))
+			bias[node] = utils.EncryptToLevel(utils.GenerateFilledArraySize(randomBias[node], batchSize), 9)
 		}
 
 		for weight := 0; weight < inputUnit; weight++ {
 
-			weights[node][weight] = utils.EncryptToPointer(utils.GenerateFilledArray(randomWeight[weight]))
+			weights[node][weight] = utils.EncryptToLevel(utils.GenerateFilledArray(randomWeight[weight]), 9)
 
 		}
 

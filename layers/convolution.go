@@ -36,8 +36,7 @@ func generateRandomNormal2dKernel(row int, col int, depth int, utils utility.Uti
 			data[r][c] = make([]*ckks.Ciphertext, depth)
 
 			for d := 0; d < depth; d++ {
-				encryptedRandom := utils.Encrypt(utils.GenerateFilledArray(randomNums[(r*col)+c]))
-				data[r][c][d] = &encryptedRandom
+				data[r][c][d] = utils.EncryptToLevel(utils.GenerateFilledArray(randomNums[(r*col)+c]), 9)
 			}
 		}
 	}
@@ -231,7 +230,7 @@ func (k conv2dKernel) rotate180() conv2dKernel {
 type Conv2D struct {
 	utils          utility.Utils
 	Kernels        []conv2dKernel
-	Bias           []ckks.Ciphertext
+	Bias           []*ckks.Ciphertext
 	Strides        []int
 	Padding        bool
 	Activation     *activations.Activation
@@ -259,12 +258,12 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 		kernels[i] = generateRandomNormal2dKernel(kernelSize[0], kernelSize[1], inputSize[2], utils)
 	}
 
-	bias := []ckks.Ciphertext{}
+	bias := []*ckks.Ciphertext{}
 	if useBias {
 		randomBias := utils.GenerateFilledArraySize(0, filters)
-		bias = make([]ckks.Ciphertext, filters)
+		bias = make([]*ckks.Ciphertext, filters)
 		for i := range bias {
-			bias[i] = utils.Encrypt(utils.GenerateFilledArraySize(randomBias[i], batchSize))
+			bias[i] = utils.EncryptToLevel(utils.GenerateFilledArraySize(randomBias[i], batchSize), 9)
 		}
 	}
 
@@ -368,7 +367,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 							result := c.utils.InterDotProduct(kernelCiphertext, inputCiphertext, true, false, true)
 
 							if len(c.Bias) != 0 {
-								c.utils.Add(c.Bias[kernelIndex], *result, result)
+								c.utils.Add(*c.Bias[kernelIndex], *result, result)
 							}
 
 							output1dChannel <- result
@@ -781,7 +780,7 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 						biasUtils.BootstrapInPlace(gradient.BiasGradient[index])
 					}
 
-					biasUtils.Sub(c.Bias[index], *gradient.BiasGradient[index], &c.Bias[index])
+					biasUtils.Sub(*c.Bias[index], *gradient.BiasGradient[index], c.Bias[index])
 
 				}(utils.ShallowCopy())
 
