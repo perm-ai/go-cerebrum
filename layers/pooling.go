@@ -292,3 +292,7 @@ func (p *AveragePooling2D) SetBootstrapOutput(set bool, direction string) {
 func (p *AveragePooling2D) SetBootstrapActivation(set bool, direction string) {
 
 }
+
+func (p *AveragePooling2D) SetWeightLevel(lvl int){
+
+}

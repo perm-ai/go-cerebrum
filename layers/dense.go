@@ -24,6 +24,7 @@ type Dense struct {
 	btspOutput     []bool
 	btspActivation []bool
 	batchSize      int
+	weightLevel    int
 }
 
 func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int) Dense {
@@ -60,7 +61,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 	}
 
-	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, []bool{false, false}, []bool{false, false}, batchSize}
+	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, []bool{false, false}, []bool{false, false}, batchSize, 9}
 
 }
 
@@ -171,21 +172,75 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(lr/float64(d.batchSize), d.batchSize))
 
+	// create weight group
+	var wg sync.WaitGroup
+
 	for node := range d.Weights {
 
-		if len(d.Bias) != 0 {
-			d.utils.SumElementsInPlace(gradient.BiasGradient[node])
-			averagedLrBias := d.utils.MultiplyPlainNew(gradient.BiasGradient[node], &batchAverager, true, false)
-			d.utils.Sub(*d.Bias[node], averagedLrBias, d.Bias[node])
-		}
+		wg.Add(1)
 
-		for w := range d.Weights[node] {
-			d.utils.SumElementsInPlace(gradient.WeightGradient[node][w])
-			averagedLrWeight := d.utils.MultiplyPlainNew(gradient.WeightGradient[node][w], &batchAverager, true, false)
-			d.utils.Sub(*d.Weights[node][w], averagedLrWeight, d.Weights[node][w])
-		}
+		go func(nodeIndex int, utils utility.Utils) {
+
+			defer wg.Done()
+
+			updatedBiasChannel := make(chan *ckks.Ciphertext)
+
+			if len(d.Bias) != 0 {
+
+				// Calculate updated bias concurrently
+				go func(utils utility.Utils, c chan *ckks.Ciphertext) {
+
+					utils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
+					averagedLrBias := utils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], &batchAverager, true, false)
+
+					if averagedLrBias.Level() < d.weightLevel {
+						utils.BootstrapInPlace(&averagedLrBias)
+					}
+
+					result := utils.SubNew(*d.Bias[nodeIndex], averagedLrBias)
+					c <- &result
+
+				}(d.utils.ShallowCopy(), updatedBiasChannel)
+
+			}
+
+			updatedWeightChannels := make([]chan *ckks.Ciphertext, len(d.Weights[nodeIndex]))
+
+			for w := range d.Weights[nodeIndex] {
+
+				// Update weight concurrently
+				updatedWeightChannels[w] = make(chan *ckks.Ciphertext)
+
+				go func(weightIndex int, utils utility.Utils, c chan *ckks.Ciphertext) {
+
+					utils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
+					averagedLrWeight := utils.MultiplyPlainNew(gradient.WeightGradient[nodeIndex][weightIndex], &batchAverager, true, false)
+
+					// Bootstrap if gradient's level is lower than it's suppose to be
+					if averagedLrWeight.Level() < d.weightLevel {
+						utils.BootstrapInPlace(&averagedLrWeight)
+					}
+
+					result := utils.SubNew(*d.Weights[nodeIndex][weightIndex], averagedLrWeight)
+					c <- &result
+
+				}(w, d.utils.ShallowCopy(), updatedWeightChannels[w])
+
+			}
+
+			if len(d.Bias) != 0 {
+				d.Bias[nodeIndex] = <-updatedBiasChannel
+			}
+
+			for w := range updatedWeightChannels {
+				d.Weights[nodeIndex][w] = <-updatedWeightChannels[w]
+			}
+
+		}(node, d.utils.ShallowCopy())
 
 	}
+
+	wg.Wait()
 
 }
 
@@ -241,4 +296,8 @@ func (d *Dense) SetBootstrapActivation(set bool, direction string) {
 	case "backward":
 		d.btspActivation[1] = set
 	}
+}
+
+func (d *Dense) SetWeightLevel(lvl int) {
+	d.weightLevel = lvl
 }

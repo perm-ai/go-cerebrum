@@ -56,16 +56,60 @@ func generate2dKernelFromArray(data [][][]*ckks.Ciphertext) conv2dKernel {
 
 }
 
-func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plaintext, utils utility.Utils) {
+func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plaintext, utils utility.Utils, weightLevel int) {
+
+	// create row weight group
+	var rowWg sync.WaitGroup
 
 	for row := range gradient {
-		for col := range gradient[row] {
-			averagedLrGradient := utils.MultiplyPlainNew(gradient[row][col], &lr, true, false)
-			for d := range k.Data[row][col] {
-				utils.Sub(*k.Data[row][col][d], averagedLrGradient, k.Data[row][col][d])
+
+		// Add 1 task to wait group
+		rowWg.Add(1)
+		
+		go func(rowIndex int){
+
+			defer rowWg.Done()
+
+			var colWg sync.WaitGroup
+
+			for col := range gradient[row] {
+
+				colWg.Add(1)
+
+				go func(colIndex int, colUtils utility.Utils){
+					defer colWg.Done()
+					
+					averagedLrGradient := colUtils.MultiplyPlainNew(gradient[row][col], &lr, true, false)
+
+					if averagedLrGradient.Level() < weightLevel{
+						colUtils.BootstrapInPlace(&averagedLrGradient)
+					}
+
+					var depWg sync.WaitGroup
+
+					for d := range k.Data[row][col] {
+						depWg.Add(1)
+
+						go func(depIndex int, depUtils utility.Utils){
+							defer depWg.Done()
+							utils.Sub(*k.Data[row][col][d], averagedLrGradient, k.Data[row][col][d])
+						}(d, colUtils.ShallowCopy())
+						
+					}
+
+					depWg.Done()
+
+				}(col, utils.ShallowCopy())
+				
 			}
-		}
+
+			colWg.Wait()
+
+		}(row)
+		
 	}
+
+	rowWg.Wait()
 
 }
 
@@ -195,6 +239,7 @@ type Conv2D struct {
 	btspOutput     []bool
 	btspActivation []bool
 	batchSize      int
+	weightLevel	   int
 }
 
 // Constructor for Convolutional layer struct
@@ -223,7 +268,7 @@ func NewConv2D(utils utility.Utils, filters int, kernelSize []int, strides []int
 		}
 	}
 
-	return Conv2D{utils: utils, Kernels: kernels, Bias: bias, Strides: strides, Padding: padding, Activation: activation, InputSize: inputSize, batchSize: batchSize, btspOutput: []bool{false, false}, btspActivation: []bool{false, false}}
+	return Conv2D{utils: utils, Kernels: kernels, Bias: bias, Strides: strides, Padding: padding, Activation: activation, InputSize: inputSize, batchSize: batchSize, btspOutput: []bool{false, false}, btspActivation: []bool{false, false}, weightLevel: 9}
 
 }
 
@@ -720,19 +765,34 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 		go func(index int, utils utility.Utils) {
 
 			defer wg.Done()
+			var biasWg sync.WaitGroup
 
 			if len(c.Bias) != 0 {
 
-				utils.SumElementsInPlace(gradient.BiasGradient[index])
-				utils.MultiplyPlain(gradient.BiasGradient[index], &batchAverager, gradient.BiasGradient[index], true, false)
-				utils.Sub(c.Bias[index], *gradient.BiasGradient[index], &c.Bias[index])
+				biasWg.Add(1)
+				
+				go func(biasUtils utility.Utils){
+					defer biasWg.Done()
+
+					biasUtils.SumElementsInPlace(gradient.BiasGradient[index])
+					biasUtils.MultiplyPlain(gradient.BiasGradient[index], &batchAverager, gradient.BiasGradient[index], true, false)
+
+					if gradient.BiasGradient[index].Level() < c.weightLevel{
+						biasUtils.BootstrapInPlace(gradient.BiasGradient[index])
+					}
+
+					biasUtils.Sub(c.Bias[index], *gradient.BiasGradient[index], &c.Bias[index])
+
+				}(utils.ShallowCopy())
 
 			}
 
 			// Update weight
-			c.Kernels[index].updateWeight(gradient.WeightGradient[index], batchAverager, utils)
+			c.Kernels[index].updateWeight(gradient.WeightGradient[index], batchAverager, utils, c.weightLevel)
 
-		}(k, c.utils.CopyWithClonedEval())
+			biasWg.Wait()
+
+		}(k, c.utils.ShallowCopy())
 
 	}
 
@@ -804,4 +864,8 @@ func (c Conv2D) GetBackwardActivationLevelConsumption() int {
 	} else {
 		return 0
 	}
+}
+
+func (c *Conv2D) SetWeightLevel(lvl int){
+	c.weightLevel = lvl
 }

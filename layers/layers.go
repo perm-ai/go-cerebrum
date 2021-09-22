@@ -56,6 +56,7 @@ type Layer1D interface {
 	GetBackwardLevelConsumption() int
 	GetForwardActivationLevelConsumption() int
 	GetBackwardActivationLevelConsumption() int
+	SetWeightLevel(lvl int)
 }
 
 //=================================================
@@ -76,4 +77,5 @@ type Layer2D interface {
 	GetBackwardLevelConsumption() int
 	GetForwardActivationLevelConsumption() int
 	GetBackwardActivationLevelConsumption() int
+	SetWeightLevel(lvl int)
 }
