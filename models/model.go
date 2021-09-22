@@ -293,23 +293,49 @@ func (m *Model) setForwardBootstrapping() {
 		// Calculate required level for this layer
 		requiredLevel := m.Layers1d[l].GetForwardLevelConsumption() + m.Layers1d[l].GetForwardActivationLevelConsumption()
 
-		if (inputLevel1D[l] - requiredLevel) < 1 {
+		if requiredLevel < 9 {
 
-			// If not enough level bootstrap output of previous layer
-			if m.Layers1d[l-1].HasActivation() {
-				m.Layers1d[l-1].SetBootstrapActivation(true, "forward")
-			} else {
-				m.Layers1d[l-1].SetBootstrapOutput(true, "forward")
+			if (inputLevel1D[l] - requiredLevel) < 1 {
+
+				// If not enough level bootstrap output of previous layer
+				if m.Layers1d[l-1].HasActivation() {
+					m.Layers1d[l-1].SetBootstrapActivation(true, "forward")
+				} else {
+					m.Layers1d[l-1].SetBootstrapOutput(true, "forward")
+				}
+	
+				// Set input to this layer to 9 (highest)
+				inputLevel1D[l] = 9
+	
 			}
 
-			// Set input to this layer to 9 (highest)
-			inputLevel1D[l] = 9
+			// Set output level of this layer (input of next layer)
+			inputLevel1D[l+1] = inputLevel1D[l] - requiredLevel
 
+		} else {
+
+			// Deal with softmax where req.lvl. is 8
+
+			if inputLevel1D[l] - m.Layers1d[l].GetForwardLevelConsumption() < 1{
+
+				// If not enough level bootstrap output of previous layer
+				if m.Layers1d[l-1].HasActivation() {
+					m.Layers1d[l-1].SetBootstrapActivation(true, "forward")
+				} else {
+					m.Layers1d[l-1].SetBootstrapOutput(true, "forward")
+				}
+
+				// Set input to this layer to 9 (highest)
+				inputLevel1D[l] = 9
+
+			}
+
+			m.Layers1d[len(m.Layers1d)-1].SetBootstrapOutput(true, "forward")
+
+			// Set output level of this layer (input of next layer)
+			inputLevel1D[l+1] = 9 - m.Layers1d[l].GetForwardActivationLevelConsumption()
+			
 		}
-
-		// Set output level of this layer (input of next layer)
-		inputLevel1D[l+1] = inputLevel1D[l] - requiredLevel
-
 	}
 
 	// Set bootstrap output for last layer
