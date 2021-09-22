@@ -23,8 +23,8 @@ type conv2dKernel struct {
 
 func generateRandomNormal2dKernel(row int, col int, depth int, utils utility.Utils) conv2dKernel {
 
-	weightStdDev := math.Sqrt(2.0/float64(row * col * depth))
-	randomNums := array.GenerateRandomNormalArray(row * col * depth, weightStdDev)
+	weightStdDev := math.Sqrt(2.0 / float64(row*col*depth))
+	randomNums := array.GenerateRandomNormalArray(row*col*depth, weightStdDev)
 	data := make([][][]*ckks.Ciphertext, row)
 
 	for r := 0; r < row; r++ {
@@ -732,7 +732,7 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 			// Update weight
 			c.Kernels[index].updateWeight(gradient.WeightGradient[index], batchAverager, utils)
 
-		}(k, c.utils.CopyUtilsWithClonedEval())
+		}(k, c.utils.CopyWithClonedEval())
 
 	}
 

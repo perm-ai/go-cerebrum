@@ -83,14 +83,14 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 							// Return avg pooling result from that pool
 							outputDepthChannel <- poolResult
 
-						}(rowIndex, colIndex, depth, p.utils.CopyUtilsWithClonedEval(), outputDepthChannels[depth])
+						}(rowIndex, colIndex, depth, p.utils.CopyWithClonedEval(), outputDepthChannels[depth])
 
 					}
 
 					outputColumn := make([]*ckks.Ciphertext, outputSize[2])
 
 					for depth := range outputDepthChannels {
-						outputColumn[depth] = <- outputDepthChannels[depth]
+						outputColumn[depth] = <-outputDepthChannels[depth]
 					}
 
 					if p.btspOutput[0] {
@@ -146,18 +146,18 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 
 	// loop through each row and start Goroutine
 	for row := range gradient {
-	
+
 		rowChannels[row] = make(chan [][]*ckks.Ciphertext)
-		
-		go func(rowIndex int, rowChannel chan [][]*ckks.Ciphertext){
-			
+
+		go func(rowIndex int, rowChannel chan [][]*ckks.Ciphertext) {
+
 			colChannels := make([]chan []*ckks.Ciphertext, len(gradient[rowIndex]))
 
 			for col := range gradient[rowIndex] {
 
 				colChannels[col] = make(chan []*ckks.Ciphertext)
 
-				go func(rowIndex int, colIndex int, colChannel chan []*ckks.Ciphertext){
+				go func(rowIndex int, colIndex int, colChannel chan []*ckks.Ciphertext) {
 
 					depChannels := make([]chan *ckks.Ciphertext, len(gradient[rowIndex][colIndex]))
 					for depth := range gradient[rowIndex][colIndex] {
@@ -167,8 +167,8 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 
 					colOutput := make([]*ckks.Ciphertext, len(gradient[rowIndex][colIndex]))
 
-					for depth := range depChannels{
-						colOutput[depth] = <- depChannels[depth]
+					for depth := range depChannels {
+						colOutput[depth] = <-depChannels[depth]
 					}
 
 					colChannel <- colOutput
@@ -176,11 +176,11 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 				}(rowIndex, col, colChannels[col])
 
 			}
-			
+
 			// Capture value from next and send back to previous
 			rowOutput := make([][]*ckks.Ciphertext, len(gradient[rowIndex]))
-			for col := range colChannels{
-				rowOutput[col] = <- colChannels[col]
+			for col := range colChannels {
+				rowOutput[col] = <-colChannels[col]
 			}
 			rowChannel <- rowOutput
 
@@ -188,8 +188,8 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 
 	}
 
-	for row := range rowChannels{
-		gradient[row] = <- rowChannels[row]
+	for row := range rowChannels {
+		gradient[row] = <-rowChannels[row]
 	}
 
 	// ===================================================

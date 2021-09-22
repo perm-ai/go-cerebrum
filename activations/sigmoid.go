@@ -10,7 +10,7 @@ import (
 //=================================================
 
 type Sigmoid struct {
-	U            utility.Utils
+	U utility.Utils
 }
 
 func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
@@ -22,7 +22,7 @@ func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// y := 0.5 + 0.197x - 0.004x^3
 			// Calculate degree three
@@ -43,11 +43,11 @@ func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 			utils.AddPlain(&result, &deg0, &result)
 			c <- &result
 
-		}(input[i], s.U.CopyUtilsWithClonedEval(), outputChannels[i])
+		}(input[i], s.U.CopyWithClonedEval(), outputChannels[i])
 
 	}
 
-	for i := range outputChannels{
+	for i := range outputChannels {
 		output[i] = <-outputChannels[i]
 	}
 
@@ -65,7 +65,7 @@ func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cip
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
@@ -77,14 +77,14 @@ func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cip
 
 			// Add all degree together
 			result := utils.AddPlainNew(deg2, deg0)
-			
+
 			c <- &result
 
-		}(input[i], s.U.CopyUtilsWithClonedEval(), outputChannels[i])
+		}(input[i], s.U.CopyWithClonedEval(), outputChannels[i])
 
 	}
 
-	for i := range outputChannels{
+	for i := range outputChannels {
 		output[i] = <-outputChannels[i]
 	}
 

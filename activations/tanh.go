@@ -31,7 +31,7 @@ func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
@@ -45,11 +45,11 @@ func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 			result := utils.AddNew(deg3, deg1)
 			c <- &result
 
-		}(input[i], t.U.CopyUtilsWithClonedEval(), outputChannels[i])
+		}(input[i], t.U.CopyWithClonedEval(), outputChannels[i])
 
 	}
 
-	for i := range outputChannels{
+	for i := range outputChannels {
 		output[i] = <-outputChannels[i]
 	}
 
@@ -68,7 +68,7 @@ func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
@@ -81,11 +81,11 @@ func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 			result := utils.AddPlainNew(deg2, deg0)
 			c <- &result
 
-		}(input[i], t.U.CopyUtilsWithClonedEval(), outputChannels[i])
-		
+		}(input[i], t.U.CopyWithClonedEval(), outputChannels[i])
+
 	}
 
-	for i := range outputChannels{
+	for i := range outputChannels {
 		output[i] = <-outputChannels[i]
 	}
 

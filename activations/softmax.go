@@ -1,6 +1,7 @@
 package activations
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -12,15 +13,13 @@ import (
 //=================================================
 
 type Softmax struct {
-	U              utility.Utils
-	zeroEliminator map[int]ckks.Plaintext
+	U utility.Utils
 }
 
 func NewSoftmax(u utility.Utils) Softmax {
 
-	eliminator := make(map[int]ckks.Plaintext)
-
-	return Softmax{u, eliminator}
+	newUtils := u.CopyWithNewScale(math.Pow(2,30))
+	return Softmax{newUtils}
 
 }
 
@@ -33,35 +32,22 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	// Encode filter if doesn't exist in cache
 	sum := s.U.Encrypt(s.U.GenerateFilledArray(0.0))
 
-	if _, ok := s.zeroEliminator[inputLength]; !ok {
-
-		arr := s.U.GenerateFilledArray(1)
-
-		for i := 0; i < inputLength; i++ {
-			arr[i] = 0
-		}
-
-		s.zeroEliminator[inputLength] = *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(arr), s.U.Params.LogSlots())
-	}
 	//create array that will contain the result, but for the first loop, contain the e^x of each input
 	arrexp := make([]*ckks.Ciphertext, len(input))
 	// Exponentiate input and get sum
-	for i, p := range input {
-		arrexp[i] = s.U.ExpNew(p)
-
-		s.U.SubPlain(*arrexp[i], s.zeroEliminator[inputLength], arrexp[i])
-		// Level input - 2
-		if arrexp[i].Scale > math.Pow(2, 40.1) && arrexp[i].Level() == 6 {
-			s.U.Evaluator.Rescale(arrexp[i], math.Pow(2, 35), arrexp[i])
-		}
+	for i := range input {
+		arrexp[i] = s.U.ExpNew(input[i], inputLength)
 		s.U.Add(sum, *arrexp[i], &sum)
 	}
+	fmt.Printf("Exp used: %d (%d - %d) Scale: %f\n", input[0].Level()-arrexp[0].Level(), input[0].Level(), arrexp[0].Level(), arrexp[0].Scale)
 
 	// Declare stretch scale as 1/40
 	stretchScale := (float64(1) / float64(40))
 	plainStretch := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(stretchScale, inputLength))
+
 	// Calculate inverse of sum of e^input
-	inverseSum := s.U.InverseApproxNew(&sum, stretchScale) // Level input - 4
+	inverseSum := s.U.InverseApproxNew(&sum, stretchScale, inputLength) // Level input - 4
+	fmt.Printf("Inverse used: %d (%d - %d) scale: %f\n", sum.Level()-inverseSum.Level(), sum.Level(), inverseSum.Level(), inverseSum.Scale)
 
 	output := make([]*ckks.Ciphertext, len(arrexp))
 	outputChannels := make([]chan *ckks.Ciphertext, len(arrexp))
@@ -71,18 +57,18 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			result := utils.MultiplyPlainNew(inputEach, &plainStretch, true, false) // Level input - 3
+			fmt.Printf("result: %d\n", result.Level())
 			s.U.Multiply(result, *inverseSum, &result, false, false)
 			c <- &result
 
-		}(arrexp[i], s.U.CopyUtilsWithClonedEval(), outputChannels[i])
-		
+		}(arrexp[i], s.U.CopyWithClonedEval(), outputChannels[i])
 
 	}
 
-	for i := range outputChannels{
+	for i := range outputChannels {
 		output[i] = <-outputChannels[i]
 	}
 
@@ -99,7 +85,7 @@ func (s Softmax) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cip
 
 func (s Softmax) GetForwardLevelConsumption() int {
 
-	return 7
+	return 8
 
 }
 

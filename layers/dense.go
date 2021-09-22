@@ -35,10 +35,10 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 	// Determine the standard deviation of initial random weight distribution
 	weightStdDev := 0.0
 
-	if (*activation).GetType() == "relu"{
-		weightStdDev = math.Sqrt(1.0/float64(inputUnit))
-	}else{
-		weightStdDev = math.Sqrt(1.0/float64(inputUnit + outputUnit))
+	if (*activation).GetType() == "relu" {
+		weightStdDev = math.Sqrt(1.0 / float64(inputUnit))
+	} else {
+		weightStdDev = math.Sqrt(1.0 / float64(inputUnit+outputUnit))
 	}
 
 	randomBias := array.GeneratePlainArray(0.0, outputUnit)
@@ -131,7 +131,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 					defer wg.Done()
 					utils.Multiply(*gradient[index], *activationGradient[index], gradient[index], true, false)
 
-				}(b, d.utils.CopyUtilsWithClonedEval())
+				}(b, d.utils.CopyWithClonedEval())
 
 			}
 
@@ -140,7 +140,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 			if d.btspActivation[1] && !hasBootstrapped {
 				d.utils.Bootstrap1dInPlace(activationGradient, true)
 			}
-			
+
 		}
 
 	}
@@ -174,11 +174,13 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 	for node := range d.Weights {
 
 		if len(d.Bias) != 0 {
+			d.utils.SumElementsInPlace(gradient.BiasGradient[node])
 			averagedLrBias := d.utils.MultiplyPlainNew(gradient.BiasGradient[node], &batchAverager, true, false)
 			d.utils.Sub(*d.Bias[node], averagedLrBias, d.Bias[node])
 		}
 
 		for w := range d.Weights[node] {
+			d.utils.SumElementsInPlace(gradient.WeightGradient[node][w])
 			averagedLrWeight := d.utils.MultiplyPlainNew(gradient.WeightGradient[node][w], &batchAverager, true, false)
 			d.utils.Sub(*d.Weights[node][w], averagedLrWeight, d.Weights[node][w])
 		}

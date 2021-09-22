@@ -19,7 +19,7 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// calculate degree 4
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
@@ -44,11 +44,11 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 			result3 := utils.AddPlainNew(result2, deg0coeff)
 			c <- &result3
 
-		}(input[i], r.U.CopyUtilsWithClonedEval(), outputChannels[i])
-		
+		}(input[i], r.U.CopyWithClonedEval(), outputChannels[i])
+
 	}
 
-	for i := range outputChannels{
+	for i := range outputChannels {
 		output[i] = <-outputChannels[i]
 	}
 
@@ -67,7 +67,7 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext){
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			//calculate deg3
 			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
@@ -90,8 +90,8 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 			result2 := utils.AddPlainNew(result1, deg0coeff)
 			c <- &result2
 
-		}(input[i], r.U.CopyUtilsWithClonedEval(), outputChannels[i])
-		
+		}(input[i], r.U.CopyWithClonedEval(), outputChannels[i])
+
 	}
 	return output
 }

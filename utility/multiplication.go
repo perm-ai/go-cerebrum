@@ -1,12 +1,8 @@
 package utility
 
 import (
-	"math"
-
 	"github.com/ldsec/lattigo/v2/ckks"
 )
-
-var RESCALE_THRESHOLD = math.Pow(2.0, 40.0)
 
 func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
@@ -18,7 +14,7 @@ func (u Utils) Multiply(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
+		u.Evaluator.Rescale(destination, u.Scale, destination)
 	}
 
 }
@@ -33,7 +29,7 @@ func (u Utils) MultiplyNew(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, b
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, RESCALE_THRESHOLD, result)
+		u.Evaluator.Rescale(result, u.Scale, result)
 	}
 
 	return *result
@@ -50,7 +46,7 @@ func (u Utils) MultiplyPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination 
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
+		u.Evaluator.Rescale(destination, u.Scale, destination)
 	}
 
 }
@@ -65,7 +61,7 @@ func (u Utils) MultiplyPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext, rescale b
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, RESCALE_THRESHOLD, result)
+		u.Evaluator.Rescale(result, u.Scale, result)
 	}
 
 	return *result
@@ -83,7 +79,7 @@ func (u Utils) MultiplyConstArray(a *ckks.Ciphertext, b []float64, destination *
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
+		u.Evaluator.Rescale(destination, u.Scale, destination)
 	}
 
 }
@@ -99,7 +95,7 @@ func (u Utils) MultiplyConstArrayNew(a ckks.Ciphertext, b []float64, rescale boo
 	}
 
 	if rescale {
-		u.Evaluator.Rescale(result, RESCALE_THRESHOLD, result)
+		u.Evaluator.Rescale(result, u.Scale, result)
 	}
 	return *result
 }
@@ -135,7 +131,7 @@ func (u Utils) MultiplyConst(a *ckks.Ciphertext, b float64, destination *ckks.Ci
 	}
 
 	if rescale && destination.Scale != originalScale {
-		u.Evaluator.Rescale(destination, RESCALE_THRESHOLD, destination)
+		u.Evaluator.Rescale(destination, u.Scale, destination)
 	}
 
 }
@@ -161,27 +157,27 @@ func (u Utils) ReEncodeAsNTT(a *ckks.Plaintext) {
 
 }
 
-func (u Utils)MultiplyConcurrent(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, c chan ckks.Ciphertext) {
-	
+func (u Utils) MultiplyConcurrent(a ckks.Ciphertext, b ckks.Ciphertext, rescale bool, c chan ckks.Ciphertext) {
+
 	eval := u.Evaluator.ShallowCopy()
 	u.SwitchToSameModCoeff(&a, &b)
 	result := eval.MulRelinNew(&a, &b)
-	
+
 	if rescale {
-		eval.Rescale(result, RESCALE_THRESHOLD, result)
+		eval.Rescale(result, u.Scale, result)
 	}
 
 	c <- *result
 }
 
-func (u Utils)MultiplyPlainConcurrent(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, c chan *ckks.Ciphertext) {
-	
+func (u Utils) MultiplyPlainConcurrent(a *ckks.Ciphertext, b *ckks.Plaintext, rescale bool, c chan *ckks.Ciphertext) {
+
 	u.ReEncodeAsNTT(b)
 	eval := u.Evaluator.ShallowCopy()
 	result := eval.MulRelinNew(a, b)
-	
+
 	if rescale {
-		eval.Rescale(result, RESCALE_THRESHOLD, result)
+		eval.Rescale(result, u.Scale, result)
 	}
 
 	c <- result

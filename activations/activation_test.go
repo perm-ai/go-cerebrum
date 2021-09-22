@@ -105,6 +105,7 @@ func TestSoftmax(t *testing.T) {
 	// Encryption
 	encInput := utils.Encrypt(randomArr)
 	utils.Evaluator.DropLevel(&encInput, encInput.Level()-9)
+	fmt.Printf("Scale: %f\n", encInput.Scale)
 	startingLevel := encInput.Level()
 
 	// Softmax initiation
@@ -112,11 +113,12 @@ func TestSoftmax(t *testing.T) {
 
 	// Calculate softmax forward
 	result := softmax.Forward([]*ckks.Ciphertext{&encInput}, 10)[0]
+	decResult := utils.Decrypt(result)
 
 	fmt.Printf("Used: %d levels (%d - %d)\n", startingLevel-result.Level(), startingLevel, result.Level())
 
 	// Evaluate correctness with precision 0.5
-	if !utility.ValidateResult(utils.Decrypt(result)[0:10], expected[0:10], false, -0.3, log) {
+	if !utility.ValidateResult(decResult[0:10], expected[0:10], false, -0.3, log) {
 		t.Error("Softmax forward wasn't evaluated properly")
 	}
 

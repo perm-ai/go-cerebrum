@@ -70,7 +70,7 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 			result := utils.MultiplyPlainNew(&product, &multiplier, true, false)
 
 			channel <- result
-		}(i, l.utils.CopyUtilsWithClonedEval(), channels[i])
+		}(i, l.utils.CopyWithClonedEval(), channels[i])
 	}
 
 	for c := range channels {
