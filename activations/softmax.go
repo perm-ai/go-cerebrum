@@ -34,12 +34,12 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 	//create array that will contain the result, but for the first loop, contain the e^x of each input
 	arrexp := make([]*ckks.Ciphertext, len(input))
+	
 	// Exponentiate input and get sum
 	for i := range input {
 		arrexp[i] = s.U.ExpNew(input[i], inputLength)
 		s.U.Add(sum, *arrexp[i], &sum)
 	}
-	fmt.Printf("Exp used: %d (%d - %d) Scale: %f\n", input[0].Level()-arrexp[0].Level(), input[0].Level(), arrexp[0].Level(), arrexp[0].Scale)
 
 	// Declare stretch scale as 1/40
 	stretchScale := (float64(1) / float64(20))
@@ -47,7 +47,6 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 	// Calculate inverse of sum of e^input
 	inverseSum := s.U.InverseApproxNew(&sum, stretchScale, inputLength) // Level input - 4
-	fmt.Printf("Inverse used: %d (%d - %d) scale: %f\n", sum.Level()-inverseSum.Level(), sum.Level(), inverseSum.Level(), inverseSum.Scale)
 
 	output := make([]*ckks.Ciphertext, len(arrexp))
 	outputChannels := make([]chan *ckks.Ciphertext, len(arrexp))

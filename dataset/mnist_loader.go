@@ -6,34 +6,31 @@ import (
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-
 type MnistLoader struct {
-
-	utils 		utility.Utils
-	RawData 	[]importer.MnistData
-
+	utils   utility.Utils
+	RawData []importer.MnistData
 }
 
 func NewMnistLoader(utils utility.Utils, filePath string) MnistLoader {
 
 	return MnistLoader{utils, importer.GetMnistData(filePath)}
-	
+
 }
 
-func (m MnistLoader) GetLength() int{
+func (m MnistLoader) GetLength() int {
 	return len(m.RawData)
 }
 
-func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext){
+func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
 
 	x := make([]*ckks.Ciphertext, 784)
 	y := make([]*ckks.Ciphertext, 10)
 
-	for i := range x{
+	for i := range x {
 
 		batchX := make([]float64, batchSize)
 
-		for dataIdx := range m.RawData[start:start+batchSize+1]{
+		for dataIdx := range m.RawData[start : start+batchSize] {
 			batchX[dataIdx] = m.RawData[dataIdx].Image[i]
 		}
 
@@ -42,21 +39,21 @@ func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ck
 	}
 
 	for i := range y {
-		
+
 		batchY := make([]float64, batchSize)
 
-		for dataIdx := range m.RawData[start:start+batchSize+1]{
+		for dataIdx := range m.RawData[start : start+batchSize] {
 			batchY[dataIdx] = m.RawData[dataIdx].Label[i]
 		}
 
 		y[i] = m.utils.EncryptToPointer(batchY)
 
 	}
-	
+
 	return x, y
 
 }
 
-func (m MnistLoader) Load2D(start int, batchSize int) ([][][]*ckks.Ciphertext, []*ckks.Ciphertext){
+func (m MnistLoader) Load2D(start int, batchSize int) ([][][]*ckks.Ciphertext, []*ckks.Ciphertext) {
 	return [][][]*ckks.Ciphertext{}, []*ckks.Ciphertext{}
 }

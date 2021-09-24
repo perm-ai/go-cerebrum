@@ -6,15 +6,11 @@ import (
 	"os"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-type mnistDatas struct {
-	Data []mnistData
-}
 
 type mnistData struct {
-	Image []float64
+	Image []int
 	Label int
 }
 
@@ -28,13 +24,13 @@ type EncryptedMnistData struct {
 	Label ckks.Ciphertext
 }
 
-func getMnistData(filepath string) mnistDatas {
+func getMnistData(filepath string) []mnistData {
 	jsonFile, _ := os.Open(filepath)
 	defer jsonFile.Close()
 	file, _ := ioutil.ReadAll(jsonFile)
 
-	var data mnistDatas
-	json.Unmarshal(file, &data)
+	var data []mnistData
+	json.Unmarshal([]byte(file), &data)
 
 	return data
 }
@@ -42,56 +38,23 @@ func getMnistData(filepath string) mnistDatas {
 func GetMnistData(filepath string) []MnistData {
 
 	datas := getMnistData(filepath)
-	result := make([]MnistData, len(datas.Data))
+	result := make([]MnistData, len(datas))
 
-	for i := range datas.Data {
+	for i := range datas {
 
 		label := make([]float64, 10)
-		label[datas.Data[i].Label] = 1
+		label[datas[i].Label] = 1
 
-		result[i] = MnistData{datas.Data[i].Image, label}
+		images := make([]float64, len(datas[i].Image))
+		for image := range images{
+			images[image] = float64(datas[i].Image[image])
+		}
+
+		result[i] = MnistData{images, label}
 
 	}
 
 	return result
 
-
-}
-
-type MnistDataLoader struct {
-	utils             utility.Utils
-	RawData           []MnistData
-	TrainingDataPoint int
-}
-
-func (m *MnistDataLoader) LoadData(filepath string) {
-
-	for _, data := range getMnistData(filepath).Data {
-
-		label := make([]float64, 10)
-		label[data.Label] = 1
-
-		m.RawData = append(m.RawData, MnistData{data.Image, label})
-
-	}
-
-	m.TrainingDataPoint = len(m.RawData)
-
-}
-
-func (m *MnistDataLoader) GetDataAsBatch(batch int, batchSize int) []EncryptedMnistData {
-
-	start := batch * batchSize
-	end := start + batchSize
-
-	result := make([]EncryptedMnistData, batchSize)
-
-	for i, data := range m.RawData[start:end] {
-
-		result[i] = EncryptedMnistData{m.utils.Encrypt(data.Image), m.utils.Encrypt(data.Label)}
-
-	}
-
-	return result
 
 }
