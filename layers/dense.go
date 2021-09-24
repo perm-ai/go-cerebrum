@@ -151,16 +151,13 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 			var wg sync.WaitGroup
 
-			channels := make([]chan *ckks.Ciphertext, len(d.Bias))
 			for b := range d.Bias {
 
 				wg.Add(1)
-				channels[b] = make(chan *ckks.Ciphertext)
 
 				go func(index int, utils utility.Utils) {
 					defer wg.Done()
 					utils.Multiply(gradient[index], activationGradient[index], gradient[index], true, false)
-
 				}(b, d.utils.CopyWithClonedEval())
 
 			}
@@ -186,9 +183,10 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 		for xi := range transposedWeight {
 			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false, true)
-			if d.btspOutput[1] {
-				d.utils.BootstrapInPlace(gradients.InputGradient[xi])
-			}
+		}
+
+		if d.btspOutput[1] {
+			d.utils.Bootstrap1dInPlace(gradients.InputGradient, true)
 		}
 
 	}

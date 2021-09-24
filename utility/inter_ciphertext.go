@@ -72,38 +72,38 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 
 	if concurrent {
 
-		outputChannels := make([]chan []*ckks.Ciphertext, len(a))
+		var rowWg sync.WaitGroup
 
 		for i := range a {
 
-			outputChannels[i] = make(chan []*ckks.Ciphertext)
+			rowWg.Add(1)
+			output[i] = make([]*ckks.Ciphertext, len(b))
 
-			go func(row int, rowChannel chan []*ckks.Ciphertext) {
+			go func(row int) {
 
-				colOutput := make([]*ckks.Ciphertext, len(b))
-				colChannels := make([]chan *ckks.Ciphertext, len(b))
+				defer rowWg.Done()
+				var colWg sync.WaitGroup
 
 				for j := range b {
 
-					colChannels[j] = make(chan *ckks.Ciphertext)
+					colWg.Add(1)
 
-					go u.MultiplyConcurrent(a[row], b[j], true, colChannels[j])
+					go func(column int, utils Utils){
+
+						defer colWg.Done()
+						output[row][column] = utils.MultiplyNew(a[row], b[column], true, false)
+
+					}(j, u.CopyWithClonedEval())
 
 				}
 
-				for j := range colChannels {
-					colOutput[j] = <-colChannels[j]
-				}
+				colWg.Wait()
 
-				rowChannel <- colOutput
-
-			}(i, outputChannels[i])
+			}(i)
 
 		}
 
-		for i := range outputChannels {
-			output[i] = <-outputChannels[i]
-		}
+		rowWg.Wait()
 
 	} else {
 		for i := range a {

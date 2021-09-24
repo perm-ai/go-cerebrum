@@ -1,7 +1,6 @@
 package activations
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -18,7 +17,7 @@ type Softmax struct {
 
 func NewSoftmax(u utility.Utils) Softmax {
 
-	newUtils := u.CopyWithNewScale(math.Pow(2,30))
+	newUtils := u.CopyWithNewScale(math.Pow(2, 30))
 	return Softmax{newUtils}
 
 }
@@ -34,7 +33,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 	//create array that will contain the result, but for the first loop, contain the e^x of each input
 	arrexp := make([]*ckks.Ciphertext, len(input))
-	
+
 	// Exponentiate input and get sum
 	for i := range input {
 		arrexp[i] = s.U.ExpNew(input[i], inputLength)
@@ -59,7 +58,6 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			result := utils.MultiplyPlainNew(inputEach, &plainStretch, true, false) // Level input - 3
-			fmt.Printf("result: %d\n", result.Level())
 			s.U.Multiply(result, inverseSum, result, false, false)
 			c <- result
 
