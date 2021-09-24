@@ -30,7 +30,7 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 			if c == 0 {
 				sum = <-channels[c]
 			} else {
-				u.Add(*sum, *<-channels[c], sum)
+				u.Add(sum, <-channels[c], sum)
 			}
 		}
 
@@ -38,12 +38,12 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 		for i := range a {
 
-			prod := u.MultiplyNew(*a[i], *b[i], rescale, bootstrap)
+			prod := u.MultiplyNew(a[i], b[i], rescale, bootstrap)
 
 			if i == 0 {
-				sum = &prod
+				sum = prod
 			} else {
-				u.Add(*sum, prod, sum)
+				u.Add(sum, prod, sum)
 			}
 
 		}
@@ -99,8 +99,7 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 
 			for j := range b {
 
-				product := u.MultiplyNew(*a[i], *b[j], true, false)
-				output[i][j] = &product
+				output[i][j] = u.MultiplyNew(a[i], b[j], true, false)
 
 			}
 

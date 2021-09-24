@@ -104,7 +104,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 		fmt.Printf("Dot product for node %d completed\n", node)
 
 		if len(d.Bias) != 0 {
-			d.utils.Add(*output[node], *d.Bias[node], output[node])
+			d.utils.Add(output[node], d.Bias[node], output[node])
 		}
 
 	}
@@ -159,7 +159,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 				go func(index int, utils utility.Utils) {
 					defer wg.Done()
-					utils.Multiply(*gradient[index], *activationGradient[index], gradient[index], true, false)
+					utils.Multiply(gradient[index], activationGradient[index], gradient[index], true, false)
 
 				}(b, d.utils.CopyWithClonedEval())
 
@@ -223,11 +223,11 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 					averagedLrBias := utils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], &batchAverager, true, false)
 
 					if averagedLrBias.Level() < d.weightLevel {
-						utils.BootstrapInPlace(&averagedLrBias)
+						utils.BootstrapInPlace(averagedLrBias)
 					}
 
-					result := utils.SubNew(*d.Bias[nodeIndex], averagedLrBias)
-					c <- &result
+					result := utils.SubNew(d.Bias[nodeIndex], averagedLrBias)
+					c <- result
 
 				}(d.utils.ShallowCopy(), updatedBiasChannel)
 
@@ -247,11 +247,11 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 					// Bootstrap if gradient's level is lower than it's suppose to be
 					if averagedLrWeight.Level() < d.weightLevel {
-						utils.BootstrapInPlace(&averagedLrWeight)
+						utils.BootstrapInPlace(averagedLrWeight)
 					}
 
-					result := utils.SubNew(*d.Weights[nodeIndex][weightIndex], averagedLrWeight)
-					c <- &result
+					result := utils.SubNew(d.Weights[nodeIndex][weightIndex], averagedLrWeight)
+					c <- result
 
 				}(w, d.utils.ShallowCopy(), updatedWeightChannels[w])
 

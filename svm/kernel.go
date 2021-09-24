@@ -9,7 +9,7 @@ import (
 
 
 type Kernel interface {
-	Calculate(xi []ckks.Ciphertext, xj []ckks.Ciphertext) (ckks.Ciphertext, error)
+	Calculate(xi []*ckks.Ciphertext, xj []*ckks.Ciphertext) (*ckks.Ciphertext, error)
 	Type() string
 }
 
@@ -17,24 +17,24 @@ type Linear struct {
 	u			utility.Utils
 }
 
-func (l Linear) Calculate(xi []ckks.Ciphertext, xj []ckks.Ciphertext) (*ckks.Ciphertext, error) {
+func (l Linear) Calculate(xi []*ckks.Ciphertext, xj []*ckks.Ciphertext) (*ckks.Ciphertext, error) {
 
 	if len(xi) != len(xj){
 		return nil, errors.New("INVALID INPUT: Lenght of xi and xj aren't equal")
 	}
 
-	var result ckks.Ciphertext
+	var result *ckks.Ciphertext
 
 	for i := range xi {
 		if i == 0{
 			result = l.u.MultiplyNew(xi[i], xj[i], true, false)
 		} else {
 			product := l.u.MultiplyNew(xi[i], xj[i], true, false)
-			l.u.Add(result, product, &result)
+			l.u.Add(result, product, result)
 		}
 	}
 
-	return &result, nil
+	return result, nil
 
 }
 
@@ -58,13 +58,13 @@ func NewRBF(u utility.Utils, gamma float64) RBF {
 }
 
 // Calculate the out put from the RBF kernel. Each ciphertext in xi and xj array should represents a feature of a data
-func (r RBF) Calculate(xi []ckks.Ciphertext, xj []ckks.Ciphertext) (*ckks.Ciphertext, error) {
+func (r RBF) Calculate(xi []*ckks.Ciphertext, xj []*ckks.Ciphertext) (*ckks.Ciphertext, error) {
 
 	if len(xi) != len(xj){
 		return nil, errors.New("INVALID INPUT: Lenght of xi and xj aren't equal")
 	}
 
-	var result ckks.Ciphertext
+	var result *ckks.Ciphertext
 
 	for i := range xi {
 		sub := r.u.SubNew(xi[i], xj[i])
@@ -72,13 +72,13 @@ func (r RBF) Calculate(xi []ckks.Ciphertext, xj []ckks.Ciphertext) (*ckks.Cipher
 			result = r.u.MultiplyNew(sub, sub, true, false)
 		} else {
 			squared := r.u.MultiplyNew(sub, sub, true, false)
-			r.u.Add(result, squared, &result)
+			r.u.Add(result, squared, result)
 		}
 	}
 
-	r.u.MultiplyPlain(&result, &r.encGamma, &result, true, false)
+	r.u.MultiplyPlain(result, &r.encGamma, result, true, false)
 
-	return &result, nil
+	return result, nil
 	
 }
 

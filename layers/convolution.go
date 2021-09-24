@@ -81,7 +81,7 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 					averagedLrGradient := colUtils.MultiplyPlainNew(gradient[rowIndex][colIndex], &lr, true, false)
 
 					if averagedLrGradient.Level() < weightLevel{
-						colUtils.BootstrapInPlace(&averagedLrGradient)
+						colUtils.BootstrapInPlace(averagedLrGradient)
 					}
 
 					var depWg sync.WaitGroup
@@ -91,7 +91,7 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 
 						go func(depIndex int, depUtils utility.Utils){
 							defer depWg.Done()
-							utils.Sub(*k.Data[rowIndex][colIndex][depIndex], averagedLrGradient, k.Data[rowIndex][colIndex][depIndex])
+							utils.Sub(k.Data[rowIndex][colIndex][depIndex], averagedLrGradient, k.Data[rowIndex][colIndex][depIndex])
 						}(d, colUtils.ShallowCopy())
 						
 					}
@@ -367,7 +367,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 							result := c.utils.InterDotProduct(kernelCiphertext, inputCiphertext, true, false, true)
 
 							if len(c.Bias) != 0 {
-								c.utils.Add(*c.Bias[kernelIndex], *result, result)
+								c.utils.Add(c.Bias[kernelIndex], result, result)
 							}
 
 							output1dChannel <- result
@@ -521,7 +521,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 					if gradients.BiasGradient[k] == nil {
 						gradients.BiasGradient[k] = gradient[ri][ci][k]
 					} else {
-						c.utils.Add(*gradient[ri][ci][k], *gradients.BiasGradient[k], gradients.BiasGradient[k])
+						c.utils.Add(gradient[ri][ci][k], gradients.BiasGradient[k], gradients.BiasGradient[k])
 					}
 				}
 			}
@@ -779,7 +779,7 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 						biasUtils.BootstrapInPlace(gradient.BiasGradient[index])
 					}
 
-					biasUtils.Sub(*c.Bias[index], *gradient.BiasGradient[index], c.Bias[index])
+					biasUtils.Sub(c.Bias[index], gradient.BiasGradient[index], c.Bias[index])
 
 				}(utils.ShallowCopy())
 

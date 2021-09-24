@@ -17,8 +17,7 @@ func (c CrossEntropy) Backward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, pr
 	result := make([]*ckks.Ciphertext, len(pred))
 
 	for i := range pred{
-		sub := c.U.SubNew(*pred[i], *y[i])
-		result[i] = &sub
+		result[i] = c.U.SubNew(pred[i], y[i])
 	}
 
 	return result

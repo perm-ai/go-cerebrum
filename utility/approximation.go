@@ -50,7 +50,7 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float6
 
 }
 
-func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64, size int) ckks.Ciphertext {
+func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64, size int) *ckks.Ciphertext {
 
 	// Calculate approximate inverse of a ciphertext
 
@@ -63,7 +63,7 @@ func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64, s
 		return u.MultiplyConstNew(inversed, horizontalStretchScale, true, false)
 
 	} else {
-		return *u.InverseApproxNew(ct, 1, size)
+		return u.InverseApproxNew(ct, 1, size)
 	}
 
 }

@@ -191,18 +191,18 @@ func TestAddition(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		sum := utils.AddNew(ct1, ct2)
-		addNewD := utils.Decrypt(&sum)
+		sum := utils.AddNew(&ct1, &ct2)
+		addNewD := utils.Decrypt(sum)
 
 		if !ValidateResult(addNewD, testCases[i].addExpected, false, 1, log) {
 			t.Error("Data wasn't correctly added (AddNew)")
 		}
 
 		timer := logger.StartTimer("Add")
-		utils.Add(ct1, ct2, &sum)
+		utils.Add(&ct1, &ct2, sum)
 		timer.LogTimeTaken()
 
-		addD := utils.Decrypt(&sum)
+		addD := utils.Decrypt(sum)
 
 		if !ValidateResult(addD, testCases[i].addExpected, false, 1, log) {
 			t.Error("Data wasn't correctly added (Add)")
@@ -222,14 +222,14 @@ func TestSubtraction(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		subNew := utils.SubNew(ct1, ct2)
-		subNewD := utils.Decrypt(&subNew)
+		subNew := utils.SubNew(&ct1, &ct2)
+		subNewD := utils.Decrypt(subNew)
 
 		if !ValidateResult(subNewD, testCases[i].subExpected, false, 1, log) {
 			t.Error("Data wasn't correctly subtracted (SubNew)")
 		}
 
-		utils.Sub(ct1, ct2, &ct1)
+		utils.Sub(&ct1, &ct2, &ct1)
 		subD := utils.Decrypt(&ct1)
 
 		if !ValidateResult(subD, testCases[i].subExpected, false, 1, log) {
@@ -250,30 +250,30 @@ func TestMultiplication(t *testing.T) {
 		ct1 := testCases[i].data1
 		ct2 := testCases[i].data2
 
-		mulNew := utils.MultiplyNew(ct1, ct2, false, true)
-		mulNewD := utils.Decrypt(&mulNew)
+		mulNew := utils.MultiplyNew(&ct1, &ct2, false, true)
+		mulNewD := utils.Decrypt(mulNew)
 
 		if !ValidateResult(mulNewD, testCases[i].mulExpected, false, 1, log) {
 			t.Error("Data wasn't correctly multiplied (MultiplyNew)")
 		}
 
 		newCiphertext1 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
-		utils.Multiply(ct1, ct2, newCiphertext1, false, true)
+		utils.Multiply(&ct1, &ct2, newCiphertext1, false, true)
 		mulD := utils.Decrypt(newCiphertext1)
 
 		if !ValidateResult(mulD, testCases[i].mulExpected, false, 1, log) {
 			t.Error("Data wasn't correctly multiplied (Multiply)")
 		}
 
-		mulNewRes := utils.MultiplyNew(ct1, ct2, true, true)
-		mulNewResD := utils.Decrypt(&mulNewRes)
+		mulNewRes := utils.MultiplyNew(&ct1, &ct2, true, true)
+		mulNewResD := utils.Decrypt(mulNewRes)
 
 		if !ValidateResult(mulNewResD, testCases[i].mulExpected, false, 1, log) && mulNewRes.Scale != ct1.Scale*ct2.Scale {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescaleNew)")
 		}
 
 		newCiphertext2 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
-		utils.Multiply(ct1, ct2, newCiphertext2, true, true)
+		utils.Multiply(&ct1, &ct2, newCiphertext2, true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 
 		if !ValidateResult(mulResD, testCases[i].mulExpected, false, 1, log) && newCiphertext2.Scale != ct1.Scale*ct2.Scale {
@@ -324,13 +324,13 @@ func TestInverse(t *testing.T) {
 
 	fmt.Printf("Cost: %d Levels\n", ct.Level()-inverse.Level())
 
-	if !ValidateResult(utils.Decrypt(&inverse)[0:100], expected[0:100], false, 1, log) {
+	if !ValidateResult(utils.Decrypt(inverse)[0:100], expected[0:100], false, 1, log) {
 		t.Error("Inverse wasn't correctly evaluated")
 	}
 
-	mulResult := utils.MultiplyConstArrayNew(inverse, utils.GenerateFilledArraySize(5, 100), true, false)
+	mulResult := utils.MultiplyConstArrayNew(*inverse, utils.GenerateFilledArraySize(5, 100), true, false)
 
-	if !ValidateResult(utils.Decrypt(&mulResult)[0:100], mulExpected[0:100], false, 1, log) {
+	if !ValidateResult(utils.Decrypt(mulResult)[0:100], mulExpected[0:100], false, 1, log) {
 		t.Error("Inversed ciphertext wasn't correctly multiplied with plaintext")
 	}
 
@@ -407,14 +407,14 @@ func TestDotProduct(t *testing.T) {
 	ct1 := testCases[0].data1
 	ct2 := testCases[0].data2
 
-	dotNew := utils.DotProductNew(ct1, ct2, true)
-	dotNewD := utils.Decrypt(&dotNew)
+	dotNew := utils.DotProductNew(&ct1, &ct2, true)
+	dotNewD := utils.Decrypt(dotNew)
 
 	if !ValidateResult(dotNewD, testCases[0].dotExpected, true, -0.69, log) {
 		t.Error("Dot product wasn't correctly calculated (DotProductNew)")
 	}
 
-	utils.DotProduct(ct1, ct2, &ct1, true)
+	utils.DotProduct(&ct1, &ct2, &ct1, true)
 	dotD := utils.Decrypt(&ct1)
 
 	if !ValidateResult(dotD, testCases[0].dotExpected, true, -0.69, log) {
@@ -448,24 +448,24 @@ func TestBootstrapping(t *testing.T) {
 
 	encTwos := utils.Encrypt(utils.GenerateFilledArray(2))
 
-	addResult := utils.AddNew(ct, encTwos)
+	addResult := utils.AddNew(&ct, &encTwos)
 
 	// Test if bootstrapped ciphertext can correctly evaluate addition
-	if !ValidateResult(utils.Decrypt(&addResult), utils.GenerateFilledArray(3.12+2), false, 1, log) {
+	if !ValidateResult(utils.Decrypt(addResult), utils.GenerateFilledArray(3.12+2), false, 1, log) {
 		t.Error("Addition wasn't evaluated correctly after bootstrap")
 	}
 
 	productByConst := utils.MultiplyConstNew(&ct, 0.1, false, false)
 
 	// Test if bootstrapped ciphertext can correctly evaluate addition
-	if !ValidateResult(utils.Decrypt(&productByConst), utils.GenerateFilledArray(3.12*0.1), false, 1, log) {
+	if !ValidateResult(utils.Decrypt(productByConst), utils.GenerateFilledArray(3.12*0.1), false, 1, log) {
 		t.Error("Multiplication by const wasn't evaluated correctly after bootstrap")
 	}
 
-	product := utils.MultiplyNew(encTwos, ct, true, true)
+	product := utils.MultiplyNew(&encTwos, &ct, true, true)
 
 	// Test if bootstrapped ciphertext can correctly evaluate addition
-	if !ValidateResult(utils.Decrypt(&product), utils.GenerateFilledArray(3.12*2), false, 1, log) {
+	if !ValidateResult(utils.Decrypt(product), utils.GenerateFilledArray(3.12*2), false, 1, log) {
 		t.Error("Multiplication wasn't evaluated correctly after bootstrap")
 	}
 
@@ -570,7 +570,7 @@ func TestOuterProduct(t *testing.T) {
 
 	for i := range outerProduct {
 
-		decryptedProduct := utils.Decrypt(&outerProduct[i])
+		decryptedProduct := utils.Decrypt(outerProduct[i])
 		expectedResult := make([]float64, utils.Params.Slots())
 
 		if i == 0 {
@@ -629,7 +629,7 @@ func TestKeyDumpAndLoad(t *testing.T) {
 	productExpected[1] = 0
 	product := newUtils.MultiplyConstNew(&ct, 2, true, false)
 
-	if !ValidateResult(newUtils.Decrypt(&product), productExpected, false, 1, log) {
+	if !ValidateResult(newUtils.Decrypt(product), productExpected, false, 1, log) {
 		t.Error("Incorrect multiplication")
 	}
 
@@ -678,7 +678,7 @@ func TestKeyPairDumpAndLoad(t *testing.T) {
 	productExpected[1] = 0
 	product := newUtils.MultiplyConstNew(&ct, 2, true, false)
 
-	if !ValidateResult(newUtils.Decrypt(&product), productExpected, false, 1, log) {
+	if !ValidateResult(newUtils.Decrypt(product), productExpected, false, 1, log) {
 		t.Error("Incorrect multiplication")
 	}
 

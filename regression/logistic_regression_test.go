@@ -34,15 +34,15 @@ func NewEmptyData(column int, amount int) DataPlain {
 
 func EncryptData(data DataPlain, utils utility.Utils) Data {
 	log := logger.NewLogger(true)
-	EnData := make([]ckks.Ciphertext, len(data.X))
+	EnData := make([]*ckks.Ciphertext, len(data.X))
 	for i, p := range data.X {
 		log.Log("Encrypting Column" + fmt.Sprint(i))
-		EnData[i] = utils.Encrypt(p)
+		EnData[i] = utils.EncryptToPointer(p)
 	}
 	log.Log("Encrypting target")
 	enctar := utils.Encrypt(data.Target)
 	log.Log("Encryption complete")
-	return Data{EnData, enctar, len(data.X[0])}
+	return Data{EnData, &enctar, len(data.X[0])}
 
 }
 func generateData(dat int, testdata int, columnAmount int) (DataPlain, DataPlain, []int) {
@@ -138,9 +138,9 @@ func TestLogisticRegression(t *testing.T) {
 }
 func (model LogisticRegression) decryptmodel() logmodel {
 	wplain := make([]float64, len(model.Weight))
-	bplain := model.utils.Decrypt(&model.Bias)[0]
+	bplain := model.utils.Decrypt(model.Bias)[0]
 	for i := range wplain {
-		wplain[i] = model.utils.Decrypt(&model.Weight[i])[0]
+		wplain[i] = model.utils.Decrypt(model.Weight[i])[0]
 	}
 	fmt.Println("w : " + fmt.Sprint(wplain))
 	fmt.Println("b : " + fmt.Sprint(bplain))

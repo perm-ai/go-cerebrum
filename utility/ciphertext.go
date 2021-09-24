@@ -93,7 +93,7 @@ func NewCiphertextGroup(ciphertexts []CiphertextData, utils Utils) CiphertextGro
 				combinedCiphertext = append(combinedCiphertext, ciphertexts[ctIndex].Ciphertext)
 			} else {
 				rotated := utils.RotateNew(&ciphertexts[ctIndex].Ciphertext, (-1 * pow2Ceil))
-				utils.Add(combinedCiphertext[groupIndex], rotated, &combinedCiphertext[groupIndex])
+				utils.Add(&combinedCiphertext[groupIndex], &rotated, &combinedCiphertext[groupIndex])
 			}
 		}
 
@@ -117,9 +117,9 @@ func (c *CiphertextGroup) Bootstrap(){
 
 }
 
-func (c CiphertextGroup) BreakGroup(rescale bool) []ckks.Ciphertext {
+func (c CiphertextGroup) BreakGroup(rescale bool) []*ckks.Ciphertext {
 
-	brokenCiphertexts := make([]ckks.Ciphertext, len(c.ciphertexts))
+	brokenCiphertexts := make([]*ckks.Ciphertext, len(c.ciphertexts))
 
 	for i, ciphertext := range c.ciphertexts{
 

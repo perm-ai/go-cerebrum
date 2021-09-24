@@ -38,7 +38,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	// Exponentiate input and get sum
 	for i := range input {
 		arrexp[i] = s.U.ExpNew(input[i], inputLength)
-		s.U.Add(sum, *arrexp[i], &sum)
+		s.U.Add(&sum, arrexp[i], &sum)
 	}
 
 	// Declare stretch scale as 1/40
@@ -60,8 +60,8 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 			result := utils.MultiplyPlainNew(inputEach, &plainStretch, true, false) // Level input - 3
 			fmt.Printf("result: %d\n", result.Level())
-			s.U.Multiply(result, *inverseSum, &result, false, false)
-			c <- &result
+			s.U.Multiply(result, inverseSum, result, false, false)
+			c <- result
 
 		}(arrexp[i], s.U.CopyWithClonedEval(), outputChannels[i])
 

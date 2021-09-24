@@ -9,7 +9,7 @@ func (u Utils) rotateAndAdd(ct *ckks.Ciphertext, size float64, evaluator ckks.Ev
 	midpoint := size / 2
 
 	rotated := evaluator.RotateNew(ct, int(midpoint))
-	u.Add(*ct, *rotated, ct)
+	u.Add(ct, rotated, ct)
 
 	if midpoint == 1 {
 		return *ct
@@ -33,17 +33,17 @@ func (u Utils) SumElementsNew(ct ckks.Ciphertext) ckks.Ciphertext {
 
 }
 
-func (u Utils) DotProduct(a ckks.Ciphertext, b ckks.Ciphertext, destination *ckks.Ciphertext, bootstrap bool) {
+func (u Utils) DotProduct(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext, bootstrap bool) {
 
 	u.Multiply(a, b, destination, true, bootstrap)
 	u.SumElementsInPlace(destination)
 
 }
 
-func (u Utils) DotProductNew(a ckks.Ciphertext, b ckks.Ciphertext, bootstrap bool) ckks.Ciphertext {
+func (u Utils) DotProductNew(a *ckks.Ciphertext, b *ckks.Ciphertext, bootstrap bool) *ckks.Ciphertext {
 
 	result := u.MultiplyNew(a, b, true, bootstrap)
-	u.SumElementsInPlace(&result)
+	u.SumElementsInPlace(result)
 
 	return result
 

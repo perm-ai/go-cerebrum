@@ -71,7 +71,7 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 									if poolResult == nil {
 										poolResult = input[rowIndex+poolRow][colIndex+poolCol][depIndex]
 									} else {
-										utils.Add(*poolResult, *input[rowIndex+poolRow][colIndex+poolCol][depIndex], poolResult)
+										utils.Add(poolResult, input[rowIndex+poolRow][colIndex+poolCol][depIndex], poolResult)
 									}
 
 								}
@@ -227,7 +227,7 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 						if upSampledGradient[row+poolRow][column+poolCol][depth] == nil {
 							upSampledGradient[row+poolRow][column+poolCol][depth] = gradient[currentGradRow][currentGradCol][depth]
 						} else {
-							p.utils.Add(*upSampledGradient[row+poolRow][column+poolCol][depth], *gradient[currentGradRow][currentGradCol][depth], upSampledGradient[row+poolRow][column+poolCol][depth])
+							p.utils.Add(upSampledGradient[row+poolRow][column+poolCol][depth], gradient[currentGradRow][currentGradCol][depth], upSampledGradient[row+poolRow][column+poolCol][depth])
 						}
 
 					}

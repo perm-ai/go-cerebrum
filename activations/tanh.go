@@ -37,16 +37,16 @@ func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// Calculate degree three
-			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
+			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
 			deg3 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg3Coeff, true, false)
-			utils.Multiply(xSquared, deg3, &deg3, true, false)
+			utils.Multiply(xSquared, deg3, deg3, true, false)
 
 			// Calculate degree one
 			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1Coeff, true, false)
 
 			// Add all degree together
 			result := utils.AddNew(deg3, deg1)
-			c <- &result
+			c <- result
 
 		}(input[i], t.U.CopyWithClonedEval(), outputChannels[i])
 
@@ -77,12 +77,12 @@ func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// Calculate degree 2
-			xSquared := utils.MultiplyNew(*inputEach.CopyNew(), *inputEach.CopyNew(), true, false)
-			deg2 := utils.MultiplyPlainNew(&xSquared, &deg2Coeff, true, false)
+			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
+			deg2 := utils.MultiplyPlainNew(xSquared, &deg2Coeff, true, false)
 
 			// Add all degree together
-			result := utils.AddPlainNew(deg2, deg0)
-			c <- &result
+			result := utils.AddPlainNew(deg2, &deg0)
+			c <- result
 
 		}(input[i], t.U.CopyWithClonedEval(), outputChannels[i])
 
