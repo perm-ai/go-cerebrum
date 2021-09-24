@@ -1,10 +1,27 @@
 package utility
 
 import (
+	"sync"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 )
 
 // This files houses inter-ciphertext operations
+
+type SafeSum struct{
+	Ct *ckks.Ciphertext
+	mu sync.Mutex
+}
+
+func (s *SafeSum) Add(ct *ckks.Ciphertext, utils Utils){
+	s.mu.Lock()
+	if s.Ct == nil {
+		s.Ct = ct
+	} else {
+		utils.Add(s.Ct, ct, s.Ct)
+	}
+	s.mu.Unlock()
+}
 
 func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, rescale bool, bootstrap bool, concurrent bool) *ckks.Ciphertext {
 
@@ -12,44 +29,40 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 		panic("Unequal length")
 	}
 
-	var sum *ckks.Ciphertext
+	sum := SafeSum{}
 
 	if concurrent {
 
-		channels := make([]chan *ckks.Ciphertext, len(a))
+		var wg sync.WaitGroup
 
 		for i := range a {
 
-			channels[i] = make(chan *ckks.Ciphertext)
+			wg.Add(1)
 
-			go u.MultiplyConcurrent(a[i], b[i], true, channels[i])
+			go func(index int, utils Utils){
 
+				defer wg.Done()
+
+				product := utils.MultiplyNew(a[index], b[index], true, false)
+				sum.Add(product, utils)
+
+			}(i, u.CopyWithClonedEval())
+			
 		}
 
-		for c := range channels {
-			if c == 0 {
-				sum = <-channels[c]
-			} else {
-				u.Add(sum, <-channels[c], sum)
-			}
-		}
+		wg.Wait()
 
 	} else {
 
 		for i := range a {
 
 			prod := u.MultiplyNew(a[i], b[i], rescale, bootstrap)
-
-			if i == 0 {
-				sum = prod
-			} else {
-				u.Add(sum, prod, sum)
-			}
+			sum.Add(prod, u)
 
 		}
 	}
 
-	return sum
+	return sum.Ct
 
 }
 
