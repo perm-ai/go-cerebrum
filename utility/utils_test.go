@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -200,7 +201,7 @@ func TestAddition(t *testing.T) {
 		timer := logger.StartTimer("Add")
 		utils.Add(ct1, ct2, &sum)
 		timer.LogTimeTaken()
-		
+
 		addD := utils.Decrypt(&sum)
 
 		if !ValidateResult(addD, testCases[i].addExpected, false, 1, log) {
@@ -470,7 +471,7 @@ func TestBootstrapping(t *testing.T) {
 
 }
 
-func TestConcurrentBootstrapping(t *testing.T){
+func TestConcurrentBootstrapping(t *testing.T) {
 
 	ct1 := utils.EncryptToPointer(utils.GenerateFilledArray(3.12))
 	ct2 := utils.EncryptToPointer(utils.GenerateFilledArray(4.20))
@@ -686,6 +687,53 @@ func TestKeyPairDumpAndLoad(t *testing.T) {
 
 	if !ValidateResult(newUtils.Decrypt(&ct), data, false, 1, log) {
 		t.Error("Incorrect bootstrapping")
+	}
+
+}
+
+func TestInterDotProduct(t *testing.T) {
+
+	a := utils.EncryptToPointer(utils.GenerateFilledArray(0.2))
+	b := utils.EncryptToPointer(utils.GenerateFilledArray(0.8))
+
+	for concurrent := 2; concurrent <= 5; concurrent++{
+
+		var wg sync.WaitGroup
+
+		timer := logger.StartTimer(fmt.Sprintf("%d inter dot product", concurrent))
+
+		for i := 0; i < concurrent; i++ {
+
+			wg.Add(1)
+	
+			go func(u Utils){
+	
+				defer wg.Done()
+
+				as := make([]*ckks.Ciphertext, 784)
+				bs := make([]*ckks.Ciphertext, 784)
+
+				for i := range as {
+					as[i] = a.CopyNew()
+					bs[i] = b.CopyNew()
+				}
+				
+				result := utils.InterDotProduct(as, bs, true, false, true)
+	
+				decrypted := utils.Decrypt(result)
+	
+				if !ValidateResult(decrypted, utils.GenerateFilledArray(125.44), false, 1, log) {
+					t.Error("Incorrect bootstrapping")
+				}
+	
+			}(utils.CopyWithClonedEval())
+			
+		}
+	
+		wg.Wait()
+
+		timer.LogTimeTaken()
+
 	}
 
 }

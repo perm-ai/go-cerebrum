@@ -12,33 +12,28 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 		panic("Unequal length")
 	}
 
-	var sum ckks.Ciphertext
+	var sum *ckks.Ciphertext
 
 	if concurrent {
-		ans := make([]ckks.Ciphertext, len(a))
 
-		channels := make([]chan ckks.Ciphertext, len(a))
+		channels := make([]chan *ckks.Ciphertext, len(a))
 
 		for i := range a {
 
-			channels[i] = make(chan ckks.Ciphertext)
+			channels[i] = make(chan *ckks.Ciphertext)
 
-			go u.MultiplyConcurrent(*a[i], *b[i], true, channels[i])
+			go u.MultiplyConcurrent(a[i], b[i], true, channels[i])
 
 		}
 
 		for c := range channels {
-			ans[c] = <- channels[c]
-		}
-
-		for i := range ans {
-			if i == 0{
-				sum = ans[i]
+			if c == 0 {
+				sum = <-channels[c]
 			} else {
-				u.Add(sum, ans[i], &sum)
+				u.Add(*sum, *<-channels[c], sum)
 			}
 		}
-		
+
 	} else {
 
 		for i := range a {
@@ -46,15 +41,15 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 			prod := u.MultiplyNew(*a[i], *b[i], rescale, bootstrap)
 
 			if i == 0 {
-				sum = prod
+				sum = &prod
 			} else {
-				u.Add(sum, prod, &sum)
+				u.Add(*sum, prod, sum)
 			}
 
 		}
 	}
 
-	return &sum
+	return sum
 
 }
 
@@ -70,22 +65,21 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 
 			outputChannels[i] = make(chan []*ckks.Ciphertext)
 
-			go func(row int, rowChannel chan []*ckks.Ciphertext){
+			go func(row int, rowChannel chan []*ckks.Ciphertext) {
 
 				colOutput := make([]*ckks.Ciphertext, len(b))
-				colChannels := make([]chan ckks.Ciphertext, len(b))
+				colChannels := make([]chan *ckks.Ciphertext, len(b))
 
 				for j := range b {
 
-					colChannels[j] = make(chan ckks.Ciphertext)
+					colChannels[j] = make(chan *ckks.Ciphertext)
 
-					go u.MultiplyConcurrent(*a[row], *b[j], true, colChannels[j])
-					
+					go u.MultiplyConcurrent(a[row], b[j], true, colChannels[j])
+
 				}
 
-				for j := range colChannels{
-					prod := <- colChannels[j]
-					colOutput[j] = &prod
+				for j := range colChannels {
+					colOutput[j] = <-colChannels[j]
 				}
 
 				rowChannel <- colOutput
@@ -94,7 +88,7 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 
 		}
 
-		for i := range outputChannels{
+		for i := range outputChannels {
 			output[i] = <-outputChannels[i]
 		}
 
