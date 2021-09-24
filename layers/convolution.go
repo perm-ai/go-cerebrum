@@ -461,15 +461,15 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 								columnBootstrapped = true
 							}
 
-							productChannels := make([]chan ckks.Ciphertext, len(activationGradient))
+							productChannels := make([]chan *ckks.Ciphertext, len(activationGradient))
 
 							// Create go routine to multiply concurrently
 							for di := range activationGradient {
 
-								productChannels[di] = make(chan ckks.Ciphertext)
-								go func(a *ckks.Ciphertext, b *ckks.Ciphertext, utils utility.Utils, c chan ckks.Ciphertext) {
+								productChannels[di] = make(chan *ckks.Ciphertext)
+								go func(a *ckks.Ciphertext, b *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
-									utils.MultiplyConcurrent(*a, *b, true, c)
+									utils.MultiplyConcurrent(a, b, true, c)
 
 								}(gradient[rowIndex][colIndex][di], activationGradient[di], c.utils, productChannels[di])
 
@@ -479,8 +479,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 
 							// Wait for go routine to complete and save values sent through channels
 							for di := range productChannels {
-								prod := <-productChannels[di]
-								gradientWrtOutput[di] = &prod
+								gradientWrtOutput[di] = <-productChannels[di]
 							}
 
 							// Bootstrapp if required and haven't been done yet

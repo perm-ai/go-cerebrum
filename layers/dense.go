@@ -2,6 +2,7 @@ package layers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/array"
+	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -45,23 +47,46 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 	}
 
 	randomBias := array.GeneratePlainArray(0.0, outputUnit)
+	logger := logger.NewLogger(true)
+
+	var wg sync.WaitGroup
 
 	for node := 0; node < outputUnit; node++ {
 
-		randomWeight := array.GenerateRandomNormalArray(inputUnit, weightStdDev)
-		weights[node] = make([]*ckks.Ciphertext, inputUnit)
+		wg.Add(1)
 
-		if useBias {
-			bias[node] = utils.EncryptToLevel(utils.GenerateFilledArraySize(randomBias[node], batchSize), 9)
-		}
+		go func(nodeIndex int, u utility.Utils) {
 
-		for weight := 0; weight < inputUnit; weight++ {
+			defer wg.Done()
 
-			weights[node][weight] = utils.EncryptToLevel(utils.GenerateFilledArray(randomWeight[weight]), 9)
+			logger.Log(fmt.Sprintf("Generating weight for node %d", nodeIndex))
+			randomWeight := array.GenerateRandomNormalArray(inputUnit, weightStdDev)
+			weights[nodeIndex] = make([]*ckks.Ciphertext, inputUnit)
 
-		}
+			if useBias {
+				bias[nodeIndex] = u.EncryptToLevel(u.GenerateFilledArraySize(randomBias[nodeIndex], batchSize), 9)
+			}
+
+			var weightWg sync.WaitGroup
+
+			for weight := 0; weight < inputUnit; weight++ {
+
+				weightWg.Add(1)
+
+				go func(weightIndex int, wUtils utility.Utils){
+					defer weightWg.Done()
+					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevel(u.GenerateFilledArray(randomWeight[weightIndex]), 9)
+				}(weight, u.CopyWithClonedEncryptor())
+
+			}
+
+			weightWg.Wait()
+
+		}(node, utils.CopyWithClonedEncryptor())
 
 	}
+
+	wg.Wait()
 
 	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, []bool{false, false}, []bool{false, false}, batchSize, 9}
 
@@ -74,25 +99,27 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	for node := range d.Weights {
 
+		fmt.Printf("Starting dot product for node %d\n", node)
 		output[node] = d.utils.InterDotProduct(input, d.Weights[node], true, false, true)
+		fmt.Printf("Dot product for node %d completed\n", node)
 
 		if len(d.Bias) != 0 {
 			d.utils.Add(*output[node], *d.Bias[node], output[node])
 		}
 
-		if d.btspOutput[0] {
-			d.utils.BootstrapInPlace(output[node])
-		}
+	}
 
+	if d.btspOutput[0] {
+		fmt.Printf("Bootstrapping node\n")
+		d.utils.Bootstrap1dInPlace(output, true)
+		fmt.Printf("Bootstrapping node completed\n")
 	}
 
 	if d.Activation != nil {
 		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
 
 		if d.btspActivation[0] {
-			for a := range activatedOutput {
-				d.utils.BootstrapInPlace(activatedOutput[a])
-			}
+			d.utils.Bootstrap1dInPlace(activatedOutput, true)
 		}
 
 	}
@@ -305,31 +332,39 @@ func (d *Dense) SetWeightLevel(lvl int) {
 }
 
 type denseWeight struct {
-	Weight		[][]float64
-	Bias		[]float64
+	Weight [][]float64
+	Bias   []float64
 }
 
-func (d *Dense) ExportWeights(filename string){
+func (d *Dense) ExportWeights(filename string) {
 
 	plainWeights := make([][]float64, len(d.Weights))
 
-	for node := range d.Weights{
+	var wg sync.WaitGroup
+
+	for node := range d.Weights {
 		plainWeights[node] = make([]float64, len(d.Weights[node]))
-		for i := range plainWeights[node]{
-			plainWeights[node][i] = d.utils.Decrypt(d.Weights[node][i])[0]
+		for i := range plainWeights[node] {
+			wg.Add(1)
+			go func(nodeIdx int, weightIdx int, utils utility.Utils){
+				defer wg.Done()
+				plainWeights[nodeIdx][weightIdx] = utils.Decrypt(d.Weights[nodeIdx][weightIdx])[0]
+			}(node, i, d.utils.CopyWithClonedDecryptor())
 		}
 	}
 
+	wg.Wait()
+
 	bias := make([]float64, len(d.Bias))
 
-	for node := range bias{
+	for node := range bias {
 		bias[node] = d.utils.Decrypt(d.Bias[node])[0]
 	}
 
 	weight := denseWeight{plainWeights, bias}
 
 	file, _ := json.MarshalIndent(weight, "", " ")
- 
+
 	_ = ioutil.WriteFile(filename, file, 0644)
 
 }
