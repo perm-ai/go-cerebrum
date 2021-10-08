@@ -29,6 +29,8 @@ github.com/ldsec/lattigo/v2 v2.2.0 h1:Nz+EbDCZiTJwTTm1A0W8AQfh0n8o0GtiviRprnk2oI
 github.com/ldsec/lattigo/v2 v2.2.0/go.mod h1:SRD19FRy5S8KWCHMjQCSac6wp7BHD65D0IaMFAysY2Q=
 github.com/ldsec/lattigo/v2 v2.2.1-0.20210919094222-8652b8d701f0 h1:yjt5vlm67/Az0BurR86bgheguEjvi1xxVvkRajtk3mc=
 github.com/ldsec/lattigo/v2 v2.2.1-0.20210919094222-8652b8d701f0/go.mod h1:SRD19FRy5S8KWCHMjQCSac6wp7BHD65D0IaMFAysY2Q=
+github.com/ldsec/lattigo/v2 v2.2.1-0.20211001080245-f6a8b08865fc h1:xFFr0aBYEgarjlTV3CxFbTgsUmmFWJ4h1iqhx4ImyTw=
+github.com/ldsec/lattigo/v2 v2.2.1-0.20211001080245-f6a8b08865fc/go.mod h1:SRD19FRy5S8KWCHMjQCSac6wp7BHD65D0IaMFAysY2Q=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
