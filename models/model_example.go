@@ -39,6 +39,7 @@ func ModelCreationExample() {
 	utils := utility.Utils{}
 	keysChain := key.GenerateKeys(0, false, true)
 	utils = utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
+	lr := 0.1
 
 	var tanh activations.Activation
 	tanh = activations.NewTanh(utils)
@@ -63,16 +64,16 @@ func ModelCreationExample() {
 	flatten := layers.NewFlatten(conv3.GetOutputSize())
 
 	fmt.Println("Dense 1 generating")
-	dense1 := layers.NewDense(utils, flatten.GetOutputSize(), 64, &tanh, true, 30000)
+	dense1 := layers.NewDense(utils, flatten.GetOutputSize(), 64, &tanh, true, 30000, lr, 9)
 
 	fmt.Println("Dense 2 generating")
-	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 10, &smx, true, 30000)
+	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 10, &smx, true, 30000, lr, 9)
 
 	model := NewModel(utils, []layers.Layer1D{
 		&dense1, &dense2,
 	}, []layers.Layer2D{
 		&conv1, &pool1, &conv2, &pool2, &conv3,
-	}, losses.CrossEntropy{U: utils})
+	}, losses.CrossEntropy{U: utils}, true)
 	
 	fmt.Println(model.ForwardLevel)
 	fmt.Println(model.BackwardLevel)

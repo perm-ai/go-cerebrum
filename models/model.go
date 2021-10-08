@@ -27,7 +27,7 @@ type Model struct {
 	BackwardLevel	[][]int
 }
 
-func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.Layer2D, loss losses.Loss) Model {
+func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.Layer2D, loss losses.Loss, autoBootstrap bool) Model {
 
 	var flatten layers.Flatten2D
 	if len(layer2d) != 0 {
@@ -36,8 +36,10 @@ func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.La
 
 	model := Model{utils: utils, Layers1d: layer1d, Layers2d: layer2d, Flatten: flatten, Loss: loss}
 
-	model.setForwardBootstrapping()
-	model.setBackwardBootstrapping(model.ForwardLevel[0], model.ForwardLevel[1])
+	if autoBootstrap{
+		model.setForwardBootstrapping()
+		model.setBackwardBootstrapping(model.ForwardLevel[0], model.ForwardLevel[1])
+	}
 
 	return model
 
@@ -171,9 +173,6 @@ func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, 
 
 			// Get layer's output
 			layerOutput := output1D[layer+1].Output
-			if m.Layers1d[layer].HasActivation() {
-				layerOutput = output1D[layer+1].ActivationOutput
-			}
 
 			gradient1D[layer] = m.Layers1d[layer].Backward(utility.Clone1dCiphertext(layerInput), utility.Clone1dCiphertext(layerOutput), utility.Clone1dCiphertext(nextLayerInputGrad), (layer != 0 || len(m.Layers2d) != 0))
 
@@ -204,9 +203,6 @@ func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, 
 
 			// Get layer's output
 			layerOutput := output2D[layer+1].Output
-			if m.Layers2d[layer].HasActivation() {
-				layerOutput = output2D[layer+1].ActivationOutput
-			}
 
 			gradient2D[layer] = m.Layers2d[layer].Backward(utility.Clone3dCiphertext(layerInput), utility.Clone3dCiphertext(layerOutput), utility.Clone3dCiphertext(nextLayerInputGrad), (layer != 0 || len(m.Layers2d) != 0))
 
