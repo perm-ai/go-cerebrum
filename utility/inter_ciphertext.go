@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
 // This files houses inter-ciphertext operations
@@ -16,14 +17,14 @@ type SafeSum struct{
 func (s *SafeSum) Add(ct *ckks.Ciphertext, utils Utils){
 	s.mu.Lock()
 	if s.Ct == nil {
-		s.Ct = ct
+		s.Ct = ct.CopyNew()
 	} else {
 		utils.Add(s.Ct, ct, s.Ct)
 	}
 	s.mu.Unlock()
 }
 
-func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, rescale bool, bootstrap bool, concurrent bool) *ckks.Ciphertext {
+func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, rescale bool, concurrent bool, counter *logger.OperationsCounter) *ckks.Ciphertext {
 
 	if len(a) != len(b) {
 		panic("Unequal length")
@@ -43,8 +44,11 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 				defer wg.Done()
 
-				product := utils.MultiplyNew(a[index], b[index], true, false)
+				product := utils.MultiplyNew(a[index], b[index], rescale, false)
 				sum.Add(product, utils)
+				if counter != nil {
+					counter.Increment()
+				}
 
 			}(i, u.CopyWithClonedEval())
 			
@@ -56,7 +60,7 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 		for i := range a {
 
-			prod := u.MultiplyNew(a[i], b[i], rescale, bootstrap)
+			prod := u.MultiplyNew(a[i], b[i], rescale, false)
 			sum.Add(prod, u)
 
 		}

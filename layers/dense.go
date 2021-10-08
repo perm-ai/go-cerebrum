@@ -9,7 +9,6 @@ import (
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
-	"github.com/perm-ai/go-cerebrum/array"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -29,9 +28,10 @@ type Dense struct {
 	btspActivation []bool
 	batchSize      int
 	weightLevel    int
+	lr			   float64
 }
 
-func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int) Dense {
+func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int, lr float64, weightLevel int) Dense {
 
 	// Generate random weights and biases
 	weights := make([][]*ckks.Ciphertext, outputUnit)
@@ -46,11 +46,11 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 		weightStdDev = math.Sqrt(1.0 / float64(inputUnit+outputUnit))
 	}
 
-	randomBias := array.GeneratePlainArray(0.0, outputUnit)
-	logger := logger.NewLogger(true)
+	counter := logger.NewOperationsCounter("Initializing weight", inputUnit*outputUnit + outputUnit)
 
 	var wg sync.WaitGroup
 
+	// Generate initial weight
 	for node := 0; node < outputUnit; node++ {
 
 		wg.Add(1)
@@ -59,12 +59,12 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 			defer wg.Done()
 
-			logger.Log(fmt.Sprintf("Generating weight for node %d", nodeIndex))
-			randomWeight := array.GenerateRandomNormalArray(inputUnit, weightStdDev)
+			randomWeight := utils.GenerateRandomNormalArraySeed(inputUnit, weightStdDev, inputUnit + nodeIndex)
 			weights[nodeIndex] = make([]*ckks.Ciphertext, inputUnit)
 
 			if useBias {
-				bias[nodeIndex] = u.EncryptToLevel(u.GenerateFilledArraySize(randomBias[nodeIndex], batchSize), 9)
+				bias[nodeIndex] = u.EncryptToLevel(u.GenerateFilledArraySize(0, batchSize), weightLevel)
+				counter.Increment()
 			}
 
 			var weightWg sync.WaitGroup
@@ -73,9 +73,10 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 				weightWg.Add(1)
 
-				go func(weightIndex int, wUtils utility.Utils){
+				go func(weightIndex int, wUtils utility.Utils) {
 					defer weightWg.Done()
-					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevel(u.GenerateFilledArray(randomWeight[weightIndex]), 9)
+					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevel(u.GenerateFilledArraySize(randomWeight[weightIndex], batchSize), weightLevel)
+					counter.Increment()
 				}(weight, u.CopyWithClonedEncryptor())
 
 			}
@@ -88,7 +89,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 	wg.Wait()
 
-	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, []bool{false, false}, []bool{false, false}, batchSize, 9}
+	return Dense{utils, inputUnit, outputUnit, weights, bias, activation, []bool{false, false}, []bool{false, false}, batchSize, weightLevel, lr}
 
 }
 
@@ -97,26 +98,48 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 	output := make([]*ckks.Ciphertext, d.OutputUnit)
 	activatedOutput := make([]*ckks.Ciphertext, d.OutputUnit)
 
+	var wg sync.WaitGroup
+
+	// DEBUG
+	timer := logger.StartTimer(fmt.Sprintf("Forward (%d) dot product", d.InputUnit))
+	dotProductCounter := logger.NewOperationsCounter(fmt.Sprintf("Forward propagating (%d) multiplying", d.InputUnit), d.InputUnit * d.OutputUnit)
+
 	for node := range d.Weights {
 
-		fmt.Printf("Starting dot product for node %d\n", node)
-		output[node] = d.utils.InterDotProduct(input, d.Weights[node], true, false, true)
-		fmt.Printf("Dot product for node %d completed\n", node)
+		wg.Add(1)
 
-		if len(d.Bias) != 0 {
-			d.utils.Add(output[node], d.Bias[node], output[node])
-		}
+		go func(nodeIndex int, utils utility.Utils) {
+			defer wg.Done()
+			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], !d.btspOutput[0], true, &dotProductCounter)
+
+			if len(d.Bias) != 0 {
+				utils.Add(output[nodeIndex], d.Bias[nodeIndex], output[nodeIndex])
+			}
+		}(node, d.utils.CopyWithClonedEval())
 
 	}
 
+	timer.LogTimeTakenSecond()
+
+	wg.Wait()
+
 	if d.btspOutput[0] {
+
+		timer = logger.StartTimer(fmt.Sprintf("Forward (%d) bootstrap", d.InputUnit))
 		fmt.Printf("Bootstrapping node\n")
+
 		d.utils.Bootstrap1dInPlace(output, true)
-		fmt.Printf("Bootstrapping node completed\n")
+
+		// Debug
+		timer.LogTimeTakenSecond()
+
 	}
 
 	if d.Activation != nil {
+
+		timer = logger.StartTimer(fmt.Sprintf("Forward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
+		timer.LogTimeTakenSecond()
 
 		if d.btspActivation[0] {
 			d.utils.Bootstrap1dInPlace(activatedOutput, true)
@@ -136,17 +159,27 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 	gradients := Gradient1d{}
 
+	fmt.Printf("Backward gradient wrt output of layer %d: %d\n", d.InputUnit, gradient[0].Level())
+
 	// Calculate gradients for last layer
 	if d.Activation != nil {
 
+		timer := logger.StartTimer(fmt.Sprintf("Backward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
+
 		if (*d.Activation).GetType() != "softmax" {
-			activationGradient := (*d.Activation).Backward(output, d.OutputUnit)
+
+			gradients.BiasGradient = make([]*ckks.Ciphertext, len(gradient))
+			fmt.Printf("Backward (%d) output level: %d\n", d.InputUnit, output[0].Level())
+			activationGradient := (*d.Activation).Backward(output, d.batchSize)
+			fmt.Printf("Backward (%d) activation level: %d\n", d.InputUnit, activationGradient[0].Level())
 
 			hasBootstrapped := false
 
 			if activationGradient[0].Level() == 1 && d.btspActivation[1] {
+
 				d.utils.Bootstrap1dInPlace(activationGradient, true)
 				hasBootstrapped = true
+				
 			}
 
 			var wg sync.WaitGroup
@@ -157,7 +190,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 				go func(index int, utils utility.Utils) {
 					defer wg.Done()
-					utils.Multiply(gradient[index], activationGradient[index], gradient[index], true, false)
+					gradients.BiasGradient[index] = utils.MultiplyNew(gradient[index], activationGradient[index], true, false)
 				}(b, d.utils.CopyWithClonedEval())
 
 			}
@@ -165,29 +198,52 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 			wg.Wait()
 
 			if d.btspActivation[1] && !hasBootstrapped {
-				d.utils.Bootstrap1dInPlace(activationGradient, true)
+
+				d.utils.Bootstrap1dInPlace(gradients.BiasGradient, true)
+
 			}
 
+		} else {
+			gradients.BiasGradient = gradient
 		}
 
-	}
+		timer.LogTimeTakenSecond()
 
-	gradients.BiasGradient = gradient
+	} else {
+		gradients.BiasGradient = gradient
+	}
+	
+	timer := logger.StartTimer(fmt.Sprintf("Backward (%d) outer", d.InputUnit))
 	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input, true)
 	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
 
+		timer = logger.StartTimer(fmt.Sprintf("Backward (%d) wrt input", d.InputUnit))
+
+		var inputWg sync.WaitGroup
+
 		// Calculate ∂L/∂A(l-1)
 		transposedWeight := d.utils.InterTranspose(d.Weights)
 
 		for xi := range transposedWeight {
-			gradients.InputGradient[xi] = d.utils.InterDotProduct(transposedWeight[xi], gradients.BiasGradient, true, false, true)
+			inputWg.Add(1)
+
+			go func(xIndex int, utils utility.Utils){
+				defer inputWg.Done()
+				gradients.InputGradient[xIndex] = d.utils.InterDotProduct(transposedWeight[xIndex], gradients.BiasGradient, true, true, nil)
+			}(xi, d.utils.CopyWithClonedEval())
+			
 		}
+
+		inputWg.Wait()
 
 		if d.btspOutput[1] {
 			d.utils.Bootstrap1dInPlace(gradients.InputGradient, true)
 		}
+
+		timer.LogTimeTakenSecond()
+		fmt.Printf("Backward (%d) input gradient: %f\n", d.InputUnit, d.utils.Decrypt(gradients.InputGradient[4])[0:5])
 
 	}
 
@@ -197,10 +253,19 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
-	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(lr/float64(d.batchSize), d.batchSize))
+	avgScale := lr/float64(d.batchSize)
+	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(avgScale, d.batchSize))
+
+	bootstrapGradient := gradient.WeightGradient[0][0].Level() - 1 < d.weightLevel 
+	ciphertextNeeded := int(math.Ceil(float64(d.InputUnit * d.OutputUnit) / float64(d.utils.Params.Slots())))
+	weightToBootstrap := make([]utility.SafeSum, ciphertextNeeded)
+	biasToBootstrap := utility.SafeSum{}
 
 	// create weight group
 	var wg sync.WaitGroup
+
+	averageTimer := logger.StartTimer(fmt.Sprintf("SGD gradient filtering and averaging (%d)", d.InputUnit))
+	counter := logger.NewOperationsCounter(fmt.Sprintf("SGD (%d)", d.InputUnit), (d.InputUnit * d.OutputUnit) + d.OutputUnit)
 
 	for node := range d.Weights {
 
@@ -210,64 +275,248 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 			defer wg.Done()
 
-			updatedBiasChannel := make(chan *ckks.Ciphertext)
+			var biasWg sync.WaitGroup
 
 			if len(d.Bias) != 0 {
 
+				biasWg.Add(1)
+
 				// Calculate updated bias concurrently
-				go func(utils utility.Utils, c chan *ckks.Ciphertext) {
+				go func(biasUtils utility.Utils) {
 
-					utils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
-					averagedLrBias := utils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], &batchAverager, true, false)
+					defer biasWg.Done()
 
-					if averagedLrBias.Level() < d.weightLevel {
-						utils.BootstrapInPlace(averagedLrBias)
+					if bootstrapGradient {
+
+						if gradient.BiasGradient[nodeIndex].Level() > 2{
+							utils.Evaluator.DropLevel(gradient.BiasGradient[nodeIndex], gradient.BiasGradient[nodeIndex].Level() - 2)
+						}
+
+						biasUtils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
+						
+						// Generate averager
+						encoder := ckks.NewEncoder(biasUtils.Params)
+						plain := make([]complex128, biasUtils.Params.Slots())
+						plain[nodeIndex] = complex(avgScale, 0)
+						avg := encoder.EncodeNTTAtLvlNew(gradient.BiasGradient[nodeIndex].Level(), plain, biasUtils.Params.LogSlots())
+
+						// Multiply with averager filter and sum for parallel bootstrapping
+						biasUtils.MultiplyPlain(gradient.BiasGradient[nodeIndex], avg, gradient.BiasGradient[nodeIndex], true, false)
+						biasToBootstrap.Add(gradient.BiasGradient[nodeIndex], biasUtils)
+						counter.Increment()
+
+					} else {
+
+						if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel + 1 {
+							biasUtils.Evaluator.DropLevel(gradient.BiasGradient[nodeIndex], gradient.BiasGradient[nodeIndex].Level() - (d.weightLevel + 1))
+						}
+
+						biasUtils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
+						averagedLrBias := biasUtils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], batchAverager, true, false)
+						biasUtils.Sub(d.Bias[nodeIndex], averagedLrBias, d.Bias[nodeIndex])
+						counter.Increment()
 					}
 
-					result := utils.SubNew(d.Bias[nodeIndex], averagedLrBias)
-					c <- result
-
-				}(d.utils.ShallowCopy(), updatedBiasChannel)
+				}(utils.CopyWithClonedEval().CopyWithClonedEncoder())
 
 			}
 
-			updatedWeightChannels := make([]chan *ckks.Ciphertext, len(d.Weights[nodeIndex]))
+			var weightWg sync.WaitGroup
 
 			for w := range d.Weights[nodeIndex] {
 
+				weightWg.Add(1)
+
 				// Update weight concurrently
-				updatedWeightChannels[w] = make(chan *ckks.Ciphertext)
+				go func(weightIndex int, weightUtils utility.Utils) {
 
-				go func(weightIndex int, utils utility.Utils, c chan *ckks.Ciphertext) {
-
-					utils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
-					averagedLrWeight := utils.MultiplyPlainNew(gradient.WeightGradient[nodeIndex][weightIndex], &batchAverager, true, false)
-
+					defer weightWg.Done()
+					
 					// Bootstrap if gradient's level is lower than it's suppose to be
-					if averagedLrWeight.Level() < d.weightLevel {
-						utils.BootstrapInPlace(averagedLrWeight)
+					if bootstrapGradient {
+
+						rescale := true
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() < 2 {
+							rescale = false
+						}
+
+						// Drop level to make computation faster if possible
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > 2{
+							utils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level() - 2)
+						}
+
+						weightUtils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
+
+						// get the index of ciphertext in weight parallel bootstrapper, and get the position that this should be in
+						ctIndex := (nodeIndex * d.InputUnit) + weightIndex
+						ct := int(math.Floor(float64(ctIndex) / float64(d.utils.Params.Slots())))
+						ctIndex %= d.utils.Params.Slots()
+
+						// Generate avg filter
+						encoder := ckks.NewEncoder(weightUtils.Params)
+						plain := make([]complex128, weightUtils.Params.Slots())
+						plain[ctIndex] = complex(avgScale, 0)
+						avg := encoder.EncodeNTTAtLvlNew(gradient.WeightGradient[nodeIndex][weightIndex].Level(), plain, weightUtils.Params.LogSlots())
+
+						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], avg, gradient.WeightGradient[nodeIndex][weightIndex], rescale, false)
+						weightToBootstrap[ct].Add(gradient.WeightGradient[nodeIndex][weightIndex], weightUtils)
+						counter.Increment()
+
+					} else {
+
+						// Drop level to minimum requirement + 1 for faster evaluation
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel + 1{
+							weightUtils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level() - (d.weightLevel + 1))
+						}
+
+						// Perform Ciphertext inner sum and average
+						weightUtils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
+
+						rescale := true
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() == d.weightLevel{
+							rescale = false
+						}
+
+						// Multiply with average scale
+						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], batchAverager, gradient.WeightGradient[nodeIndex][weightIndex], rescale, false)
+
+						// Perform SGD
+						weightUtils.Sub(d.Weights[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex], d.Weights[nodeIndex][weightIndex])
+
+						counter.Increment()
+
 					}
 
-					result := utils.SubNew(d.Weights[nodeIndex][weightIndex], averagedLrWeight)
-					c <- result
-
-				}(w, d.utils.ShallowCopy(), updatedWeightChannels[w])
+				}(w, utils.CopyWithClonedEval().CopyWithClonedEncoder())
 
 			}
 
-			if len(d.Bias) != 0 {
-				d.Bias[nodeIndex] = <-updatedBiasChannel
-			}
+			weightWg.Wait()
+			biasWg.Wait()
 
-			for w := range updatedWeightChannels {
-				d.Weights[nodeIndex][w] = <-updatedWeightChannels[w]
-			}
-
-		}(node, d.utils.ShallowCopy())
+		}(node, d.utils.CopyWithClonedEval())
 
 	}
 
 	wg.Wait()
+	averageTimer.LogTimeTakenSecond()
+
+	// Check if bootstrap needs to be performed
+	if bootstrapGradient {
+
+		fmt.Printf("Bootstrapping SGD gradient (%d)", d.InputUnit)
+		btpTimer := logger.StartTimer(fmt.Sprintf("Bootstrapping SGD gradient (%d)", d.InputUnit))
+
+		// Combine all ciphertext into one array of ciphertexts
+		biasLen := 0
+
+		if len(d.Bias) != 0{
+			biasLen = 1
+		}
+
+		cts := make([]*ckks.Ciphertext, len(weightToBootstrap) + biasLen)
+
+		for i := range weightToBootstrap{
+			cts[i] = weightToBootstrap[i].Ct
+		}
+
+		if len(d.Bias) != 0{
+			cts[len(cts)-1] = biasToBootstrap.Ct
+		}
+
+		d.utils.Bootstrap1dInPlace(cts, true)
+
+		btpTimer.LogTimeTakenSecond()
+
+		btpTimer = logger.StartTimer("Unpack bootstrapped")
+
+		// Update weight and bias with bootstrapped gradients
+		var updateGradWg sync.WaitGroup
+
+		for node := range d.Weights{
+
+			updateGradWg.Add(1)
+
+			go func(nodeIndex int, utils utility.Utils){
+
+				var biasWg sync.WaitGroup
+
+				if len(d.Bias) != 0{
+					biasWg.Add(1)
+
+					go func(biasUtils utility.Utils){
+
+						defer biasWg.Done()
+
+						// Generate filter
+						encoder := ckks.NewEncoder(biasUtils.Params)
+						plain := make([]complex128, biasUtils.Params.Slots())
+						plain[nodeIndex] = complex(1, 0)
+						filter := encoder.EncodeNTTAtLvlNew(cts[len(cts) - 1].Level(), plain, biasUtils.Params.LogSlots())
+
+						rescale := true
+						if cts[len(cts) - 1].Level() > d.weightLevel + 1{
+							biasUtils.Evaluator.DropLevel(cts[len(cts) - 1], cts[len(cts) - 1].Level() - (d.weightLevel + 1))
+						} else if cts[len(cts) - 1].Level() == d.weightLevel{
+							rescale = false
+						}
+
+						biasGradient := biasUtils.MultiplyPlainNew(cts[len(cts) - 1], filter, rescale, true)
+						utils.Rotate(biasGradient, nodeIndex)
+						biasUtils.FillCiphertextInPlace(biasGradient, d.batchSize)
+						biasUtils.Sub(d.Bias[nodeIndex], biasGradient, d.Bias[nodeIndex])
+
+					}(utils.CopyWithClonedEval())
+
+				}
+
+				var weightWg sync.WaitGroup
+
+				for w := range d.Weights[nodeIndex]{
+
+					weightWg.Add(1)
+					go func(weightIndex int, weightUtils utility.Utils){
+
+						defer weightWg.Done()
+
+						// get the index of ciphertext in weight parallel bootstrapper, and get the position that this should be in
+						ctIndex := (nodeIndex * d.InputUnit) + weightIndex
+						ct := int(math.Floor(float64(ctIndex) / float64(d.utils.Params.Slots())))
+						ctIndex %= d.utils.Params.Slots()
+
+						rescale := true
+						if cts[ct].Level() > d.weightLevel + 1{
+							weightUtils.Evaluator.DropLevel(cts[ct], cts[ct].Level() - (d.weightLevel + 1))
+						} else if cts[ct].Level() == d.weightLevel || cts[ct].Scale > math.Pow(2,50){
+							rescale = false
+						}
+
+						// Generate filter
+						encoder := ckks.NewEncoder(weightUtils.Params)
+						plain := make([]complex128, weightUtils.Params.Slots())
+						plain[ctIndex] = complex(1, 0)
+						filter := encoder.EncodeNTTAtLvlNew(cts[ct].Level(), plain, weightUtils.Params.LogSlots())
+
+						// Isolate weight grqadient
+						weightGradient := weightUtils.MultiplyPlainNew(cts[ct], filter, rescale, false)
+						weightUtils.SumElementsInPlace(weightGradient)
+						weightUtils.Sub(d.Weights[nodeIndex][weightIndex], weightGradient, d.Weights[nodeIndex][weightIndex])
+
+					}(w, utils.CopyWithClonedEval())
+
+				}
+
+				biasWg.Wait()
+				weightWg.Wait()
+
+			}(node, d.utils.CopyWithClonedEval())
+
+		}
+
+		updateGradWg.Wait()
+		btpTimer.LogTimeTakenSecond()
+		
+	}
 
 }
 
@@ -344,7 +593,7 @@ func (d *Dense) ExportWeights(filename string) {
 		plainWeights[node] = make([]float64, len(d.Weights[node]))
 		for i := range plainWeights[node] {
 			wg.Add(1)
-			go func(nodeIdx int, weightIdx int, utils utility.Utils){
+			go func(nodeIdx int, weightIdx int, utils utility.Utils) {
 				defer wg.Done()
 				plainWeights[nodeIdx][weightIdx] = utils.Decrypt(d.Weights[nodeIdx][weightIdx])[0]
 			}(node, i, d.utils.CopyWithClonedDecryptor())

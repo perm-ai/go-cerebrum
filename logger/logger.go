@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -18,4 +19,24 @@ func (l Logger) Log(s string) {
 		fmt.Print(time.Now().Format("2006-01-02T15:04:05-0700"))
 		fmt.Print("\t" + s + "\n")
 	}
+}
+
+type OperationsCounter struct {
+	name 	string
+	current int
+	total   int
+	mu		sync.Mutex
+}
+
+func NewOperationsCounter(name string, total int) OperationsCounter {
+
+	return OperationsCounter{name: name, current: 0, total: total}
+
+}
+
+func (o *OperationsCounter) Increment(){
+	o.mu.Lock()
+	o.current++
+	o.mu.Unlock()
+	fmt.Printf("\r%s %d/%d", o.name, o.current, o.total)
 }

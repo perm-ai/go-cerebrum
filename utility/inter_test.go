@@ -43,11 +43,11 @@ func TestInter(t *testing.T) {
 	*b[3] = b4ct
 
 	timer1 := logger.StartTimer("nonConcurrency")
-	nonConcur := utils.InterDotProduct(a, b, true, false, false)
+	nonConcur := utils.InterDotProduct(a, b, true, false, nil)
 	timer1.LogTimeTaken()
 
 	timer2 := logger.StartTimer("Concurrency")
-	Concur := utils.InterDotProduct(a, b, true, false, true)
+	Concur := utils.InterDotProduct(a, b, true, true, nil)
 	timer2.LogTimeTaken()
 
 	plainNonConcur := utils.Decrypt(nonConcur)

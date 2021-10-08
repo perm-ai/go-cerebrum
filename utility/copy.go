@@ -88,6 +88,28 @@ func (u Utils) CopyWithClonedDecryptor() Utils {
 
 }
 
+func (u Utils) CopyWithClonedEncoder() Utils {
+
+	encoder := ckks.NewEncoder(u.Params)
+
+	return Utils{
+		hasSecretKey:        u.hasSecretKey,
+		bootstrapEnabled:    u.bootstrapEnabled,
+		BootstrappingParams: u.BootstrappingParams,
+		Params:              u.Params,
+		KeyChain:            u.KeyChain,
+		Bootstrapper:        u.Bootstrapper,
+		Encoder:             encoder,
+		Evaluator:           u.Evaluator,
+		Encryptor:           u.Encryptor,
+		Decryptor:           u.Decryptor,
+		Filters:             u.Filters,
+		Scale:               u.Scale,
+		log:                 u.log,
+	}
+
+}
+
 func (u Utils) ShallowCopy() Utils {
 
 	return Utils{

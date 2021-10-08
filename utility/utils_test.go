@@ -13,8 +13,8 @@ import (
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
-var keyChain = key.GenerateKeys(0, false, true)
-var utils = NewUtils(keyChain, math.Pow(2, 35), 100, true)
+var keyChain = key.GenerateKeys(0, true, true)
+var utils = NewUtils(keyChain, math.Pow(2, 40), 100, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
@@ -703,7 +703,7 @@ func TestInterDotProduct(t *testing.T) {
 	}
 
 	timer := logger.StartTimer("inter dot product")
-	result := utils.InterDotProduct(as, bs, true, false, true)
+	result := utils.InterDotProduct(as, bs, true, true, nil)
 	timer.LogTimeTaken()
 
 	decrypted := utils.Decrypt(result)
@@ -712,6 +712,71 @@ func TestInterDotProduct(t *testing.T) {
 
 	if !ValidateResult(decrypted, utils.GenerateFilledArray(125.44), false, 1, log) {
 		t.Error("Incorrect bootstrapping")
+	}
+
+}
+
+func TestFillArray(t *testing.T){
+
+	plainTestCase := make([]float64, utils.Params.Slots())
+	plainTestCase[0] = 1.23
+	testCase := utils.EncryptToPointer(plainTestCase)
+
+	utils.FillCiphertextInPlace(testCase, 2000)
+	dec := utils.Decrypt(testCase)
+
+	if !ValidateResult(dec, utils.GenerateFilledArraySize(1.23, 2000), false, 1, log) {
+		t.Error("Incorrect")
+	}
+
+}
+
+func TestInterOuterProduct(t *testing.T) {
+
+	// Test the correctness of outer product evaluation betweem two ciphertexts
+	// Test case:			Expected:
+	// A = E(3, 4)			[ E(6, 9, 15, 18),
+	// B = E(2, 3, 5, 6)	  E(8, 12, 20, 24)]
+
+	testCaseA := []*ckks.Ciphertext{utils.EncryptToPointer(utils.GenerateFilledArray(3)), utils.EncryptToPointer(utils.GenerateFilledArray(4))}
+	testCaseB := []*ckks.Ciphertext{utils.EncryptToPointer(utils.GenerateFilledArray(2)), utils.EncryptToPointer(utils.GenerateFilledArray(3)), utils.EncryptToPointer(utils.GenerateFilledArray(5)), utils.EncryptToPointer(utils.GenerateFilledArray(6))}
+
+	outerProduct := utils.InterOuter(testCaseA, testCaseB, true)
+	expectedResults := [][]float64{
+		{6,9,15,18},
+		{8,12,20,24},
+	}
+
+	for r := range outerProduct {
+
+		for c := range outerProduct[r]{
+
+			decryptedProduct := utils.Decrypt(outerProduct[r][c])
+			expectedResult := utils.GenerateFilledArray(expectedResults[r][c])
+
+			if !ValidateResult(decryptedProduct, expectedResult, false, 1, log) {
+
+				t.Error("Outer was incorrectly calculated")
+
+			}
+
+		}
+
+	}
+
+}
+
+func TestSumElementZero(t *testing.T){
+
+	ct := utils.EncryptToPointer(utils.GenerateFilledArray(0))
+	utils.SumElementsInPlace(ct)
+
+	decrypted := utils.Decrypt(ct)
+
+	if !ValidateResult(decrypted, utils.GenerateFilledArray(0), false, 1, log) {
+
+		t.Error("Sum zero was incorrectly calculated")
+
 	}
 
 }

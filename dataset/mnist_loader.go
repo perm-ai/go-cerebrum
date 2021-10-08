@@ -1,6 +1,8 @@
 package dataset
 
 import (
+	"sync"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/importer"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -17,38 +19,63 @@ func NewMnistLoader(utils utility.Utils, filePath string) MnistLoader {
 
 }
 
+func NewMnistLoaderSmallBatch(utils utility.Utils, filePath string, batchAmount int, batchSize int) MnistLoader {
+
+	return MnistLoader{utils, importer.GetMnistData(filePath)[0 : batchSize*batchAmount]}
+
+}
+
 func (m MnistLoader) GetLength() int {
 	return len(m.RawData)
 }
 
 func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
 
+	var xWg, yWg sync.WaitGroup
+
 	x := make([]*ckks.Ciphertext, 784)
 	y := make([]*ckks.Ciphertext, 10)
 
 	for i := range x {
 
-		batchX := make([]float64, batchSize)
+		xWg.Add(1)
 
-		for dataIdx := range m.RawData[start : start+batchSize] {
-			batchX[dataIdx] = m.RawData[dataIdx].Image[i]
-		}
+		go func(index int, utils utility.Utils) {
 
-		x[i] = m.utils.EncryptToPointer(batchX)
+			defer xWg.Done()
+			batchX := make([]float64, batchSize)
+
+			for dataIdx := range m.RawData[start : start+batchSize] {
+				batchX[dataIdx] = m.RawData[dataIdx].Image[index]
+			}
+
+			x[index] = utils.EncryptToLevel(batchX, 9)
+
+		}(i, m.utils.CopyWithClonedEncryptor())
 
 	}
 
 	for i := range y {
 
-		batchY := make([]float64, batchSize)
+		yWg.Add(1)
 
-		for dataIdx := range m.RawData[start : start+batchSize] {
-			batchY[dataIdx] = m.RawData[dataIdx].Label[i]
-		}
+		go func(index int, utils utility.Utils) {
 
-		y[i] = m.utils.EncryptToPointer(batchY)
+			defer yWg.Done()
+			batchY := make([]float64, batchSize)
+
+			for dataIdx := range m.RawData[start : start+batchSize] {
+				batchY[dataIdx] = m.RawData[dataIdx].Label[index]
+			}
+
+			y[index] = utils.EncryptToLevel(batchY, 9)
+
+		}(i, m.utils.CopyWithClonedEncryptor())
 
 	}
+
+	yWg.Wait()
+	xWg.Wait()
 
 	return x, y
 

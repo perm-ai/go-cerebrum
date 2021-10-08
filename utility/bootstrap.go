@@ -9,7 +9,6 @@ func (u Utils) BootstrapIfNecessary(ct *ckks.Ciphertext) bool {
 
 	if ct.Level() == 1 {
 
-		u.log.Log("Bootstrapping")
 		*ct = *u.Bootstrapper.Bootstrapp(ct)
 		return true
 
@@ -21,7 +20,6 @@ func (u Utils) BootstrapIfNecessary(ct *ckks.Ciphertext) bool {
 
 func (u Utils) BootstrapInPlace(ct *ckks.Ciphertext) {
 
-	u.log.Log("Bootstrapping")
 	*ct = *u.Bootstrapper.Bootstrapp(ct)
 
 }

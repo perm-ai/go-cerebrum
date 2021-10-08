@@ -64,8 +64,8 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 
 		// Add 1 task to wait group
 		rowWg.Add(1)
-		
-		go func(rowIndex int){
+
+		go func(rowIndex int) {
 
 			defer rowWg.Done()
 
@@ -75,12 +75,12 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 
 				colWg.Add(1)
 
-				go func(colIndex int, colUtils utility.Utils){
+				go func(colIndex int, colUtils utility.Utils) {
 					defer colWg.Done()
-					
+
 					averagedLrGradient := colUtils.MultiplyPlainNew(gradient[rowIndex][colIndex], &lr, true, false)
 
-					if averagedLrGradient.Level() < weightLevel{
+					if averagedLrGradient.Level() < weightLevel {
 						colUtils.BootstrapInPlace(averagedLrGradient)
 					}
 
@@ -89,23 +89,23 @@ func (k *conv2dKernel) updateWeight(gradient [][]*ckks.Ciphertext, lr ckks.Plain
 					for d := range k.Data[rowIndex][colIndex] {
 						depWg.Add(1)
 
-						go func(depIndex int, depUtils utility.Utils){
+						go func(depIndex int, depUtils utility.Utils) {
 							defer depWg.Done()
-							utils.Sub(k.Data[rowIndex][colIndex][depIndex], averagedLrGradient, k.Data[rowIndex][colIndex][depIndex])
+							depUtils.Sub(k.Data[rowIndex][colIndex][depIndex], averagedLrGradient, k.Data[rowIndex][colIndex][depIndex])
 						}(d, colUtils.ShallowCopy())
-						
+
 					}
 
 					depWg.Done()
 
 				}(col, utils.ShallowCopy())
-				
+
 			}
 
 			colWg.Wait()
 
 		}(row)
-		
+
 	}
 
 	rowWg.Wait()
@@ -238,7 +238,7 @@ type Conv2D struct {
 	btspOutput     []bool
 	btspActivation []bool
 	batchSize      int
-	weightLevel	   int
+	weightLevel    int
 }
 
 // Constructor for Convolutional layer struct
@@ -364,7 +364,7 @@ func (c Conv2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 								}
 							}
 
-							result := c.utils.InterDotProduct(kernelCiphertext, inputCiphertext, true, false, true)
+							result := c.utils.InterDotProduct(kernelCiphertext, inputCiphertext, true, true, nil)
 
 							if len(c.Bias) != 0 {
 								c.utils.Add(c.Bias[kernelIndex], result, result)
@@ -588,7 +588,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 								}
 							}
 
-							result := c.utils.InterDotProduct(kernelCiphertexts, inputCiphertexts, true, false, true)
+							result := c.utils.InterDotProduct(kernelCiphertexts, inputCiphertexts, true, true, nil)
 
 							weightGradientColChannel <- result
 
@@ -698,7 +698,7 @@ func (c Conv2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*ckks.Cipher
 								}
 
 								// Calculate dot product and send result back through channel
-								inputGradientDepthChannel <- c.utils.InterDotProduct(rotatedKernelsCiphertexts, lossGradientCiphertexts, true, false, true)
+								inputGradientDepthChannel <- c.utils.InterDotProduct(rotatedKernelsCiphertexts, lossGradientCiphertexts, true, true, nil)
 
 							}(rowIndex, colIndex, d, inputGradientDepthChannels[d])
 
@@ -768,14 +768,14 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 			if len(c.Bias) != 0 {
 
 				biasWg.Add(1)
-				
-				go func(biasUtils utility.Utils){
+
+				go func(biasUtils utility.Utils) {
 					defer biasWg.Done()
 
 					biasUtils.SumElementsInPlace(gradient.BiasGradient[index])
-					biasUtils.MultiplyPlain(gradient.BiasGradient[index], &batchAverager, gradient.BiasGradient[index], true, false)
+					biasUtils.MultiplyPlain(gradient.BiasGradient[index], batchAverager, gradient.BiasGradient[index], true, false)
 
-					if gradient.BiasGradient[index].Level() < c.weightLevel{
+					if gradient.BiasGradient[index].Level() < c.weightLevel {
 						biasUtils.BootstrapInPlace(gradient.BiasGradient[index])
 					}
 
@@ -786,7 +786,7 @@ func (c *Conv2D) UpdateGradient(gradient Gradient2d, lr float64) {
 			}
 
 			// Update weight
-			c.Kernels[index].updateWeight(gradient.WeightGradient[index], batchAverager, utils, c.weightLevel)
+			c.Kernels[index].updateWeight(gradient.WeightGradient[index], *batchAverager, utils, c.weightLevel)
 
 			biasWg.Wait()
 
@@ -864,6 +864,6 @@ func (c Conv2D) GetBackwardActivationLevelConsumption() int {
 	}
 }
 
-func (c *Conv2D) SetWeightLevel(lvl int){
+func (c *Conv2D) SetWeightLevel(lvl int) {
 	c.weightLevel = lvl
 }

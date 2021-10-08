@@ -47,7 +47,7 @@ func GetMnistData(filepath string) []MnistData {
 
 		images := make([]float64, len(datas[i].Image))
 		for image := range images{
-			images[image] = float64(datas[i].Image[image])
+			images[image] = float64(datas[i].Image[image]) / 255.0
 		}
 
 		result[i] = MnistData{images, label}

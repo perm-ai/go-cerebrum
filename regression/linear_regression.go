@@ -34,8 +34,8 @@ func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 }
 
 func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
-
-	result := l.utils.InterDotProduct(input, l.Weight, true, false, true)
+	
+	result := l.utils.InterDotProduct(input, l.Weight, true, true, nil)
 
 	l.utils.Add(result, l.Bias, result)
 
