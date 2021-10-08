@@ -31,11 +31,11 @@ func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 			// y := 0.5 + 0.197x - 0.004x^3
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
-			deg3 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg3Coeff, true, false)
+			deg3 := utils.MultiplyPlainNew(inputEach.CopyNew(), deg3Coeff, true, false)
 			utils.Multiply(xSquared, deg3, deg3, true, false)
 
 			// Calculate degree one
-			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1Coeff, true, false)
+			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), deg1Coeff, true, false)
 
 			// Add all degree together
 			result := utils.AddNew(deg3, deg1)
@@ -71,7 +71,7 @@ func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cip
 
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
-			deg2 := utils.MultiplyPlainNew(xSquared, &deg2Coeff, true, false)
+			deg2 := utils.MultiplyPlainNew(xSquared, deg2Coeff, true, false)
 
 			// Add all degree together
 			result := utils.AddPlainNew(deg2, &deg0)

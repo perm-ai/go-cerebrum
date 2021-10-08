@@ -67,7 +67,7 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 		go func(index int, utils utility.Utils, channel chan *ckks.Ciphertext) {
 			product := utils.MultiplyNew(input[index], err.CopyNew(), true, false)
 			utils.SumElementsInPlace(product)
-			result := utils.MultiplyPlainNew(product, &multiplier, true, false)
+			result := utils.MultiplyPlainNew(product, multiplier, true, false)
 
 			channel <- result
 		}(i, l.utils.CopyWithClonedEval(), channels[i])
@@ -78,9 +78,9 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 	}
 
 	dB := l.utils.SumElementsNew(*err)
-	l.utils.MultiplyPlain(&dB, &multiplier, &dB, true, false)
+	l.utils.MultiplyPlain(dB, multiplier, dB, true, false)
 
-	return LinearRegressionGradient{dM, &dB}
+	return LinearRegressionGradient{dM, dB}
 
 }
 

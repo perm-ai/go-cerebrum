@@ -191,8 +191,15 @@ func (u Utils) EncodeCoeffs(value []float64) ckks.Plaintext {
 }
 
 // Encode float array into NTT Plaintext
-func (u Utils) EncodePlaintextFromArray(arr []float64) ckks.Plaintext {
-	return *u.Encoder.EncodeNTTNew(u.Float64ToComplex128(arr), u.Params.LogSlots())
+func (u Utils) EncodePlaintextFromArray(arr []float64) *ckks.Plaintext {
+	return u.Encoder.EncodeNTTNew(u.Float64ToComplex128(arr), u.Params.LogSlots())
+}
+
+// Encode float array into NTT Plaintext
+func (u Utils) EncodePlaintextFromArrayScale(arr []float64, scale float64) *ckks.Plaintext {
+	pt := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
+	u.Encoder.EncodeNTT(pt, u.Float64ToComplex128(arr), u.Params.LogSlots())
+	return pt
 }
 
 // Decode complex plaintext and take real part returning float array

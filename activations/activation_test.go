@@ -54,29 +54,36 @@ func TestTanh(t *testing.T) {
 	// y = (-0.00752x^3) + (0.37x)
 	// (-0.02256x^2) + 0.37
 
-	inputArrray := utils.GenerateRandomNormalArray(100,1)
-	forwardExpected := make([]float64, utils.Params.Slots())
-	backwardExpected := make([]float64, utils.Params.Slots())
+	testCases := make([]*ckks.Ciphertext, 10)
+	forwardExpected := make([][]float64, 10)
+	backwardExpected := make([][]float64, 10)
 
-	for i := 0; i < 100; i++ {
-		forwardExpected[i] = (0.37 * inputArrray[i]) + (-0.00752 * math.Pow(inputArrray[i], 3))
-		backwardExpected[i] = (-0.02256 * math.Pow(inputArrray[i], 2)) + 0.37
+	for testCase := 0; testCase < 10; testCase++{
+		inputArrray := utils.GenerateRandomNormalArray(100,1)
+		forwardExpected[testCase] = make([]float64, utils.Params.Slots())
+		backwardExpected[testCase] = make([]float64, utils.Params.Slots())
+
+		for i := 0; i < 100; i++ {
+			forwardExpected[testCase][i] = (0.37 * inputArrray[i]) + (-0.00752 * math.Pow(inputArrray[i], 3))
+			backwardExpected[testCase][i] = (-0.02256 * math.Pow(inputArrray[i], 2)) + 0.37
+		}
+
+		testCases[testCase] = utils.EncryptToPointer(inputArrray)
 	}
-
-	encryptedInput := utils.Encrypt(inputArrray)
 
 	tanh := Tanh{U: utils}
 
-	fwdResult := tanh.Forward([]*ckks.Ciphertext{&encryptedInput}, 100)
+	fwdResult := tanh.Forward(testCases, 100)
+	backwardResult := tanh.Backward(testCases, 100)
 
-	if !utility.ValidateResult(utils.Decrypt(fwdResult[0]), forwardExpected, false, 1, log) {
-		t.Error("Tanh forward wasn't evaluated properly")
-	}
-
-	backwardResult := tanh.Backward([]*ckks.Ciphertext{&encryptedInput}, 100)
-
-	if !utility.ValidateResult(utils.Decrypt(backwardResult[0]), backwardExpected, false, 1, log) {
-		t.Error("Tanh backward wasn't evaluated properly")
+	for testCase := range testCases {
+		if !utility.ValidateResult(utils.Decrypt(fwdResult[testCase]), forwardExpected[testCase], false, 1, log) {
+			t.Error(fmt.Sprintf("Tanh forward wasn't evaluated properly (testcase %d)", testCase))
+		}
+	
+		if !utility.ValidateResult(utils.Decrypt(backwardResult[testCase]), backwardExpected[testCase], false, 1, log) {
+			t.Error(fmt.Sprintf("Tanh backward wasn't evaluated properly (testcase %d)", testCase))
+		}
 	}
 
 }

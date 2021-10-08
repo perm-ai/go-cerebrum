@@ -70,14 +70,14 @@ func (model LogisticRegression) Backward(data Data, predict *ckks.Ciphertext, lr
 
 		dw[i] = model.utils.MultiplyNew(data.x[i].CopyNew(), err.CopyNew(), true, false)
 		model.utils.SumElementsInPlace(dw[i])
-		model.utils.MultiplyPlain(dw[i].CopyNew(), &multiplier, dw[i], true, false)
+		model.utils.MultiplyPlain(dw[i].CopyNew(), multiplier, dw[i], true, false)
 
 	}
 
 	db := model.utils.SumElementsNew(*err)
-	model.utils.MultiplyPlain(db.CopyNew(), &multiplier, &db, true, false)
+	model.utils.MultiplyPlain(db.CopyNew(), multiplier, db, true, false)
 
-	return LogisticRegressionGradient{dw, &db}
+	return LogisticRegressionGradient{dw, db}
 
 }
 

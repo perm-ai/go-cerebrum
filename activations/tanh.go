@@ -1,6 +1,9 @@
 package activations
 
 import (
+	"math"
+	"sync"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -25,36 +28,36 @@ func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 	// y = (-0.00752x^3) + (0.37x)
 
 	output := make([]*ckks.Ciphertext, len(input))
-	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 
 	deg3Coeff := t.U.EncodePlaintextFromArray(t.U.GenerateFilledArraySize(-0.00752, inputLength))
 	deg1Coeff := t.U.EncodePlaintextFromArray(t.U.GenerateFilledArraySize(0.37, inputLength))
 
+	var wg sync.WaitGroup
+
 	for i := range input {
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		wg.Add(1)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(index int, utils utility.Utils) {
+
+			defer wg.Done()
 
 			// Calculate degree three
-			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
-			deg3 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg3Coeff, true, false)
-			utils.Multiply(xSquared, deg3, deg3, true, false)
+			xSquared := utils.MultiplyNew(input[index], input[index], true, false)
+			output[index] = utils.MultiplyPlainNew(input[index], deg3Coeff, true, false)
+			utils.Multiply(xSquared, output[index], output[index], true, false)
 
 			// Calculate degree one
-			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1Coeff, true, false)
+			deg1 := utils.MultiplyPlainNew(input[index], deg1Coeff, true, false)
 
 			// Add all degree together
-			result := utils.AddNew(deg3, deg1)
-			c <- result
+			utils.Add(output[index], deg1, output[index])
 
-		}(input[i], t.U.CopyWithClonedEval(), outputChannels[i])
+		}(i, t.U.CopyWithClonedEval())
 
 	}
 
-	for i := range outputChannels {
-		output[i] = <-outputChannels[i]
-	}
+	wg.Wait()
 
 	return output
 
@@ -67,24 +70,24 @@ func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 	output := make([]*ckks.Ciphertext, len(input))
 	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 
-	deg2Coeff := t.U.EncodePlaintextFromArray(t.U.GenerateFilledArraySize(-0.02256, inputLength))
-	deg0 := *t.U.Encoder.EncodeNTTNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.LogSlots())
+	deg2Coeff := t.U.EncodePlaintextFromArrayScale(t.U.GenerateFilledArray(-0.02256), math.Pow(2, 30))
+	deg0 := t.U.Encoder.EncodeNTTNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.LogSlots())
 
 	for i := range input {
 
 		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(index int, utils utility.Utils, c chan *ckks.Ciphertext) {
 
 			// Calculate degree 2
-			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
-			deg2 := utils.MultiplyPlainNew(xSquared, &deg2Coeff, true, false)
+			result := utils.MultiplyNew(input[index], input[index], true, false)
+			utils.MultiplyPlain(result, deg2Coeff, result, true, false)
 
 			// Add all degree together
-			result := utils.AddPlainNew(deg2, &deg0)
+			utils.AddPlain(result, deg0, result)
 			c <- result
 
-		}(input[i], t.U.CopyWithClonedEval(), outputChannels[i])
+		}(i, t.U.CopyWithClonedEval(), outputChannels[i])
 
 	}
 

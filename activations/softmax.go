@@ -57,7 +57,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
 
-			result := utils.MultiplyPlainNew(inputEach, &plainStretch, true, false) // Level input - 3
+			result := utils.MultiplyPlainNew(inputEach, plainStretch, true, false) // Level input - 3
 			s.U.Multiply(result, inverseSum, result, false, false)
 			c <- result
 

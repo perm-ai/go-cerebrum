@@ -78,7 +78,7 @@ func (p AveragePooling2D) Forward(input [][][]*ckks.Ciphertext) Output2d {
 							}
 
 							// Compute pooling average
-							utils.MultiplyPlain(poolResult, &averager, poolResult, true, false)
+							utils.MultiplyPlain(poolResult, averager, poolResult, true, false)
 
 							// Return avg pooling result from that pool
 							outputDepthChannel <- poolResult
@@ -162,7 +162,7 @@ func (p AveragePooling2D) Backward(input [][][]*ckks.Ciphertext, output [][][]*c
 					depChannels := make([]chan *ckks.Ciphertext, len(gradient[rowIndex][colIndex]))
 					for depth := range gradient[rowIndex][colIndex] {
 						depChannels[depth] = make(chan *ckks.Ciphertext)
-						p.utils.MultiplyPlainConcurrent(gradient[rowIndex][colIndex][depth], &divider, true, depChannels[depth])
+						p.utils.MultiplyPlainConcurrent(gradient[rowIndex][colIndex][depth], divider, true, depChannels[depth])
 					}
 
 					colOutput := make([]*ckks.Ciphertext, len(gradient[rowIndex][colIndex]))

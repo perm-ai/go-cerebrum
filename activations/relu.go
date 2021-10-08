@@ -29,18 +29,18 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 			// calculate degree 4
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
 			xForthed := utils.MultiplyNew(xSquared, xSquared, true, false)
-			deg4 := utils.MultiplyPlainNew(xForthed, &deg4coeff, true, false)
+			deg4 := utils.MultiplyPlainNew(xForthed, deg4coeff, true, false)
 
 			// calculate degree 2
-			deg2 := utils.MultiplyPlainNew(xSquared, &deg2coeff, true, false)
+			deg2 := utils.MultiplyPlainNew(xSquared, deg2coeff, true, false)
 
 			// calculate degree 1
-			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1coeff, true, false)
+			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), deg1coeff, true, false)
 
 			// put everything together
 			result1 := utils.AddNew(deg4, deg2)
 			result2 := utils.AddNew(deg1, result1)
-			result3 := utils.AddPlainNew(result2, &deg0coeff)
+			result3 := utils.AddPlainNew(result2, deg0coeff)
 			c <- result3
 
 		}(input[i], r.U.CopyWithClonedEval(), outputChannels[i])
@@ -74,16 +74,16 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 
 			//calculate deg3
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
-			xAndDeg3coeff := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg3coeff, true, false)
+			xAndDeg3coeff := utils.MultiplyPlainNew(inputEach.CopyNew(), deg3coeff, true, false)
 			deg3 := utils.MultiplyNew(xSquared, xAndDeg3coeff, true, false)
 
 			//calculate deg1
-			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), &deg1coeff, true, false)
+			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), deg1coeff, true, false)
 
 			//add everything together
 
 			result1 := utils.AddNew(deg3, deg1)
-			result2 := utils.AddPlainNew(result1, &deg0coeff)
+			result2 := utils.AddPlainNew(result1, deg0coeff)
 			c <- result2
 
 		}(input[i], r.U.CopyWithClonedEval(), outputChannels[i])

@@ -27,7 +27,7 @@ func NewPolynomial(coeff []float64, utils Utils) Polynomial {
 
 		if i != 0 {
 			pt := utils.EncodePlaintextFromArray(utils.GenerateFilledArray(coeff[i]))
-			encoded[utils.Params.Slots()] = &pt
+			encoded[utils.Params.Slots()] = pt
 		}
 
 		coeffs[i] = Coefficient{Degree: i, Value: coeff[i], Encoded: encoded}
@@ -138,7 +138,7 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 			if _, ok := poly.Coeff[c].Encoded[size]; !ok {
 
 				encoded := poly.u.EncodePlaintextFromArray(poly.u.GenerateFilledArraySize(poly.Coeff[c].Value, size))
-				poly.Coeff[c].Encoded[size] = &encoded
+				poly.Coeff[c].Encoded[size] = encoded
 
 			}
 			poly.u.AddPlain(sum, poly.Coeff[c].Encoded[size], sum)
