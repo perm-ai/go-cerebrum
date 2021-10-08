@@ -6,7 +6,7 @@ import (
 
 func (u Utils) Multiply(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext, rescale bool, bootstrap bool) {
 
-	u.SwitchToSameModCoeff(a, b)
+	a, b = u.SwitchToSameModCoeff(a, b)
 	u.Evaluator.MulRelin(a, b, destination)
 
 	if bootstrap {
@@ -21,7 +21,7 @@ func (u Utils) Multiply(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckk
 
 func (u Utils) MultiplyNew(a *ckks.Ciphertext, b *ckks.Ciphertext, rescale bool, bootstrap bool) *ckks.Ciphertext {
 
-	u.SwitchToSameModCoeff(a, b)
+	a, b = u.SwitchToSameModCoeff(a, b)
 	result := u.Evaluator.MulRelinNew(a, b)
 
 	if bootstrap {
@@ -100,7 +100,7 @@ func (u Utils) MultiplyConstArrayNew(a ckks.Ciphertext, b []float64, rescale boo
 	return result
 }
 
-func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
+func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) (*ckks.Ciphertext, *ckks.Ciphertext) {
 
 	if a.Level() != b.Level() {
 
@@ -108,16 +108,20 @@ func (u Utils) SwitchToSameModCoeff(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 		var constant *ckks.Ciphertext
 
 		if a.Level() > b.Level() {
-			requireSwitch = a
+			requireSwitch = a.CopyNew()
 			constant = b
 		} else {
-			requireSwitch = b
+			requireSwitch = b.CopyNew()
 			constant = a
 		}
 
 		u.Evaluator.DropLevel(requireSwitch, requireSwitch.Level()-constant.Level())
 
+		return requireSwitch, constant
+
 	}
+
+	return a, b
 
 }
 
@@ -160,7 +164,7 @@ func (u Utils) ReEncodeAsNTT(a *ckks.Plaintext) {
 func (u Utils) MultiplyConcurrent(a *ckks.Ciphertext, b *ckks.Ciphertext, rescale bool, c chan *ckks.Ciphertext) {
 
 	eval := u.Evaluator.ShallowCopy()
-	u.SwitchToSameModCoeff(a, b)
+	a, b = u.SwitchToSameModCoeff(a, b)
 	result := eval.MulRelinNew(a, b)
 
 	if rescale {

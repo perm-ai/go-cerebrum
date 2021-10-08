@@ -53,7 +53,7 @@ func (model *SVM) Fit(x []*ckks.Ciphertext, y *ckks.Ciphertext, dataLength int, 
 		// Loop through training data set and apply filter to extract data from that random index out
 		// then use sum element in place to make that ciphertext filled with that randomed index
 		for feature := range x{
-			xi[feature] = model.u.MultiplyPlainNew(x[feature], &encodedFilter, true, true)
+			xi[feature] = model.u.MultiplyPlainNew(x[feature], encodedFilter, true, true)
 			model.u.SumElementsInPlace(xi[feature])
 		}
 
@@ -78,7 +78,7 @@ func (model *SVM) Fit(x []*ckks.Ciphertext, y *ckks.Ciphertext, dataLength int, 
 		eta := model.u.EncodePlaintextFromArray(etaArray)
 
 		// Apply eta
-		model.u.MultiplyPlain(decision, &eta, decision, true, false)
+		model.u.MultiplyPlain(decision, eta, decision, true, false)
 
 		// Pass through decision function turning number <1 into 1 and >1 into 0
 		// TODO: Add decision function
@@ -99,7 +99,7 @@ func (model *SVM) Fit(x []*ckks.Ciphertext, y *ckks.Ciphertext, dataLength int, 
 			regularizationConst := 1.0 / (lambda * float64(iterations))
 			regularization := model.u.EncodePlaintextFromArray(model.u.GenerateFilledArray(regularizationConst))
 
-			model.u.MultiplyPlain(model.Weights[feature], &regularization, model.Weights[feature], true, false)
+			model.u.MultiplyPlain(model.Weights[feature], regularization, model.Weights[feature], true, false)
 
 		}
 
