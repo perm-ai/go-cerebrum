@@ -9,13 +9,14 @@ import (
 	"github.com/perm-ai/go-cerebrum/dataset"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/layers"
+	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/losses"
 	"github.com/perm-ai/go-cerebrum/models"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 func main() {
-	
+
 	BATCH_SIZE := 2000
 	LEARNING_RATE := 0.25
 	EPOCH := 1
@@ -39,16 +40,20 @@ func main() {
 	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 10, &smx, true, BATCH_SIZE, LEARNING_RATE, 2)
 
 	dense1.SetBootstrapOutput(true, "forward")
-	dense1.SetBootstrapActivation(true, "backward")
 
 	dense2.SetBootstrapOutput(true, "forward")
+	dense2.SetBootstrapOutput(true, "backward")
 	dense2.SetBootstrapActivation(true, "forward")
 
 	model := models.NewModel(utils, []layers.Layer1D{
 		&dense1, &dense2,
 	}, []layers.Layer2D{}, losses.CrossEntropy{U: utils}, false)
 
+	timer := logger.StartTimer("Neural Network Training")
+
 	model.Train1D(loader, LEARNING_RATE, BATCH_SIZE, EPOCH)
+
+	timer.LogTimeTakenSecond()
 
 	os.Mkdir("test_model_1", 0777)
 

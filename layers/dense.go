@@ -119,9 +119,9 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	}
 
-	timer.LogTimeTakenSecond()
-
 	wg.Wait()
+
+	timer.LogTimeTakenSecond()
 
 	if d.btspOutput[0] {
 
@@ -246,6 +246,8 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		fmt.Printf("Backward (%d) input gradient: %f\n", d.InputUnit, d.utils.Decrypt(gradients.InputGradient[4])[0:5])
 
 	}
+
+	fmt.Printf("Backward (%d) weight level: %d \tbias level: %d\n", d.InputUnit, gradients.WeightGradient[0][0].Level(), gradients.BiasGradient[0].Level())
 
 	return gradients
 

@@ -39,4 +39,7 @@ func (o *OperationsCounter) Increment(){
 	o.current++
 	o.mu.Unlock()
 	fmt.Printf("\r%s %d/%d", o.name, o.current, o.total)
+	if o.current == o.total{
+		fmt.Printf("\n")
+	}
 }
