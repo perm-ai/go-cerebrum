@@ -17,8 +17,8 @@ import (
 
 func main() {
 
-	BATCH_SIZE := 2000
-	LEARNING_RATE := 0.25
+	BATCH_SIZE := 2500
+	LEARNING_RATE := 0.35
 	EPOCH := 1
 
 	keysChain := key.GenerateKeys(0, true, true)
@@ -34,7 +34,7 @@ func main() {
 	smx = activations.NewSoftmax(utils)
 
 	fmt.Println("Dense 1 generating")
-	dense1 := layers.NewDense(utils, 784, 32, &tanh, true, BATCH_SIZE, LEARNING_RATE, 2)
+	dense1 := layers.NewDense(utils, 784, 20, &tanh, true, BATCH_SIZE, LEARNING_RATE, 2)
 
 	fmt.Println("Dense 2 generating")
 	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 10, &smx, true, BATCH_SIZE, LEARNING_RATE, 2)
