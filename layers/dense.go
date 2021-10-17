@@ -231,7 +231,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 			go func(xIndex int, utils utility.Utils){
 				defer inputWg.Done()
-				gradients.InputGradient[xIndex] = d.utils.InterDotProduct(transposedWeight[xIndex], gradients.BiasGradient, true, true, nil)
+				gradients.InputGradient[xIndex] = d.utils.InterDotProduct(transposedWeight[xIndex], gradients.BiasGradient, !d.btspOutput[1], true, nil)
 			}(xi, d.utils.CopyWithClonedEval())
 			
 		}
