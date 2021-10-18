@@ -45,8 +45,8 @@ func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ck
 			defer xWg.Done()
 			batchX := make([]float64, batchSize)
 
-			for dataIdx := start; dataIdx < start+batchSize; dataIdx++ {
-				batchX[dataIdx] = m.RawData[dataIdx].Image[index]
+			for dataIdx := 0; dataIdx < batchSize; dataIdx++ {
+				batchX[dataIdx] = m.RawData[dataIdx+start].Image[index]
 			}
 
 			x[index] = utils.EncryptToLevel(batchX, 9)
@@ -64,8 +64,8 @@ func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ck
 			defer yWg.Done()
 			batchY := make([]float64, batchSize)
 
-			for dataIdx := start; dataIdx < start+batchSize; dataIdx++ {
-				batchY[dataIdx] = m.RawData[dataIdx].Label[index]
+			for dataIdx := 0; dataIdx < batchSize; dataIdx++ {
+				batchY[dataIdx] = m.RawData[dataIdx+start].Label[index]
 			}
 
 			y[index] = utils.EncryptToLevel(batchY, 9)
