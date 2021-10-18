@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"math"
+	"os"
 	"path"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -272,6 +273,15 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 			log.Log("Backward complete")
 
 			m.UpdateGradient(gradients1D, gradients2D, learningRate)
+
+			if i == 11 || i == 23{
+
+				dirName := fmt.Sprintf("test_model_e%d_b%d", e+1, i+1)
+				os.Mkdir(dirName, 0777)
+
+				m.ExportModel1D(dirName)
+
+			}
 	
 		}
 

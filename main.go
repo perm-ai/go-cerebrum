@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"os"
 
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/dataset"
@@ -19,13 +18,14 @@ func main() {
 
 	BATCH_SIZE := 2500
 	LEARNING_RATE := 0.35
-	EPOCH := 1
+	EPOCH := 3
 
 	keysChain := key.GenerateKeys(0, true, true)
 	utils := utility.NewUtils(keysChain, math.Pow(2, 35), 0, true)
 
 	fmt.Println("Loading Data")
-	loader := dataset.NewMnistLoaderSmallBatch(utils, "/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/mnist_handwritten_train.json", 1, BATCH_SIZE)
+	// loader := dataset.NewMnistLoaderSmallBatch(utils, "/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/mnist_handwritten_train.json", 1, BATCH_SIZE)
+	loader := dataset.NewMnistLoader(utils, "/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/mnist_handwritten_train.json")
 
 	var tanh activations.Activation
 	tanh = activations.NewTanh(utils)
@@ -55,8 +55,8 @@ func main() {
 
 	timer.LogTimeTakenSecond()
 
-	os.Mkdir("test_model_1", 0777)
+	// os.Mkdir("test_model_1", 0777)
 
-	model.ExportModel1D("test_model_1")
+	// model.ExportModel1D("test_model_1")
 
 }
