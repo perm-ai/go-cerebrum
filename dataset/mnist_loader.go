@@ -45,7 +45,7 @@ func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ck
 			defer xWg.Done()
 			batchX := make([]float64, batchSize)
 
-			for dataIdx := range m.RawData[start : start+batchSize] {
+			for dataIdx := start; dataIdx < start+batchSize; dataIdx++ {
 				batchX[dataIdx] = m.RawData[dataIdx].Image[index]
 			}
 
@@ -64,7 +64,7 @@ func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ck
 			defer yWg.Done()
 			batchY := make([]float64, batchSize)
 
-			for dataIdx := range m.RawData[start : start+batchSize] {
+			for dataIdx := start; dataIdx < start+batchSize; dataIdx++ {
 				batchY[dataIdx] = m.RawData[dataIdx].Label[index]
 			}
 
