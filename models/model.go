@@ -276,10 +276,12 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 			if i == 11 || i == 23{
 
+				exportTimer := logger.StartTimer("Export weighs & biases")
 				dirName := fmt.Sprintf("test_model_e%d_b%d", e+1, i+1)
 				os.Mkdir(dirName, 0777)
 
 				m.ExportModel1D(dirName)
+				exportTimer.LogTimeTakenSecond()
 
 			}
 	
