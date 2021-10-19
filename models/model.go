@@ -274,7 +274,7 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 			m.UpdateGradient(gradients1D, gradients2D, learningRate)
 
-			if i == 5 || i == 11 || i == 17 || i == 23{
+			if (i + 1) % 3 == 0 && i != 0{
 
 				exportTimer := logger.StartTimer("Export weighs & biases")
 				dirName := fmt.Sprintf("test_model_e%d_b%d", e+1, i+1)

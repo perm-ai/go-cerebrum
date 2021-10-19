@@ -17,7 +17,7 @@ import (
 func main() {
 
 	BATCH_SIZE := 2500
-	LEARNING_RATE := 0.35
+	LEARNING_RATE := 0.25
 	EPOCH := 3
 
 	keysChain := key.GenerateKeys(0, true, true)
