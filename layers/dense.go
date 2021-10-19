@@ -604,7 +604,7 @@ type denseWeight struct {
 	Bias   []float64
 }
 
-func (d *Dense) LoadWeights(filename string){
+func (d *Dense) LoadWeights(filename string, weightLevel int){
 	
 	jsonFile, _ := os.Open(filename)
 	defer jsonFile.Close()
@@ -612,6 +612,8 @@ func (d *Dense) LoadWeights(filename string){
 
 	var data denseWeight
 	json.Unmarshal([]byte(file), &data)
+
+	counter := logger.NewOperationsCounter("Load weight", (d.InputUnit * d.OutputUnit) + d.OutputUnit)
 
 	var wg sync.WaitGroup
 
@@ -631,12 +633,14 @@ func (d *Dense) LoadWeights(filename string){
 
 				go func(weightIndex int, weightUtils utility.Utils){
 					defer weightWg.Done()
-					d.Weights[nodeIndex][weightIndex] = weightUtils.EncryptToPointer(weightUtils.GenerateFilledArraySize(data.Weight[nodeIndex][weightIndex], d.batchSize))
+					d.Weights[nodeIndex][weightIndex] = weightUtils.EncryptToLevel(weightUtils.GenerateFilledArraySize(data.Weight[nodeIndex][weightIndex], d.batchSize), weightLevel)
+					counter.Increment()
 				}(w, nodeUtils.CopyWithClonedEncryptor())
 	
 			}
 	
-			d.Bias[nodeIndex] = nodeUtils.EncryptToPointer(nodeUtils.GenerateFilledArraySize(data.Bias[nodeIndex], d.batchSize))
+			d.Bias[nodeIndex] = nodeUtils.EncryptToLevel(nodeUtils.GenerateFilledArraySize(data.Bias[nodeIndex], d.batchSize), weightLevel)
+			counter.Increment()
 
 			weightWg.Wait()
 
