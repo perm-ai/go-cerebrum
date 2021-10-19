@@ -35,9 +35,11 @@ func main() {
 
 	fmt.Println("Dense 1 generating")
 	dense1 := layers.NewDense(utils, 784, 20, &tanh, true, BATCH_SIZE, LEARNING_RATE, 2)
+	dense1.LoadWeights("/usr/local/go/src/github.com/perm-ai/go-cerebrum/test_model_e1_b6/layer_0.json")
 
 	fmt.Println("Dense 2 generating")
 	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 10, &smx, true, BATCH_SIZE, LEARNING_RATE, 2)
+	dense1.LoadWeights("/usr/local/go/src/github.com/perm-ai/go-cerebrum/test_model_e1_b6/layer_1.json")
 
 	dense1.SetBootstrapOutput(true, "forward")
 
@@ -51,7 +53,8 @@ func main() {
 
 	timer := logger.StartTimer("Neural Network Training")
 
-	model.Train1D(loader, LEARNING_RATE, BATCH_SIZE, EPOCH)
+	// model.Train1D(loader, LEARNING_RATE, BATCH_SIZE, EPOCH)
+	model.Train1DFrom(loader, LEARNING_RATE, BATCH_SIZE, EPOCH, 1, 6)
 
 	timer.LogTimeTakenSecond()
 

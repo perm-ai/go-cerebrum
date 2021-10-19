@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"os"
 	"sync"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -601,6 +602,50 @@ func (d *Dense) SetWeightLevel(lvl int) {
 type denseWeight struct {
 	Weight [][]float64
 	Bias   []float64
+}
+
+func (d *Dense) LoadWeights(filename string){
+	
+	jsonFile, _ := os.Open(filename)
+	defer jsonFile.Close()
+	file, _ := ioutil.ReadAll(jsonFile)
+
+	var data denseWeight
+	json.Unmarshal([]byte(file), &data)
+
+	var wg sync.WaitGroup
+
+	for node := range data.Weight {
+
+		wg.Add(1)
+
+		go func(nodeIndex int, nodeUtils utility.Utils){
+
+			defer wg.Done()
+
+			var weightWg sync.WaitGroup
+
+			for w := range data.Weight[nodeIndex] {
+
+				weightWg.Add(1)
+
+				go func(weightIndex int, weightUtils utility.Utils){
+					defer weightWg.Done()
+					d.Weights[nodeIndex][weightIndex] = weightUtils.EncryptToPointer(weightUtils.GenerateFilledArraySize(data.Weight[nodeIndex][weightIndex], d.batchSize))
+				}(w, nodeUtils.CopyWithClonedEncryptor())
+	
+			}
+	
+			d.Bias[nodeIndex] = nodeUtils.EncryptToPointer(nodeUtils.GenerateFilledArraySize(data.Bias[nodeIndex], d.batchSize))
+
+			weightWg.Wait()
+
+		}(node, d.utils.CopyWithClonedEncryptor())
+
+	}
+
+	wg.Wait()
+
 }
 
 func (d *Dense) ExportWeights(filename string) {

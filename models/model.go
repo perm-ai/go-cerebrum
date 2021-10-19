@@ -291,6 +291,54 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 }
 
+func (m *Model) Train1DFrom(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int, startEpoch int, startBatch int) {
+
+	totalBatch := int(dataLoader.GetLength()/batchSize)
+	log := logger.NewLogger(true)
+
+	for e := 0; e < epoch; e++{
+
+		for i := 0; i < totalBatch; i++ {
+
+			log.Log(fmt.Sprintf("Epoch : %d/%d\t\tBatch : %d/%d", e+1, epoch, i+1, totalBatch))
+
+			if e + 1 <= startEpoch{
+				if i + 1 <= startBatch{
+					continue
+				}
+			}
+
+			x, y := dataLoader.Load1D(i*batchSize, batchSize)
+
+			log.Log("Data loaded")
+	
+			outputs2D, outputs1D := m.Forward([][][]*ckks.Ciphertext{}, x)
+			
+			log.Log("Forward complete")
+
+			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
+
+			log.Log("Backward complete")
+
+			m.UpdateGradient(gradients1D, gradients2D, learningRate)
+
+			if (i + 1) % 3 == 0 && i != 0{
+
+				exportTimer := logger.StartTimer("Export weighs & biases")
+				dirName := fmt.Sprintf("test_model_e%d_b%d", e+1, i+1)
+				os.Mkdir(dirName, 0777)
+
+				m.ExportModel1D(dirName)
+				exportTimer.LogTimeTakenSecond()
+
+			}
+	
+		}
+
+	}
+
+}
+
 func (m Model) ExportModel1D(dirPath string){
 
 	for layer := range m.Layers1d{
