@@ -396,7 +396,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						gradData := []float64{0, 0, 0}
 
 						// DEBUG start
-						if nodeIndex == 7 && weightIndex == 570{
+						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
 							weightUtils = weightUtils.CopyWithClonedDecryptor()
 							weightData = []float64{weightUtils.Decrypt(d.Weights[nodeIndex][weightIndex])[0], float64(d.Weights[nodeIndex][weightIndex].Level()), d.Weights[nodeIndex][weightIndex].Scale}
 							gradData = []float64{weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0], float64(gradient.WeightGradient[nodeIndex][weightIndex].Level()), gradient.WeightGradient[nodeIndex][weightIndex].Scale}
@@ -407,7 +407,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						weightUtils.Sub(d.Weights[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex], d.Weights[nodeIndex][weightIndex])
 
 						// DEBUG start
-						if nodeIndex == 7 && weightIndex == 570{
+						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
 							res := weightUtils.Decrypt(d.Weights[nodeIndex][weightIndex])[0]
 							fmt.Printf("SGD Sample: %f (L: %f, S: %f) - %f (L: %f, S: %f) = %f (L: %f, S: %f)\n", weightData[0], weightData[1], weightData[2], gradData[0], gradData[1], gradData[2], res, float64(d.Weights[nodeIndex][weightIndex].Level()), d.Weights[nodeIndex][weightIndex].Scale)
 						}
