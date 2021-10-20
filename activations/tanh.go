@@ -70,7 +70,7 @@ func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 	output := make([]*ckks.Ciphertext, len(input))
 	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 
-	deg2Coeff := t.U.EncodePlaintextFromArrayScale(t.U.GenerateFilledArray(-0.02256), math.Pow(2, 30))
+	deg2Coeff := t.U.EncodePlaintextFromArrayScale(t.U.GenerateFilledArraySize(-0.02256, inputLength), math.Pow(2, 30))
 	deg0 := t.U.Encoder.EncodeNTTNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.LogSlots())
 
 	for i := range input {
