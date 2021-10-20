@@ -219,7 +219,19 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	}
 	
 	timer := logger.StartTimer(fmt.Sprintf("Backward (%d) outer", d.InputUnit))
+
+	if d.InputUnit == 20 {
+		b := d.utils.Decrypt(gradients.BiasGradient[7])
+		inp := d.utils.Decrypt(input[10])
+		fmt.Printf("Backward (%d) sample: %f x %f = ", d.InputUnit, b[0:21], inp[0:21])
+	}
+
 	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input, true)
+
+	if d.InputUnit == 20 {
+		fmt.Printf("%f\n", d.utils.Decrypt(gradients.WeightGradient[7][10])[0:21])
+	}
+	
 	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
@@ -384,7 +396,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						// DEBUG start
 						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
 							weightUtils = weightUtils.CopyWithClonedDecryptor()
-							fmt.Printf("SGD Sample pre-sum: %f", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:25])
+							fmt.Printf("\nSGD Sample pre-sum: %f\n", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:25])
 						}
 						// DEBUG end
 
@@ -394,7 +406,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						// DEBUG start
 						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
 							weightUtils = weightUtils.CopyWithClonedDecryptor()
-							fmt.Printf("SGD Sample post-sum: %f", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:5])
+							fmt.Printf("\nSGD Sample post-sum: %f\n", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:5])
 						}
 						// DEBUG end
 
