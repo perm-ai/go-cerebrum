@@ -64,7 +64,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 			weights[nodeIndex] = make([]*ckks.Ciphertext, inputUnit)
 
 			if useBias {
-				bias[nodeIndex] = u.EncryptToLevel(u.GenerateFilledArraySize(0, batchSize), weightLevel)
+				bias[nodeIndex] = u.EncryptToLevelScale(u.GenerateFilledArraySize(0, batchSize), weightLevel, math.Pow(2,40))
 				counter.Increment()
 			}
 
@@ -76,7 +76,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 				go func(weightIndex int, wUtils utility.Utils) {
 					defer weightWg.Done()
-					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevel(u.GenerateFilledArraySize(randomWeight[weightIndex], batchSize), weightLevel)
+					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevelScale(u.GenerateFilledArraySize(randomWeight[weightIndex], batchSize), weightLevel, math.Pow(2,40))
 					counter.Increment()
 				}(weight, u.CopyWithClonedEncryptor())
 
@@ -381,8 +381,22 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 							weightUtils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level() - (d.weightLevel + 1))
 						}
 
+						// DEBUG start
+						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
+							weightUtils = weightUtils.CopyWithClonedDecryptor()
+							fmt.Printf("SGD Sample pre-sum: %f", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:25])
+						}
+						// DEBUG end
+
 						// Perform Ciphertext inner sum and average
 						weightUtils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
+
+						// DEBUG start
+						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
+							weightUtils = weightUtils.CopyWithClonedDecryptor()
+							fmt.Printf("SGD Sample post-sum: %f", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:5])
+						}
+						// DEBUG end
 
 						rescale := true
 						if gradient.WeightGradient[nodeIndex][weightIndex].Level() == d.weightLevel{
@@ -397,7 +411,6 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 						// DEBUG start
 						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
-							weightUtils = weightUtils.CopyWithClonedDecryptor()
 							weightData = []float64{weightUtils.Decrypt(d.Weights[nodeIndex][weightIndex])[0], float64(d.Weights[nodeIndex][weightIndex].Level()), d.Weights[nodeIndex][weightIndex].Scale}
 							gradData = []float64{weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0], float64(gradient.WeightGradient[nodeIndex][weightIndex].Level()), gradient.WeightGradient[nodeIndex][weightIndex].Scale}
 						}

@@ -269,6 +269,18 @@ func (u Utils) EncryptToLevel(value []float64, level int) *ckks.Ciphertext {
 
 }
 
+func (u Utils) EncryptToLevelScale(value []float64, level int, scale float64) *ckks.Ciphertext {
+
+	// Encode value
+	plaintext := u.EncodeToScale(value, scale)
+
+	// Encrypt value
+	ciphertext := ckks.NewCiphertext(u.Params, 1, level, scale)
+	u.Encryptor.Encrypt(&plaintext, ciphertext)
+
+	return ciphertext
+
+}
 
 func (u Utils) Decrypt(ciphertext *ckks.Ciphertext) []float64 {
 
