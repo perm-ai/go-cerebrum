@@ -113,9 +113,23 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 			defer wg.Done()
 			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], !d.btspOutput[0], true, &dotProductCounter)
 
+			// DEBUG start
+			if nodeIndex == 0{
+				dutils := utils.CopyWithClonedDecryptor()
+				fmt.Printf("Forward (%d) post dot sample: %f (L: %d | S: %f)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale)
+			}
+			// DEBUG end
+
 			if len(d.Bias) != 0 {
 				utils.Add(output[nodeIndex], d.Bias[nodeIndex], output[nodeIndex])
 			}
+
+			// DEBUG start
+			if nodeIndex == 0{
+				dutils := utils.CopyWithClonedDecryptor()
+				fmt.Printf("Forward (%d) post bias sample: %f (L: %d | S: %f)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale)
+			}
+			// DEBUG end
 		}(node, d.utils.CopyWithClonedEval())
 
 	}
@@ -131,7 +145,8 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 		d.utils.Bootstrap1dInPlace(output, true)
 
-		// Debug
+		// DEBUG start
+		fmt.Printf("Forward (%d) post btp sample: %f (L: %d | S: %f)\n", d.InputUnit, d.utils.Decrypt(output[0])[0:5], output[0].Level(), output[0].Scale)
 		timer.LogTimeTakenSecond()
 
 	}
@@ -140,6 +155,9 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 		timer = logger.StartTimer(fmt.Sprintf("Forward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
+
+		// DEBUG start
+		fmt.Printf("Forward (%d) activated sample: %f (L: %d | S: %f)\n", d.InputUnit, d.utils.Decrypt(activatedOutput[0])[0:5], activatedOutput[0].Level(), activatedOutput[0].Scale)
 		timer.LogTimeTakenSecond()
 
 		if d.btspActivation[0] {
