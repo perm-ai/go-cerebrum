@@ -34,7 +34,7 @@ func main() {
 	smx = activations.NewSoftmax(utils)
 
 	fmt.Println("Dense 1 generating")
-	dense1 := layers.NewDense(utils, 784, 20, &tanh, true, BATCH_SIZE, LEARNING_RATE, 2)
+	dense1 := layers.NewDense(utils, 784, 2, &tanh, true, BATCH_SIZE, LEARNING_RATE, 2)
 	// dense1.LoadWeights("/usr/local/go/src/github.com/perm-ai/go-cerebrum/test_model_e1_b6/layer_0.json", 2)
 
 	fmt.Println("Dense 2 generating")

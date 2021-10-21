@@ -362,14 +362,16 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 							idealRescaleScale := (d.utils.Scale * math.Pow(2, 40))
 							if averagedLrBias.Scale > idealRescaleScale{
 								utils.Evaluator.Rescale(averagedLrBias, d.utils.Scale, averagedLrBias)
+								if nodeIndex == 0{
+									fmt.Printf("\nSGD bias gradient updated scale (no upscale): %f\n", averagedLrBias.Scale)
+								}
 							} else {
 								scaleUpBy := idealRescaleScale / averagedLrBias.Scale
 								utils.Evaluator.ScaleUp(averagedLrBias, scaleUpBy, averagedLrBias)
 								utils.Evaluator.Rescale(averagedLrBias, d.utils.Scale, averagedLrBias)
-							}
-
-							if nodeIndex == 0{
-								fmt.Printf("\nSGD weight gradient updated scale: %f\n", averagedLrBias.Scale)
+								if nodeIndex == 0{
+									fmt.Printf("\nSGD bias gradient updated scale (upscaled): %f\n", averagedLrBias.Scale)
+								}
 							}
 
 						}
@@ -446,12 +448,18 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 							fmt.Printf("\nSGD Sample post-sum: %f\n", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:5])
 						}
 						if nodeIndex == 0 && weightIndex == 500{
-							fmt.Printf("\nSGD weight gradient scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+							fmt.Printf("\nSGD weight gradient pre avg scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
 						}
 						// DEBUG end
 
 						// Multiply with average scale
 						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], batchAverager, gradient.WeightGradient[nodeIndex][weightIndex], false, false)
+
+						// DEBUG start
+						if nodeIndex == 0 && weightIndex == 500{
+							fmt.Printf("\nSGD weight gradient post avg scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+						}
+						// DEBUG end
 
 						// Ensure same scale
 						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.Weights[nodeIndex][weightIndex].Level() && gradient.WeightGradient[nodeIndex][weightIndex].Scale > d.utils.Scale{
@@ -459,14 +467,18 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 							idealRescaleScale := (d.utils.Scale * math.Pow(2, 40))
 							if gradient.WeightGradient[nodeIndex][weightIndex].Scale > idealRescaleScale{
 								utils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
+
+								if nodeIndex == 0 && weightIndex == 10{
+									fmt.Printf("\nSGD weight gradient updated scale (No scale up): %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+								}
 							} else {
 								scaleUpBy := idealRescaleScale / gradient.WeightGradient[nodeIndex][weightIndex].Scale
 								utils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], scaleUpBy, gradient.WeightGradient[nodeIndex][weightIndex])
 								utils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
-							}
 
-							if nodeIndex == 0 && weightIndex == 10{
-								fmt.Printf("\nSGD weight gradient updated scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+								if nodeIndex == 0 && weightIndex == 10{
+									fmt.Printf("\nSGD weight gradient updated scale (Scaled up): %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+								}
 							}
 
 						}
