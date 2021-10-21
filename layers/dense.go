@@ -111,12 +111,13 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 		go func(nodeIndex int, utils utility.Utils) {
 			defer wg.Done()
-			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], !d.btspOutput[0], true, &dotProductCounter)
+			rescaleDot := (!d.btspOutput[0] || d.Weights[nodeIndex][0].Scale * input[0].Scale > math.Pow(2, 75))
+			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], rescaleDot, true, &dotProductCounter)
 
 			// DEBUG start
 			if nodeIndex == 0{
 				dutils := utils.CopyWithClonedDecryptor()
-				fmt.Printf("Forward (%d) post dot sample: %f (L: %d | S: %f)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale)
+				fmt.Printf("Forward (%d) post dot sample: %f (L: %d | S: %f | R: %t)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale, rescaleDot)
 			}
 			// DEBUG end
 
