@@ -117,11 +117,24 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 
 			if prevLayerHasActivation {
 				prevOut = output1D[layer].ActivationOutput
+				fmt.Println("Using activated output for forward propagation")
 			} else {
 				prevOut = output1D[layer].Output
 			}
 
+			// DEBUG start
+			if layer == 1{
+				fmt.Printf("Forward (20) prev out: %f\n", m.utils.Decrypt(prevOut[0])[0:5])
+			}
+			// DEBUG end
+
 			output1D[layer+1] = m.Layers1d[layer].Forward(utility.Clone1dCiphertext(prevOut))
+
+			// DEBUG start
+			if layer == 1{
+				fmt.Printf("Forward (20) prev out: %f\n", m.utils.Decrypt(prevOut[0])[0:5])
+			}
+			// DEBUG end
 
 			prevLayerHasActivation = m.Layers1d[layer].HasActivation()
 
@@ -169,8 +182,15 @@ func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, 
 			if layer != 0 {
 				if m.Layers1d[layer-1].HasActivation() {
 					layerInput = output1D[layer].ActivationOutput
+					fmt.Println("Using activated output from previous layer for backward prop")
 				}
 			}
+
+			// DEBUG start
+			if layer == 1{
+				fmt.Printf("Backward input layer 2: %f\t%f\n", m.utils.Decrypt(layerInput[0])[0:5], m.utils.Decrypt(output1D[layer].ActivationOutput[0])[0:5])
+			}
+			// DEBUG end
 
 			// Get layer's output
 			layerOutput := output1D[layer+1].Output
