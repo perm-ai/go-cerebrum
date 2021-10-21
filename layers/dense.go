@@ -446,6 +446,8 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 								utils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
 							}
 
+							fmt.Printf("\nSGD weight gradient updated scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+
 						}
 
 						// DEBUG start
