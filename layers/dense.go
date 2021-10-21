@@ -111,13 +111,12 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 		go func(nodeIndex int, utils utility.Utils) {
 			defer wg.Done()
-			rescaleDot := (!d.btspOutput[0] || d.Weights[nodeIndex][0].Scale * input[0].Scale > math.Pow(2, 75))
-			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], rescaleDot, true, &dotProductCounter)
+			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], !d.btspOutput[0], true, &dotProductCounter)
 
 			// DEBUG start
 			if nodeIndex == 0{
 				dutils := utils.CopyWithClonedDecryptor()
-				fmt.Printf("Forward (%d) post dot sample: %f (L: %d | S: %f | R: %t)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale, rescaleDot)
+				fmt.Printf("Forward (%d) post dot sample: %f (L: %d | S: %f)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale)
 			}
 			// DEBUG end
 
@@ -355,7 +354,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						}
 
 						biasUtils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
-						averagedLrBias := biasUtils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], batchAverager, true, false)
+						averagedLrBias := biasUtils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], batchAverager, false, false)
 						biasUtils.Sub(d.Bias[nodeIndex], averagedLrBias, d.Bias[nodeIndex])
 						counter.Increment()
 					}
@@ -427,20 +426,31 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 							weightUtils = weightUtils.CopyWithClonedDecryptor()
 							fmt.Printf("\nSGD Sample post-sum: %f\n", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:5])
 						}
+						if nodeIndex == 0 && weightIndex == 500{
+							fmt.Printf("\nSGD weight gradient scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
+						}
 						// DEBUG end
 
-						rescale := true
-						if gradient.WeightGradient[nodeIndex][weightIndex].Level() == d.weightLevel{
-							rescale = false
+						// Multiply with average scale
+						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], batchAverager, gradient.WeightGradient[nodeIndex][weightIndex], false, false)
+
+						// Ensure same scale
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.Weights[nodeIndex][weightIndex].Level() && gradient.WeightGradient[nodeIndex][weightIndex].Scale > d.utils.Scale{
+
+							idealRescaleScale := (d.utils.Scale * math.Pow(2, 40))
+							if gradient.WeightGradient[nodeIndex][weightIndex].Scale > idealRescaleScale{
+								utils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
+							} else {
+								scaleUpBy := idealRescaleScale / gradient.WeightGradient[nodeIndex][weightIndex].Scale
+								utils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], scaleUpBy, gradient.WeightGradient[nodeIndex][weightIndex])
+								utils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
+							}
+
 						}
 
-						// Multiply with average scale
-						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], batchAverager, gradient.WeightGradient[nodeIndex][weightIndex], rescale, false)
-
+						// DEBUG start
 						weightData := []float64{0, 0, 0}
 						gradData := []float64{0, 0, 0}
-
-						// DEBUG start
 						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
 							weightData = []float64{weightUtils.Decrypt(d.Weights[nodeIndex][weightIndex])[0], float64(d.Weights[nodeIndex][weightIndex].Level()), d.Weights[nodeIndex][weightIndex].Scale}
 							gradData = []float64{weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0], float64(gradient.WeightGradient[nodeIndex][weightIndex].Level()), gradient.WeightGradient[nodeIndex][weightIndex].Scale}
