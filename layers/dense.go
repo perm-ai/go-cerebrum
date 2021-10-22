@@ -29,7 +29,7 @@ type Dense struct {
 	btspActivation []bool
 	batchSize      int
 	weightLevel    int
-	lr			   float64
+	lr             float64
 }
 
 func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int, lr float64, weightLevel int) Dense {
@@ -47,7 +47,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 		weightStdDev = math.Sqrt(1.0 / float64(inputUnit+outputUnit))
 	}
 
-	counter := logger.NewOperationsCounter("Initializing weight", inputUnit*outputUnit + outputUnit)
+	counter := logger.NewOperationsCounter("Initializing weight", inputUnit*outputUnit+outputUnit)
 
 	var wg sync.WaitGroup
 
@@ -60,11 +60,11 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 			defer wg.Done()
 
-			randomWeight := utils.GenerateRandomNormalArraySeed(inputUnit, weightStdDev, inputUnit + nodeIndex)
+			randomWeight := utils.GenerateRandomNormalArraySeed(inputUnit, weightStdDev, inputUnit+nodeIndex)
 			weights[nodeIndex] = make([]*ckks.Ciphertext, inputUnit)
 
 			if useBias {
-				bias[nodeIndex] = u.EncryptToLevelScale(u.GenerateFilledArraySize(0, batchSize), weightLevel, math.Pow(2,40))
+				bias[nodeIndex] = u.EncryptToLevelScale(u.GenerateFilledArraySize(0, batchSize), weightLevel, math.Pow(2, 40))
 				counter.Increment()
 			}
 
@@ -76,7 +76,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 				go func(weightIndex int, wUtils utility.Utils) {
 					defer weightWg.Done()
-					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevelScale(u.GenerateFilledArraySize(randomWeight[weightIndex], batchSize), weightLevel, math.Pow(2,40))
+					weights[nodeIndex][weightIndex] = wUtils.EncryptToLevelScale(u.GenerateFilledArraySize(randomWeight[weightIndex], batchSize), weightLevel, math.Pow(2, 40))
 					counter.Increment()
 				}(weight, u.CopyWithClonedEncryptor())
 
@@ -103,7 +103,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	// DEBUG
 	timer := logger.StartTimer(fmt.Sprintf("Forward (%d) dot product", d.InputUnit))
-	dotProductCounter := logger.NewOperationsCounter(fmt.Sprintf("Forward propagating (%d) multiplying", d.InputUnit), d.InputUnit * d.OutputUnit)
+	dotProductCounter := logger.NewOperationsCounter(fmt.Sprintf("Forward propagating (%d) multiplying", d.InputUnit), d.InputUnit*d.OutputUnit)
 
 	for node := range d.Weights {
 
@@ -113,23 +113,10 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 			defer wg.Done()
 			output[nodeIndex] = utils.InterDotProduct(input, d.Weights[nodeIndex], !d.btspOutput[0], true, &dotProductCounter)
 
-			// DEBUG start
-			if nodeIndex == 0{
-				dutils := utils.CopyWithClonedDecryptor()
-				fmt.Printf("Forward (%d) post dot sample: %f (L: %d | S: %f)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale)
-			}
-			// DEBUG end
-
 			if len(d.Bias) != 0 {
 				utils.Add(output[nodeIndex], d.Bias[nodeIndex], output[nodeIndex])
 			}
 
-			// DEBUG start
-			if nodeIndex == 0{
-				dutils := utils.CopyWithClonedDecryptor()
-				fmt.Printf("Forward (%d) post bias sample: %f (L: %d | S: %f)\n", d.InputUnit, dutils.Decrypt(output[nodeIndex])[0:5], output[nodeIndex].Level(), output[nodeIndex].Scale)
-			}
-			// DEBUG end
 		}(node, d.utils.CopyWithClonedEval())
 
 	}
@@ -145,8 +132,6 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 		d.utils.Bootstrap1dInPlace(output, true)
 
-		// DEBUG start
-		fmt.Printf("Forward (%d) post btp sample: %f (L: %d | S: %f)\n", d.InputUnit, d.utils.Decrypt(output[0])[0:5], output[0].Level(), output[0].Scale)
 		timer.LogTimeTakenSecond()
 
 	}
@@ -156,8 +141,6 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 		timer = logger.StartTimer(fmt.Sprintf("Forward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
 
-		// DEBUG start
-		fmt.Printf("Forward (%d) activated sample: %f (L: %d | S: %f)\n", d.InputUnit, d.utils.Decrypt(activatedOutput[0])[0:5], activatedOutput[0].Level(), activatedOutput[0].Scale)
 		timer.LogTimeTakenSecond()
 
 		if d.btspActivation[0] {
@@ -204,7 +187,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 				d.utils.Bootstrap1dInPlace(activationGradient, true)
 				hasBootstrapped = true
-				
+
 			}
 
 			var wg sync.WaitGroup
@@ -235,7 +218,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	} else {
 		gradients.BiasGradient = gradient
 	}
-	
+
 	timer := logger.StartTimer(fmt.Sprintf("Backward (%d) outer", d.InputUnit))
 
 	if d.InputUnit == 20 {
@@ -249,7 +232,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 	if d.InputUnit == 20 {
 		fmt.Printf("%f\n", d.utils.Decrypt(gradients.WeightGradient[7][10])[0:21])
 	}
-	
+
 	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
@@ -264,11 +247,11 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		for xi := range transposedWeight {
 			inputWg.Add(1)
 
-			go func(xIndex int, utils utility.Utils){
+			go func(xIndex int, utils utility.Utils) {
 				defer inputWg.Done()
 				gradients.InputGradient[xIndex] = d.utils.InterDotProduct(transposedWeight[xIndex], gradients.BiasGradient, !d.btspOutput[1], true, nil)
 			}(xi, d.utils.CopyWithClonedEval())
-			
+
 		}
 
 		inputWg.Wait()
@@ -295,11 +278,11 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
-	avgScale := lr/float64(d.batchSize)
+	avgScale := lr / float64(d.batchSize)
 	batchAverager := d.utils.EncodePlaintextFromArray(d.utils.GenerateFilledArraySize(avgScale, d.batchSize))
 
-	bootstrapGradient := gradient.WeightGradient[0][0].Level() - 1 < d.weightLevel 
-	ciphertextNeeded := int(math.Ceil(float64(d.InputUnit * d.OutputUnit) / float64(d.utils.Params.Slots())))
+	bootstrapGradient := gradient.WeightGradient[0][0].Level()-1 < d.weightLevel
+	ciphertextNeeded := int(math.Ceil(float64(d.InputUnit*d.OutputUnit) / float64(d.utils.Params.Slots())))
 	weightToBootstrap := make([]utility.SafeSum, ciphertextNeeded)
 	biasToBootstrap := utility.SafeSum{}
 
@@ -307,7 +290,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 	var wg sync.WaitGroup
 
 	averageTimer := logger.StartTimer(fmt.Sprintf("SGD gradient filtering and averaging (%d)", d.InputUnit))
-	counter := logger.NewOperationsCounter(fmt.Sprintf("SGD (%d)", d.InputUnit), (d.InputUnit * d.OutputUnit) + d.OutputUnit)
+	counter := logger.NewOperationsCounter(fmt.Sprintf("SGD (%d)", d.InputUnit), (d.InputUnit*d.OutputUnit)+d.OutputUnit)
 
 	for node := range d.Weights {
 
@@ -330,12 +313,12 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 					if bootstrapGradient {
 
-						if gradient.BiasGradient[nodeIndex].Level() > 2{
-							utils.Evaluator.DropLevel(gradient.BiasGradient[nodeIndex], gradient.BiasGradient[nodeIndex].Level() - 2)
+						if gradient.BiasGradient[nodeIndex].Level() > 2 {
+							utils.Evaluator.DropLevel(gradient.BiasGradient[nodeIndex], gradient.BiasGradient[nodeIndex].Level()-2)
 						}
 
 						biasUtils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
-						
+
 						// Generate averager
 						encoder := ckks.NewEncoder(biasUtils.Params)
 						plain := make([]complex128, biasUtils.Params.Slots())
@@ -350,53 +333,33 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 					} else {
 
 						// Ensure same scale
-						if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel + 1{
+						if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel+1 {
 							currentScale := gradient.BiasGradient[nodeIndex].Scale
 							idealScale := math.Pow(2, 40)
-							if currentScale > idealScale{
+							if currentScale > idealScale {
 
 								// TODO: cover more cases using while loop
-								
-								if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel + 2 && currentScale < math.Pow(2, 80){
-									biasUtils.Evaluator.ScaleUp(gradient.BiasGradient[nodeIndex], (idealScale * math.Pow(2, 40))/currentScale, gradient.BiasGradient[nodeIndex])
-									biasUtils.Evaluator.Rescale(gradient.BiasGradient[nodeIndex], d.utils.Scale, gradient.BiasGradient[nodeIndex])
 
-									if nodeIndex == 0{
-										fmt.Printf("\nSGD bias gradient updated scale (higher than ideal): %f\n", gradient.BiasGradient[nodeIndex].Scale)
-									}
+								if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel+2 && currentScale < math.Pow(2, 80) {
+									biasUtils.Evaluator.ScaleUp(gradient.BiasGradient[nodeIndex], (idealScale*math.Pow(2, 40))/currentScale, gradient.BiasGradient[nodeIndex])
+									biasUtils.Evaluator.Rescale(gradient.BiasGradient[nodeIndex], d.utils.Scale, gradient.BiasGradient[nodeIndex])
 								}
-								
+
 							} else if currentScale < idealScale {
 								scaleUpBy := idealScale / currentScale
 								biasUtils.Evaluator.ScaleUp(gradient.BiasGradient[nodeIndex], scaleUpBy, gradient.BiasGradient[nodeIndex])
-
-								if nodeIndex == 0 {
-									fmt.Printf("\nSGD bias gradient updated scale (lower than ideal): %f\n", gradient.BiasGradient[nodeIndex].Scale)
-								}
 							}
 
 						}
 
-						if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel + 1 {
-							biasUtils.Evaluator.DropLevel(gradient.BiasGradient[nodeIndex], gradient.BiasGradient[nodeIndex].Level() - (d.weightLevel + 1))
+						if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel+1 {
+							biasUtils.Evaluator.DropLevel(gradient.BiasGradient[nodeIndex], gradient.BiasGradient[nodeIndex].Level()-(d.weightLevel+1))
 						}
 
 						biasUtils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
+
 						averagedLrBias := biasUtils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], batchAverager, false, false)
-
-						// DEBUG start
-						if nodeIndex == 0{
-							fmt.Printf("\nSGD bias gradient post avg scale: %f\n", averagedLrBias.Scale)
-						}
-						// DEBUG end
-
 						biasUtils.Evaluator.Rescale(averagedLrBias, biasUtils.Scale/2, averagedLrBias)
-
-						// DEBUG start
-						if nodeIndex == 0{
-							fmt.Printf("\nSGD bias gradient post avg rescale scale: %f\n", averagedLrBias.Scale)
-						}
-						// DEBUG end
 
 						biasUtils.Sub(d.Bias[nodeIndex], averagedLrBias, d.Bias[nodeIndex])
 						counter.Increment()
@@ -416,7 +379,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 				go func(weightIndex int, weightUtils utility.Utils) {
 
 					defer weightWg.Done()
-					
+
 					// Bootstrap if gradient's level is lower than it's suppose to be
 					if bootstrapGradient {
 
@@ -426,8 +389,8 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						}
 
 						// Drop level to make computation faster if possible
-						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > 2{
-							utils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level() - 2)
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > 2 {
+							utils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level()-2)
 						}
 
 						weightUtils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
@@ -450,93 +413,39 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 					} else {
 
 						// Ensure same scale
-						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel + 1{
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+1 {
 							currentScale := gradient.WeightGradient[nodeIndex][weightIndex].Scale
 							idealScale := math.Pow(2, 40)
-							if currentScale > idealScale{
+							if currentScale > idealScale {
 
 								// TODO: cover more cases using while loop
-								
-								if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel + 2 && currentScale < math.Pow(2, 80){
-									weightUtils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], (idealScale * math.Pow(2, 40))/currentScale, gradient.WeightGradient[nodeIndex][weightIndex])
-									weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
 
-									if nodeIndex == 0 && weightIndex == 10{
-										fmt.Printf("\nSGD weight gradient updated scale (higher than ideal): %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
-									}
+								if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+2 && currentScale < math.Pow(2, 80) {
+									weightUtils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], (idealScale*math.Pow(2, 40))/currentScale, gradient.WeightGradient[nodeIndex][weightIndex])
+									weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
 								}
-								
+
 							} else if currentScale < idealScale {
 								scaleUpBy := idealScale / currentScale
 								weightUtils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], scaleUpBy, gradient.WeightGradient[nodeIndex][weightIndex])
-
-								if nodeIndex == 0 && weightIndex == 10{
-									fmt.Printf("\nSGD weight gradient updated scale (lower than ideal): %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
-								}
 							}
 
 						}
 
 						// Drop level to minimum requirement + 1 for faster evaluation
-						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel + 1{
-							weightUtils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level() - (d.weightLevel + 1))
+						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+1 {
+							weightUtils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level()-(d.weightLevel+1))
 						}
-
-						// DEBUG start
-						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
-							weightUtils = weightUtils.CopyWithClonedDecryptor()
-							fmt.Printf("\nSGD Sample pre-sum: %f\n", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:25])
-						}
-						// DEBUG end
 
 						// Perform Ciphertext inner sum and average
 						weightUtils.SumElementsInPlace(gradient.WeightGradient[nodeIndex][weightIndex])
 
-						// DEBUG start
-						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
-							weightUtils = weightUtils.CopyWithClonedDecryptor()
-							fmt.Printf("\nSGD Sample post-sum: %f\n", weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0:5])
-						}
-						if nodeIndex == 0 && weightIndex == 500{
-							fmt.Printf("\nSGD weight gradient pre avg scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
-						}
-						// DEBUG end
-
 						// Multiply with average scale
 						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], batchAverager, gradient.WeightGradient[nodeIndex][weightIndex], false, false)
-
-						// DEBUG start
-						if nodeIndex == 0 && weightIndex == 500{
-							fmt.Printf("\nSGD weight gradient post avg scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
-						}
-						// DEBUG end
-
 						weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], weightUtils.Scale/2, gradient.WeightGradient[nodeIndex][weightIndex])
-
-						// DEBUG start
-						if nodeIndex == 0 && weightIndex == 500{
-							fmt.Printf("\nSGD weight gradient post avg rescale scale: %f\n", gradient.WeightGradient[nodeIndex][weightIndex].Scale)
-						}
-						// DEBUG end
-
-						// DEBUG start
-						weightData := []float64{0, 0, 0}
-						gradData := []float64{0, 0, 0}
-						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
-							weightData = []float64{weightUtils.Decrypt(d.Weights[nodeIndex][weightIndex])[0], float64(d.Weights[nodeIndex][weightIndex].Level()), d.Weights[nodeIndex][weightIndex].Scale}
-							gradData = []float64{weightUtils.Decrypt(gradient.WeightGradient[nodeIndex][weightIndex])[0], float64(gradient.WeightGradient[nodeIndex][weightIndex].Level()), gradient.WeightGradient[nodeIndex][weightIndex].Scale}
-						}
-						// DEBUG end
 
 						// Perform SGD
 						weightUtils.Sub(d.Weights[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex], d.Weights[nodeIndex][weightIndex])
-
-						// DEBUG start
-						if nodeIndex == 7 && weightIndex == 10 && d.InputUnit == 20{
-							res := weightUtils.Decrypt(d.Weights[nodeIndex][weightIndex])[0]
-							fmt.Printf("SGD Sample: %f (L: %f, S: %f) - %f (L: %f, S: %f) = %f (L: %f, S: %f)\n", weightData[0], weightData[1], weightData[2], gradData[0], gradData[1], gradData[2], res, float64(d.Weights[nodeIndex][weightIndex].Level()), d.Weights[nodeIndex][weightIndex].Scale)
-						}
-						// DEBUG end
 
 						counter.Increment()
 
@@ -565,17 +474,17 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 		// Combine all ciphertext into one array of ciphertexts
 		biasLen := 0
 
-		if len(d.Bias) != 0{
+		if len(d.Bias) != 0 {
 			biasLen = 1
 		}
 
-		cts := make([]*ckks.Ciphertext, len(weightToBootstrap) + biasLen)
+		cts := make([]*ckks.Ciphertext, len(weightToBootstrap)+biasLen)
 
-		for i := range weightToBootstrap{
+		for i := range weightToBootstrap {
 			cts[i] = weightToBootstrap[i].Ct
 		}
 
-		if len(d.Bias) != 0{
+		if len(d.Bias) != 0 {
 			cts[len(cts)-1] = biasToBootstrap.Ct
 		}
 
@@ -588,18 +497,18 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 		// Update weight and bias with bootstrapped gradients
 		var updateGradWg sync.WaitGroup
 
-		for node := range d.Weights{
+		for node := range d.Weights {
 
 			updateGradWg.Add(1)
 
-			go func(nodeIndex int, utils utility.Utils){
+			go func(nodeIndex int, utils utility.Utils) {
 
 				var biasWg sync.WaitGroup
 
-				if len(d.Bias) != 0{
+				if len(d.Bias) != 0 {
 					biasWg.Add(1)
 
-					go func(biasUtils utility.Utils){
+					go func(biasUtils utility.Utils) {
 
 						defer biasWg.Done()
 
@@ -607,16 +516,16 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						encoder := ckks.NewEncoder(biasUtils.Params)
 						plain := make([]complex128, biasUtils.Params.Slots())
 						plain[nodeIndex] = complex(1, 0)
-						filter := encoder.EncodeNTTAtLvlNew(cts[len(cts) - 1].Level(), plain, biasUtils.Params.LogSlots())
+						filter := encoder.EncodeNTTAtLvlNew(cts[len(cts)-1].Level(), plain, biasUtils.Params.LogSlots())
 
 						rescale := true
-						if cts[len(cts) - 1].Level() > d.weightLevel + 1{
-							biasUtils.Evaluator.DropLevel(cts[len(cts) - 1], cts[len(cts) - 1].Level() - (d.weightLevel + 1))
-						} else if cts[len(cts) - 1].Level() == d.weightLevel{
+						if cts[len(cts)-1].Level() > d.weightLevel+1 {
+							biasUtils.Evaluator.DropLevel(cts[len(cts)-1], cts[len(cts)-1].Level()-(d.weightLevel+1))
+						} else if cts[len(cts)-1].Level() == d.weightLevel {
 							rescale = false
 						}
 
-						biasGradient := biasUtils.MultiplyPlainNew(cts[len(cts) - 1], filter, rescale, true)
+						biasGradient := biasUtils.MultiplyPlainNew(cts[len(cts)-1], filter, rescale, true)
 						utils.Rotate(biasGradient, nodeIndex)
 						biasUtils.FillCiphertextInPlace(biasGradient, d.batchSize)
 						biasUtils.Sub(d.Bias[nodeIndex], biasGradient, d.Bias[nodeIndex])
@@ -627,10 +536,10 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 				var weightWg sync.WaitGroup
 
-				for w := range d.Weights[nodeIndex]{
+				for w := range d.Weights[nodeIndex] {
 
 					weightWg.Add(1)
-					go func(weightIndex int, weightUtils utility.Utils){
+					go func(weightIndex int, weightUtils utility.Utils) {
 
 						defer weightWg.Done()
 
@@ -640,9 +549,9 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						ctIndex %= d.utils.Params.Slots()
 
 						rescale := true
-						if cts[ct].Level() > d.weightLevel + 1{
-							weightUtils.Evaluator.DropLevel(cts[ct], cts[ct].Level() - (d.weightLevel + 1))
-						} else if cts[ct].Level() == d.weightLevel || cts[ct].Scale > math.Pow(2,50){
+						if cts[ct].Level() > d.weightLevel+1 {
+							weightUtils.Evaluator.DropLevel(cts[ct], cts[ct].Level()-(d.weightLevel+1))
+						} else if cts[ct].Level() == d.weightLevel || cts[ct].Scale > math.Pow(2, 50) {
 							rescale = false
 						}
 
@@ -670,7 +579,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 		updateGradWg.Wait()
 		btpTimer.LogTimeTakenSecond()
-		
+
 	}
 
 }
@@ -738,8 +647,8 @@ type denseWeight struct {
 	Bias   []float64
 }
 
-func (d *Dense) LoadWeights(filename string, weightLevel int){
-	
+func (d *Dense) LoadWeights(filename string, weightLevel int) {
+
 	jsonFile, _ := os.Open(filename)
 	defer jsonFile.Close()
 	file, _ := ioutil.ReadAll(jsonFile)
@@ -747,7 +656,7 @@ func (d *Dense) LoadWeights(filename string, weightLevel int){
 	var data denseWeight
 	json.Unmarshal([]byte(file), &data)
 
-	counter := logger.NewOperationsCounter("Load weight", (d.InputUnit * d.OutputUnit) + d.OutputUnit)
+	counter := logger.NewOperationsCounter("Load weight", (d.InputUnit*d.OutputUnit)+d.OutputUnit)
 
 	var wg sync.WaitGroup
 
@@ -755,7 +664,7 @@ func (d *Dense) LoadWeights(filename string, weightLevel int){
 
 		wg.Add(1)
 
-		go func(nodeIndex int, nodeUtils utility.Utils){
+		go func(nodeIndex int, nodeUtils utility.Utils) {
 
 			defer wg.Done()
 
@@ -765,14 +674,14 @@ func (d *Dense) LoadWeights(filename string, weightLevel int){
 
 				weightWg.Add(1)
 
-				go func(weightIndex int, weightUtils utility.Utils){
+				go func(weightIndex int, weightUtils utility.Utils) {
 					defer weightWg.Done()
 					d.Weights[nodeIndex][weightIndex] = weightUtils.EncryptToLevel(weightUtils.GenerateFilledArraySize(data.Weight[nodeIndex][weightIndex], d.batchSize), weightLevel)
 					counter.Increment()
 				}(w, nodeUtils.CopyWithClonedEncryptor())
-	
+
 			}
-	
+
 			d.Bias[nodeIndex] = nodeUtils.EncryptToLevel(nodeUtils.GenerateFilledArraySize(data.Bias[nodeIndex], d.batchSize), weightLevel)
 			counter.Increment()
 
