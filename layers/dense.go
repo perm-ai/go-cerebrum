@@ -101,8 +101,6 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	var wg sync.WaitGroup
 
-	// DEBUG
-	timer := logger.StartTimer(fmt.Sprintf("Forward (%d) dot product", d.InputUnit))
 	dotProductCounter := logger.NewOperationsCounter(fmt.Sprintf("Forward propagating (%d) multiplying", d.InputUnit), d.InputUnit*d.OutputUnit)
 
 	for node := range d.Weights {
@@ -123,11 +121,9 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	wg.Wait()
 
-	timer.LogTimeTakenSecond()
-
 	if d.btspOutput[0] {
 
-		timer = logger.StartTimer(fmt.Sprintf("Forward (%d) bootstrap", d.InputUnit))
+		timer := logger.StartTimer(fmt.Sprintf("Forward (%d) bootstrap", d.InputUnit))
 		fmt.Printf("Bootstrapping node\n")
 
 		d.utils.Bootstrap1dInPlace(output, true)
@@ -138,7 +134,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 
 	if d.Activation != nil {
 
-		timer = logger.StartTimer(fmt.Sprintf("Forward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
+		timer := logger.StartTimer(fmt.Sprintf("Forward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 		activatedOutput = (*d.Activation).Forward(output, d.batchSize)
 
 		timer.LogTimeTakenSecond()
@@ -165,22 +161,19 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 	fmt.Printf("Backward gradient wrt output of layer %d: %d\n", d.InputUnit, gradient[0].Level())
 
-	backwardTimer := logger.StartTimer(fmt.Sprintf("Backward (%d)", d.InputUnit))
-
 	// Calculate gradients for last layer
 	if d.Activation != nil {
 
 		if (*d.Activation).GetType() != "softmax" {
 
 			gradients.BiasGradient = make([]*ckks.Ciphertext, len(gradient))
-			fmt.Printf("Backward (%d) output level: %d\n", d.InputUnit, output[0].Level())
+			// fmt.Printf("Backward (%d) output level: %d\n", d.InputUnit, output[0].Level())
 
 			activationTimer := logger.StartTimer(fmt.Sprintf("Backward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 			activationGradient := (*d.Activation).Backward(output, d.batchSize)
 			activationTimer.LogTimeTakenSecond()
-			fmt.Printf("Backward (%d) activation level: %d\n", d.InputUnit, activationGradient[0].Level())
+			// fmt.Printf("Backward (%d) activation level: %d\n", d.InputUnit, activationGradient[0].Level())
 
-			backwardTimer = logger.StartTimer(fmt.Sprintf("Backward (%d)", d.InputUnit))
 			hasBootstrapped := false
 
 			if activationGradient[0].Level() == 1 && d.btspActivation[1] {
@@ -219,25 +212,11 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		gradients.BiasGradient = gradient
 	}
 
-	timer := logger.StartTimer(fmt.Sprintf("Backward (%d) outer", d.InputUnit))
-
-	if d.InputUnit == 20 {
-		b := d.utils.Decrypt(gradients.BiasGradient[7])
-		inp := d.utils.Decrypt(input[10])
-		fmt.Printf("Backward (%d) sample: %f x %f = ", d.InputUnit, b[0:21], inp[0:21])
-	}
 
 	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input, true)
-
-	if d.InputUnit == 20 {
-		fmt.Printf("%f\n", d.utils.Decrypt(gradients.WeightGradient[7][10])[0:21])
-	}
-
 	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
-
-		timer = logger.StartTimer(fmt.Sprintf("Backward (%d) wrt input", d.InputUnit))
 
 		var inputWg sync.WaitGroup
 
@@ -255,7 +234,6 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		}
 
 		inputWg.Wait()
-		backwardTimer.LogTimeTakenSecond()
 
 		if d.btspOutput[1] {
 			btpTimer := logger.StartTimer(fmt.Sprintf("Backward (%d) input gradient bootstrap", d.InputUnit))
@@ -263,11 +241,8 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 			btpTimer.LogTimeTakenSecond()
 		}
 
-		timer.LogTimeTakenSecond()
 		fmt.Printf("Backward (%d) input gradient: %f\n", d.InputUnit, d.utils.Decrypt(gradients.InputGradient[4])[0:5])
 
-	} else {
-		backwardTimer.LogTimeTakenSecond()
 	}
 
 	fmt.Printf("Backward (%d) weight level: %d \tbias level: %d\n", d.InputUnit, gradients.WeightGradient[0][0].Level(), gradients.BiasGradient[0].Level())

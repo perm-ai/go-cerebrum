@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"math"
-	"os"
 	"path"
 
 	"github.com/ldsec/lattigo/v2/ckks"
@@ -19,13 +18,13 @@ import (
 //=================================================
 
 type Model struct {
-	utils    		utility.Utils
-	Layers1d 		[]layers.Layer1D
-	Layers2d 		[]layers.Layer2D
-	Flatten  		layers.Flatten2D
-	Loss     		losses.Loss
-	ForwardLevel	[][]int
-	BackwardLevel	[][]int
+	utils         utility.Utils
+	Layers1d      []layers.Layer1D
+	Layers2d      []layers.Layer2D
+	Flatten       layers.Flatten2D
+	Loss          losses.Loss
+	ForwardLevel  [][]int
+	BackwardLevel [][]int
 }
 
 func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.Layer2D, loss losses.Loss, autoBootstrap bool) Model {
@@ -37,7 +36,7 @@ func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.La
 
 	model := Model{utils: utils, Layers1d: layer1d, Layers2d: layer2d, Flatten: flatten, Loss: loss}
 
-	if autoBootstrap{
+	if autoBootstrap {
 		model.setForwardBootstrapping()
 		model.setBackwardBootstrapping(model.ForwardLevel[0], model.ForwardLevel[1])
 	}
@@ -123,7 +122,7 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 			}
 
 			output1D[layer+1] = m.Layers1d[layer].Forward(utility.Clone1dCiphertext(prevOut))
-			
+
 			prevLayerHasActivation = m.Layers1d[layer].HasActivation()
 
 		}
@@ -235,16 +234,16 @@ func (m *Model) UpdateGradient(gradients1d []layers.Gradient1d, gradients2d []la
 
 func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int) {
 
-	for e := 0; e < epoch; e++{
+	for e := 0; e < epoch; e++ {
 
 		for i := 0; i < int(dataLoader.GetLength()/batchSize); i++ {
 
 			x, y := dataLoader.Load2D(i*batchSize, batchSize)
-	
+
 			outputs2D, outputs1D := m.Forward(x, []*ckks.Ciphertext{})
 			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
 			m.UpdateGradient(gradients1D, gradients2D, learningRate)
-	
+
 		}
 
 	}
@@ -253,10 +252,10 @@ func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int) {
 
-	totalBatch := int(dataLoader.GetLength()/batchSize)
+	totalBatch := int(dataLoader.GetLength() / batchSize)
 	log := logger.NewLogger(true)
 
-	for e := 0; e < epoch; e++{
+	for e := 0; e < epoch; e++ {
 
 		for i := 0; i < totalBatch; i++ {
 
@@ -265,9 +264,9 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 			x, y := dataLoader.Load1D(i*batchSize, batchSize)
 
 			log.Log("Data loaded")
-	
+
 			outputs2D, outputs1D := m.Forward([][][]*ckks.Ciphertext{}, x)
-			
+
 			log.Log("Forward complete")
 
 			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
@@ -276,17 +275,6 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 			m.UpdateGradient(gradients1D, gradients2D, learningRate)
 
-			if (i + 1) % 3 == 0 && i != 0{
-
-				exportTimer := logger.StartTimer("Export weighs & biases")
-				dirName := fmt.Sprintf("test_model_e%d_b%d", e+1, i+1)
-				os.Mkdir(dirName, 0777)
-
-				m.ExportModel1D(dirName)
-				exportTimer.LogTimeTakenSecond()
-
-			}
-	
 		}
 
 	}
@@ -295,17 +283,17 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 func (m *Model) Train1DFrom(dataLoader dataset.Loader, learningRate float64, batchSize int, epoch int, startEpoch int, startBatch int) {
 
-	totalBatch := int(dataLoader.GetLength()/batchSize)
+	totalBatch := int(dataLoader.GetLength() / batchSize)
 	log := logger.NewLogger(true)
 
-	for e := 0; e < epoch; e++{
+	for e := 0; e < epoch; e++ {
 
 		for i := 0; i < totalBatch; i++ {
 
 			log.Log(fmt.Sprintf("Epoch : %d/%d\t\tBatch : %d/%d", e+1, epoch, i+1, totalBatch))
 
-			if e + 1 <= startEpoch{
-				if i + 1 <= startBatch{
+			if e+1 <= startEpoch {
+				if i+1 <= startBatch {
 					continue
 				}
 			}
@@ -313,9 +301,9 @@ func (m *Model) Train1DFrom(dataLoader dataset.Loader, learningRate float64, bat
 			x, y := dataLoader.Load1D(i*batchSize, batchSize)
 
 			log.Log("Data loaded")
-	
+
 			outputs2D, outputs1D := m.Forward([][][]*ckks.Ciphertext{}, x)
-			
+
 			log.Log("Forward complete")
 
 			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
@@ -324,26 +312,15 @@ func (m *Model) Train1DFrom(dataLoader dataset.Loader, learningRate float64, bat
 
 			m.UpdateGradient(gradients1D, gradients2D, learningRate)
 
-			if (i + 1) % 3 == 0 && i != 0{
-
-				exportTimer := logger.StartTimer("Export weighs & biases")
-				dirName := fmt.Sprintf("test_model_e%d_b%d", e+1, i+1)
-				os.Mkdir(dirName, 0777)
-
-				m.ExportModel1D(dirName)
-				exportTimer.LogTimeTakenSecond()
-
-			}
-	
 		}
 
 	}
 
 }
 
-func (m Model) ExportModel1D(dirPath string){
+func (m Model) ExportModel1D(dirPath string) {
 
-	for layer := range m.Layers1d{
+	for layer := range m.Layers1d {
 		fmt.Printf("Exporting 1D weight layer %d/%d\n", layer+1, len(m.Layers1d))
 		m.Layers1d[layer].ExportWeights(path.Join(dirPath, fmt.Sprintf("layer_%d.json", layer)))
 	}
@@ -403,10 +380,10 @@ func (m *Model) setForwardBootstrapping() {
 				} else {
 					m.Layers1d[l-1].SetBootstrapOutput(true, "forward")
 				}
-	
+
 				// Set input to this layer to 9 (highest)
 				inputLevel1D[l] = 9
-	
+
 			}
 
 			// Set output level of this layer (input of next layer)
@@ -416,7 +393,7 @@ func (m *Model) setForwardBootstrapping() {
 
 			// Deal with softmax where req.lvl. is 8
 
-			if inputLevel1D[l] - m.Layers1d[l].GetForwardLevelConsumption() < 1{
+			if inputLevel1D[l]-m.Layers1d[l].GetForwardLevelConsumption() < 1 {
 
 				// If not enough level bootstrap output of previous layer
 				if m.Layers1d[l-1].HasActivation() {
@@ -434,7 +411,7 @@ func (m *Model) setForwardBootstrapping() {
 
 			// Set output level of this layer (input of next layer)
 			inputLevel1D[l+1] = 9 - m.Layers1d[l].GetForwardActivationLevelConsumption()
-			
+
 		}
 	}
 
@@ -534,7 +511,7 @@ func (m *Model) setBackwardBootstrapping(inputLevel1D []int, inputLevel2D []int)
 
 	if len(m.Layers2d) == 0 {
 		m.BackwardLevel = [][]int{gradientLevel1D, gradientLevel2D}
-		return 
+		return
 	}
 
 	// Loop throught each layer backward
