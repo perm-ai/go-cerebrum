@@ -2,6 +2,7 @@ package activations
 
 import (
 	"math"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -11,64 +12,86 @@ import (
 //=================================================
 
 type Softmax struct {
-	U          		utility.Utils
-	zeroEliminator 	map[int]ckks.Plaintext
+	U utility.Utils
 }
 
 func NewSoftmax(u utility.Utils) Softmax {
 
-	eliminator := make(map[int]ckks.Plaintext)
-
-	return Softmax{u, eliminator}
+	newUtils := u.CopyWithNewScale(math.Pow(2, 30))
+	return Softmax{newUtils}
 
 }
 
-func (s Softmax) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
 	// Homomorphic friendly softmax function
 	// e^x / (e^x1 + e^x2 + ... + e^xn)
 	// Cost 7 level if rescale is false and 8 if rescale is true
 
 	// Encode filter if doesn't exist in cache
-	if _, ok := s.zeroEliminator[inputLength]; !ok {
+	sum := s.U.Encrypt(s.U.GenerateFilledArray(0.0))
 
-		arr := s.U.GenerateFilledArray(1)
+	//create array that will contain the result, but for the first loop, contain the e^x of each input
+	arrexp := make([]*ckks.Ciphertext, len(input))
 
-		for i := 0; i < inputLength; i++ {
-			arr[i] = 0
-		}
-
-		s.zeroEliminator[inputLength] = *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(arr), s.U.Params.LogSlots())
+	// Exponentiate input and get sum
+	for i := range input {
+		arrexp[i] = s.U.ExpNew(input[i], inputLength)
+		s.U.Add(&sum, arrexp[i], &sum)
 	}
-
-	// Exponentiate input
-	exp := s.U.ExpNew(&input) // Level input - 2
-
-	if exp.Scale > math.Pow(2, 40.1) && exp.Level() == 6 {
-		s.U.Evaluator.Rescale(exp, math.Pow(2, 35), exp)
-	}
-
-	// Filter 1 (since e^0 = 1)
-	s.U.SubPlain(*exp, s.zeroEliminator[inputLength], exp)
-
-	expSum := s.U.SumElementsNew(*exp)
 
 	// Declare stretch scale as 1/40
-	stretchScale := (float64(1) / float64(40))
+	stretchScale := (float64(1) / float64(20))
+	plainStretch := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(stretchScale, inputLength))
 
 	// Calculate inverse of sum of e^input
-	inverseSum := s.U.InverseApproxNew(&expSum, stretchScale) // Level input - 4
+	inverseSum := s.U.InverseApproxNew(&sum, stretchScale, inputLength) // Level input - 4
 
-	// Apply stretch scale to exponentiated input
-	s.U.MultiplyConstArray(exp, s.U.GenerateFilledArraySize(stretchScale, inputLength), exp, true, false) // Level input - 3
+	output := make([]*ckks.Ciphertext, len(arrexp))
+	outputChannels := make([]chan *ckks.Ciphertext, len(arrexp))
 
-	return s.U.MultiplyNew(*exp, *inverseSum, false, false) // Level input - 5
+	//multiply the arrexp with stretchscale and the inverse, which will be the result that the function return
+	for i := range arrexp {
+
+		outputChannels[i] = make(chan *ckks.Ciphertext)
+
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+
+			result := utils.MultiplyPlainNew(inputEach, plainStretch, true, false) // Level input - 3
+			s.U.Multiply(result, inverseSum, result, false, false)
+			c <- result
+
+		}(arrexp[i], s.U.CopyWithClonedEval(), outputChannels[i])
+
+	}
+
+	for i := range outputChannels {
+		output[i] = <-outputChannels[i]
+	}
+
+	return output // Level input - 5
 
 }
 
-func (s Softmax) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Softmax) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
 	// Not implemented, won't be used
 	return input
 
+}
+
+func (s Softmax) GetForwardLevelConsumption() int {
+
+	return 8
+
+}
+
+func (s Softmax) GetBackwardLevelConsumption() int {
+
+	return 0
+
+}
+
+func (s Softmax) GetType() string {
+	return "softmax"
 }

@@ -6,15 +6,11 @@ import (
 	"os"
 
 	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-type mnistDatas struct {
-	Data []mnistData
-}
 
 type mnistData struct {
-	Image []float64
+	Image []int
 	Label int
 }
 
@@ -28,51 +24,37 @@ type EncryptedMnistData struct {
 	Label ckks.Ciphertext
 }
 
-func getMnistData(filepath string) mnistDatas {
+func getMnistData(filepath string) []mnistData {
 	jsonFile, _ := os.Open(filepath)
 	defer jsonFile.Close()
 	file, _ := ioutil.ReadAll(jsonFile)
 
-	var data mnistDatas
-	json.Unmarshal(file, &data)
+	var data []mnistData
+	json.Unmarshal([]byte(file), &data)
 
 	return data
 }
 
-type MnistDataLoader struct {
-	utils             utility.Utils
-	RawData           []MnistData
-	TrainingDataPoint int
-}
+func GetMnistData(filepath string) []MnistData {
 
-func (m *MnistDataLoader) LoadData(filepath string) {
+	datas := getMnistData(filepath)
+	result := make([]MnistData, len(datas))
 
-	for _, data := range getMnistData(filepath).Data {
+	for i := range datas {
 
 		label := make([]float64, 10)
-		label[data.Label] = 1
+		label[datas[i].Label] = 1
 
-		m.RawData = append(m.RawData, MnistData{data.Image, label})
+		images := make([]float64, len(datas[i].Image))
+		for image := range images{
+			images[image] = float64(datas[i].Image[image]) / 255.0
+		}
 
-	}
-
-	m.TrainingDataPoint = len(m.RawData)
-
-}
-
-func (m *MnistDataLoader) GetDataAsBatch(batch int, batchSize int) []EncryptedMnistData {
-
-	start := batch * batchSize
-	end := start + batchSize
-
-	result := make([]EncryptedMnistData, batchSize)
-
-	for i, data := range m.RawData[start:end] {
-
-		result[i] = EncryptedMnistData{m.utils.Encrypt(data.Image), m.utils.Encrypt(data.Label)}
+		result[i] = MnistData{images, label}
 
 	}
 
 	return result
+
 
 }

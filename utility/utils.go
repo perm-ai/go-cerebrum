@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
 	"github.com/ldsec/lattigo/v2/rlwe"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -17,11 +18,11 @@ type Utils struct {
 	hasSecretKey     bool
 	bootstrapEnabled bool
 
-	BootstrappingParams ckks.BootstrappingParameters
+	BootstrappingParams bootstrapping.Parameters
 	Params              ckks.Parameters
 	KeyChain            key.KeyChain
 
-	Bootstrapper *ckks.Bootstrapper
+	Bootstrapper *bootstrapping.Bootstrapper
 	Encoder      ckks.Encoder
 	Evaluator    ckks.Evaluator
 	Encryptor    ckks.Encryptor
@@ -41,19 +42,19 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 	bootstrapEnabled := keyChain.BtspGalKey != nil
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[keyChain.ParamsIndex]
-	Params, _ := bootstrappingParams.Params()
+	bootstrappingParams := bootstrapping.DefaultParameters[keyChain.ParamsIndex]
+	params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[keyChain.ParamsIndex])
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
-	encoder := ckks.NewEncoder(Params)
-	evaluator := ckks.NewEvaluator(Params, rlwe.EvaluationKey{Rlk: keyChain.RelinKey})
-	encryptor := ckks.NewFastEncryptor(Params, keyChain.PublicKey)
+	encoder := ckks.NewEncoder(params)
+	evaluator := ckks.NewEvaluator(params, rlwe.EvaluationKey{Rlk: keyChain.RelinKey})
+	encryptor := ckks.NewFastEncryptor(params, keyChain.PublicKey)
 
 	var decryptor ckks.Decryptor
 	decryptor = nil
 
 	if keyChain.SecretKey != nil {
-		decryptor = ckks.NewDecryptor(Params, keyChain.SecretKey)
+		decryptor = ckks.NewDecryptor(params, keyChain.SecretKey)
 	}
 
 	filters := make([]ckks.Plaintext, filtersAmount)
@@ -61,19 +62,19 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 	for i := range filters {
 		filter := make([]complex128, filtersAmount)
 		filter[i] = complex(1, 0)
-		filters[i] = *encoder.EncodeNTTAtLvlNew(Params.MaxLevel(), filter, Params.LogSlots())
+		filters[i] = *encoder.EncodeNTTAtLvlNew(params.MaxLevel(), filter, params.LogSlots())
 	}
 
-	var bootstrapper *ckks.Bootstrapper
+	var bootstrapper *bootstrapping.Bootstrapper
 	bootstrapper = nil
 
 	if bootstrapEnabled {
 
-		bootstrappingKey := ckks.BootstrappingKey{Rlk: keyChain.RelinKey, Rtks: keyChain.BtspGalKey}
+		bootstrappingKey := rlwe.EvaluationKey{Rlk: keyChain.RelinKey, Rtks: keyChain.BtspGalKey}
 
 		var err error
 		log.Log("Util Initialization: Generating bootstrapper")
-		bootstrapper, err = ckks.NewBootstrapper(Params, bootstrappingParams, bootstrappingKey)
+		bootstrapper, err = bootstrapping.NewBootstrapper(params, bootstrappingParams, bootstrappingKey)
 
 		if err != nil {
 			panic("BOOTSTRAPPER GENERATION ERROR")
@@ -83,8 +84,8 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 	return Utils{
 		true,
 		bootstrapEnabled,
-		*bootstrappingParams,
-		Params,
+		bootstrappingParams,
+		params,
 		keyChain,
 		bootstrapper,
 		encoder,
@@ -101,17 +102,17 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 func NewDecryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) Utils {
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[keyChain.ParamsIndex]
-	Params, _ := bootstrappingParams.Params()
-	encoder := ckks.NewEncoder(Params)
-	encryptor := ckks.NewFastEncryptor(Params, keyChain.PublicKey)
-	decryptor := ckks.NewDecryptor(Params, keyChain.SecretKey)
+	bootstrappingParams := bootstrapping.DefaultParameters[keyChain.ParamsIndex]
+	params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[keyChain.ParamsIndex])
+	encoder := ckks.NewEncoder(params)
+	encryptor := ckks.NewFastEncryptor(params, keyChain.PublicKey)
+	decryptor := ckks.NewDecryptor(params, keyChain.SecretKey)
 
 	return Utils{
 		true,
 		false,
-		*bootstrappingParams,
-		Params,
+		bootstrappingParams,
+		params,
 		keyChain,
 		nil,
 		encoder,
@@ -189,6 +190,18 @@ func (u Utils) EncodeCoeffs(value []float64) ckks.Plaintext {
 
 }
 
+// Encode float array into NTT Plaintext
+func (u Utils) EncodePlaintextFromArray(arr []float64) *ckks.Plaintext {
+	return u.Encoder.EncodeNTTNew(u.Float64ToComplex128(arr), u.Params.LogSlots())
+}
+
+// Encode float array into NTT Plaintext
+func (u Utils) EncodePlaintextFromArrayScale(arr []float64, scale float64) *ckks.Plaintext {
+	pt := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
+	u.Encoder.EncodeNTT(pt, u.Float64ToComplex128(arr), u.Params.LogSlots())
+	return pt
+}
+
 // Decode complex plaintext and take real part returning float array
 func (u Utils) Decode(value *ckks.Plaintext) []float64 {
 
@@ -219,6 +232,18 @@ func (u Utils) Encrypt(value []float64) ckks.Ciphertext {
 
 }
 
+func (u Utils) EncryptToPointer(value []float64) *ckks.Ciphertext {
+
+	// Encode value
+	plaintext := u.EncodeToScale(value, u.Scale)
+
+	// Encrypt value
+	ciphertext := u.Encryptor.EncryptNew(&plaintext)
+
+	return ciphertext
+
+}
+
 func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
 
 	// Encode value
@@ -228,6 +253,32 @@ func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
 	ciphertext := u.Encryptor.EncryptNew(&plaintext)
 
 	return *ciphertext
+
+}
+
+func (u Utils) EncryptToLevel(value []float64, level int) *ckks.Ciphertext {
+
+	// Encode value
+	plaintext := u.EncodeToScale(value, u.Scale)
+
+	// Encrypt value
+	ciphertext := ckks.NewCiphertext(u.Params, 1, level, u.Scale)
+	u.Encryptor.Encrypt(&plaintext, ciphertext)
+
+	return ciphertext
+
+}
+
+func (u Utils) EncryptToLevelScale(value []float64, level int, scale float64) *ckks.Ciphertext {
+
+	// Encode value
+	plaintext := u.EncodeToScale(value, scale)
+
+	// Encrypt value
+	ciphertext := ckks.NewCiphertext(u.Params, 1, level, scale)
+	u.Encryptor.Encrypt(&plaintext, ciphertext)
+
+	return ciphertext
 
 }
 

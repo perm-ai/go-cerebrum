@@ -46,7 +46,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 				u.MultiplyPlain(&rotated[r], &u.Filters[c], newRow, true, false)
 			} else {
 				product := u.MultiplyPlainNew(&rotated[r], &u.Filters[r+c], true, false)
-				u.Add(product, *newRow, newRow)
+				u.Add(product, newRow, newRow)
 			}
 
 		}
@@ -61,16 +61,16 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 }
 
-func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int, filterBy float64) []ckks.Ciphertext {
+func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int, filterBy float64) []*ckks.Ciphertext {
 
 	// Need to cover rotation in range [0, aSize)
 	pow2rotationEvaluator := u.Get2PowRotationEvaluator()
 
-	outerProduct := make([]ckks.Ciphertext, aSize)
+	outerProduct := make([]*ckks.Ciphertext, aSize)
 
 	for i := 0; i < aSize; i++ {
 
-		var filtered ckks.Ciphertext
+		var filtered *ckks.Ciphertext
 
 		if(filterBy == 0 || filterBy == 1){
 
@@ -90,24 +90,24 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 		// If aSize is more than 2^(logSlot - 2) it would be more or equally efficient to compute sumElement
 		if bSize > int(u.Params.Slots())/4 {
-			u.SumElementsInPlace(&filtered)
+			u.SumElementsInPlace(filtered)
 		} else {
 
 			if i != 0 {
 				// Rotate data of interest to slot 0
-				u.Rotate(&filtered, i, &filtered)
+				u.Rotate(filtered, i)
 			}
 
 			for j := 1; j < bSize; j *= 2 {
 				// Rotate and add to double the amount of data each iteration
-				rotated := pow2rotationEvaluator.RotateNew(&filtered, -j)
-				u.Add(filtered, *rotated, &filtered)
+				rotated := pow2rotationEvaluator.RotateNew(filtered, -j)
+				u.Add(filtered, rotated, filtered)
 			}
 
 		}
 
 		// Calculate product
-		outerProduct[i] = u.MultiplyNew(filtered, *b, true, false)
+		outerProduct[i] = u.MultiplyNew(filtered, b, true, false)
 
 	}
 
@@ -125,7 +125,7 @@ func (u Utils) PackVector(ciphertexts []ckks.Ciphertext) ckks.Ciphertext {
 			u.MultiplyPlain(&ciphertexts[i], &u.Filters[i], result, true, false)
 		} else {
 			filtered := u.MultiplyPlainNew(&ciphertexts[i], &u.Filters[i], true, false)
-			u.Add(filtered, *result, result)
+			u.Add(filtered, result, result)
 		}
 
 	}

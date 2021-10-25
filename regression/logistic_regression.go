@@ -1,191 +1,126 @@
 package regression
 
 import (
-	// "fmt"
-	"fmt"
-	"math"
 	"strconv"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type LogisticRegression struct {
-	utils utility.Utils
-	b0    ckks.Ciphertext // intercept
-	b1    ckks.Ciphertext // data1
-	b2    ckks.Ciphertext // data2
+	utils  utility.Utils
+	Weight []*ckks.Ciphertext
+	Bias   *ckks.Ciphertext
 }
 
 type LogisticRegressionGradient struct {
-	Db0 ckks.Ciphertext
-	Db1 ckks.Ciphertext
-	Db2 ckks.Ciphertext
+	dw []*ckks.Ciphertext
+	db *ckks.Ciphertext
 }
 
-func NewLogisticRegression(u utility.Utils) LogisticRegression {
-
-	zeros := u.GenerateFilledArray(0.0)
-	b0 := u.Encrypt(zeros)
-	b1 := u.Encrypt(zeros)
-	b2 := u.Encrypt(zeros)
-
-	return LogisticRegression{u, b0, b1, b2}
-
+type Data struct {
+	x          []*ckks.Ciphertext
+	target     *ckks.Ciphertext
+	datalength int
 }
 
-func (lr LogisticRegression) Sigmoid(x ckks.Ciphertext) ckks.Ciphertext {
+func NewLogisticRegression(u utility.Utils, numOfFeatures int) LogisticRegression {
 
-	// Evaluate Sigmoid according to the approximation
-	// 0.5 + 0.197x + 0.004x^3
+	value := u.GenerateFilledArray(0.0)
+	b := u.EncryptToPointer(value)
+	w := make([]*ckks.Ciphertext, numOfFeatures)
+	for i := 0; i < numOfFeatures; i++ {
+		w[i] = u.EncryptToPointer(value)
+	}
 
-	output := lr.utils.MultiplyNew(lr.utils.MultiplyNew(x, lr.utils.MultiplyConstArrayNew(x, lr.utils.GenerateFilledArray(0.004), true, false), true, false), lr.utils.MultiplyNew(x, x, true, false), true, false) // output = x * x
-	// output = utils.MultiplyNew(x, utils.MultiplyConstNew(x, utils.GenerateFilledArray(0.004), true, false), true, false) // output = output * (x * 0.004)
-	output = lr.utils.SubNew(lr.utils.MultiplyConstArrayNew(x, lr.utils.GenerateFilledArray(0.197), true, false), output) // output = output + 0.197 * x
-
-	SigCont := lr.utils.GenerateFilledArray(0.5)
-	encoded := lr.utils.EncodeToScale(SigCont, math.Pow(2.0, 20.0))
-	lr.utils.ReEncodeAsNTT(&encoded)
-
-	output = lr.utils.AddPlainNew(output, encoded)
-
-	return output
+	return LogisticRegression{u, w, b}
 
 }
 
-func SigmoidCheck(input float64) float64 {
-	// In real case, evaluate sigmoid by taylor estimation
-	// 0.5 + 0.197x + 0.004x^3
+func (model LogisticRegression) Forward(data Data) *ckks.Ciphertext {
 
-	return 1.0 / (1.0 + math.Exp(-1*input))
+	//prediction(yhat) = sigmoid(w1*x1+w2*x2+...+b)
+	result := model.utils.EncryptToPointer(model.utils.GenerateFilledArray(0.0))
+	sigmoid := activations.Sigmoid{U: model.utils}
+	//w[i]*x[i]
+	for i := range data.x {
+		Weight := model.utils.MultiplyNew(model.Weight[i].CopyNew(), data.x[i].CopyNew(), true, false)
+		model.utils.Add(Weight, result, result)
+
+	}
+	model.utils.Add(model.Bias, result, result)
+	if result.Level() < 6 {
+		model.utils.BootstrapInPlace(result)
+	}
+	Arrresult := make([]*ckks.Ciphertext, 1)
+	Arrresult[0] = result
+	return sigmoid.Forward(Arrresult, data.datalength)[0]
 
 }
 
-func (lr LogisticRegression) PredictCipher(x ckks.Ciphertext, y ckks.Ciphertext) ckks.Ciphertext {
-	// Predict whether it is class 0 or 1
+func (model LogisticRegression) Backward(data Data, predict *ckks.Ciphertext, lr float64) LogisticRegressionGradient {
 
-	// yhat = b0 + b1*x + b2*y
-	// return sigmoid(yhat)
-	yhat := lr.utils.AddNew(lr.utils.MultiplyNew(lr.b2, y, true, false), lr.utils.MultiplyNew(lr.b1, x, true, false))
-	yhat = lr.utils.AddNew(yhat, lr.b0)
+	dw := make([]*ckks.Ciphertext, len(model.Weight))
+	err := model.utils.SubNew(predict, data.target)
+	multiplier := model.utils.EncodePlaintextFromArray(model.utils.GenerateFilledArraySize((2.0/float64(data.datalength))*lr, data.datalength))
 
-	// decrypt yhat first then evaluate sigmoid?
+	for i := range model.Weight {
 
-	return lr.Sigmoid(yhat)
+		dw[i] = model.utils.MultiplyNew(data.x[i].CopyNew(), err.CopyNew(), true, false)
+		model.utils.SumElementsInPlace(dw[i])
+		model.utils.MultiplyPlain(dw[i].CopyNew(), multiplier, dw[i], true, false)
+
+	}
+
+	db := model.utils.SumElementsNew(*err)
+	model.utils.MultiplyPlain(db.CopyNew(), multiplier, db, true, false)
+
+	return LogisticRegressionGradient{dw, db}
+
 }
 
-func (lr LogisticRegression) Sgd(x ckks.Ciphertext, y ckks.Ciphertext, target ckks.Ciphertext, learningRate float64, size int) LogisticRegressionGradient {
-	// Calculate backward gradient using the following equation
-	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
-	yhat := lr.PredictCipher(x, y)       // get yhat
-	err := lr.utils.SubNew(target, yhat) // find error of yhat and target
+func (model *LogisticRegression) UpdateGradient(grad LogisticRegressionGradient) {
+	for i := range grad.dw {
+		model.utils.Sub(model.Weight[i], grad.dw[i], model.Weight[i])
+	}
+	model.utils.Sub(model.Bias, grad.db, model.Bias)
 
-	Db2 := lr.utils.MultiplyNew(y, *err.CopyNew(), true, false)
-	lr.utils.SumElementsInPlace(&Db2)
-	lr.utils.MultiplyConstArray(&Db2, lr.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &Db2, true, false)
-
-	Db1 := lr.utils.MultiplyNew(x, *err.CopyNew(), true, false)
-	lr.utils.SumElementsInPlace(&Db1)
-	lr.utils.MultiplyConstArray(&Db1, lr.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &Db1, true, false)
-
-	Db0 := lr.utils.SumElementsNew(err)
-	lr.utils.MultiplyConstArray(&Db0, lr.utils.GenerateFilledArraySize((-2/float64(size))*learningRate, size), &Db0, true, false)
-
-	return LogisticRegressionGradient{Db0, Db1, Db2}
 }
 
-func (lr *LogisticRegression) UpdateGradient(gradient LogisticRegressionGradient) {
-	lr.utils.Sub(lr.b0, gradient.Db0, &lr.b0)
-	lr.utils.Sub(lr.b1, gradient.Db1, &lr.b1)
-	lr.utils.Sub(lr.b2, gradient.Db2, &lr.b2)
-}
-
-func (model *LogisticRegression) TrainLR(x ckks.Ciphertext, y ckks.Ciphertext, target ckks.Ciphertext, learningRate float64, size int, epoch int) {
-
+func (model *LogisticRegression) Train(x []*ckks.Ciphertext, target *ckks.Ciphertext, datalength int, learningRate float64, epoch int) {
+	data := Data{x, target, datalength}
 	log := logger.NewLogger(true)
 	log.Log("Starting Logistic Regression Training on encrypted data")
 
 	for i := 0; i < epoch; i++ {
 
-		// if model.b0.Level() < 6 || model.b1.Level() < 6 || model.b2.Level() < 6 {
-		// 	fmt.Println("Bootstrapping gradient")
-		// 	if model.b0.Level() != 1 {
-		// 		model.utils.Evaluator.DropLevel(&model.b0, model.b0.Level()-1)
-		// 	}
-		// 	model.utils.BootstrapInPlace(&model.b0)
-		// 	model.utils.BootstrapInPlace(&model.b1)
-		// 	model.utils.BootstrapInPlace(&model.b2)
+		log.Log("Forward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		fwd := model.Forward(data)
 
-		// 	fmt.Printf("NEW b0 scale and level is %f and %d \n", model.b0.Scale(), model.b0.Level())
-		// 	fmt.Printf("NEW b1 scale and level is %f and %d \n", model.b1.Scale(), model.b1.Level())
-		// 	fmt.Printf("NEW b2 scale and level is %f and %d \n", model.b2.Scale(), model.b2.Level())
+		if fwd.Level() < 5 {
+			model.utils.BootstrapInPlace(fwd)
+		}
 
-		// }
+		log.Log("Backward propagating " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
+		grad := model.Backward(data, fwd, learningRate)
 
-		log.Log("Performing SGD " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		fwd := model.Sgd(x, y, target, learningRate, size)
+		log.Log("Updating gradient " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch) + "\n")
+		model.UpdateGradient(grad)
 
-		log.Log("Updating gradients " + strconv.Itoa(i+1) + "/" + strconv.Itoa(epoch))
-		model.UpdateGradient(fwd)
-
-		fmt.Println("Finished Training the epoch number " + strconv.Itoa(i+1))
-		fmt.Printf("b0 scale and level is %f and %d \n", model.b0.Scale, model.b0.Level())
-		fmt.Printf("b1 scale and level is %f and %d \n", model.b1.Scale, model.b1.Level())
-		fmt.Printf("b2 scale and level is %f and %d \n", model.b2.Scale, model.b2.Level())
-
-		if model.b0.Level() < 7 || model.b1.Level() < 7 || model.b2.Level() < 7 {
-			fmt.Println("Bootstrapping gradient")
-			if model.b0.Level() != 1 {
-				model.utils.Evaluator.DropLevel(&model.b0, model.b0.Level()-1)
+		if i != epoch-1 {
+			if model.Weight[0].Level() < 8 {
+				for i := range model.Weight {
+					model.utils.BootstrapInPlace(model.Weight[i])
+				}
 			}
-			model.utils.BootstrapInPlace(&model.b0)
-			model.utils.BootstrapInPlace(&model.b1)
-			model.utils.BootstrapInPlace(&model.b2)
 
-			fmt.Printf("NEW b0 scale and level is %f and %d \n", model.b0.Scale, model.b0.Level())
-			fmt.Printf("NEW b1 scale and level is %f and %d \n", model.b1.Scale, model.b1.Level())
-			fmt.Printf("NEW b2 scale and level is %f and %d \n", model.b2.Scale, model.b2.Level())
-
+			if model.Bias.Level() < 5 {
+				model.utils.BootstrapInPlace(model.Bias)
+			}
 		}
 
 	}
-
-}
-
-func (model LogisticRegression) AccuracyTest(x []float64, y []float64, target []float64, size int) float64 {
-
-	// Evaluate b0 + b1*data1 + b2*data2 then into sigmoid then check with target
-
-	// model.utils.Decrypt(&x)
-	// model.utils.Decrypt(&y)
-	// model.utils.Decrypt(&target)
-
-	b0plain := model.utils.Decrypt(&model.b0)
-	b1plain := model.utils.Decrypt(&model.b1)
-	b2plain := model.utils.Decrypt(&model.b2)
-
-	correct := 0
-	incorrect := 0
-
-	for i := 0; i < size; i++ {
-		yhat := b0plain[i] + b1plain[i]*x[i] + b2plain[i]*y[i]
-		guess := SigmoidCheck(yhat)
-
-		if guess > 0.5 {
-			guess = 1
-		} else {
-			guess = 0
-		}
-
-		if guess == target[i] {
-			correct++
-		} else {
-			incorrect++
-		}
-	}
-
-	acc := float64(correct) / float64(size) * float64(100)
-
-	return acc
+	log.Log("Trainning complete")
 }

@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
 	"github.com/ldsec/lattigo/v2/rlwe"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
@@ -39,9 +40,9 @@ func GenerateKeys(paramsIndex int, btspEnabled bool, logEnabled bool) KeyChain {
 
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[paramsIndex]
-	Params, _ := bootstrappingParams.Params()
-
+	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
+	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
@@ -56,8 +57,8 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[paramsIndex]
-	Params, _ := bootstrappingParams.Params()
+	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
+	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
 
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
@@ -77,7 +78,7 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 	var btpRotationKeys *rlwe.RotationKeySet
 
 	if btspEnabled {
-		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogSlots())
+		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogN(), Params.LogSlots())
 		btpRotationKeys = keyGenerator.GenRotationKeysForRotations(rotations, true, sk)
 	}
 
@@ -87,8 +88,8 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 
 func GenerateKeyPair(paramsIndex int) KeyChain {
 
-	bootstrappingParams := ckks.DefaultBootstrapParams[paramsIndex]
-	Params, _ := bootstrappingParams.Params()
+	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
+	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
 
 	keyGenerator := ckks.NewKeyGenerator(Params)
 

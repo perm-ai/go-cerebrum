@@ -10,60 +10,94 @@ import (
 //=================================================
 
 type Sigmoid struct {
-	U        		utility.Utils
-	forwardDeg0  	map[int]ckks.Plaintext
-	backwardDeg0 	map[int]ckks.Plaintext
+	U utility.Utils
 }
 
-func (s Sigmoid) Forward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
-	// y := 0.5 + 0.197x + 0.004x^3
+	outputChannels := make([]chan *ckks.Ciphertext, len(input))
+	output := make([]*ckks.Ciphertext, len(input))
 
-	// Calculate degree three
-	xSquared := s.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
-	deg3 := s.U.MultiplyConstNew(input.CopyNew(), 0.004, true, false)
-	s.U.Multiply(xSquared, deg3, &deg3, true, false)
+	deg3Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(-0.004, inputLength))
+	deg1Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.197, inputLength))
+	deg0 := *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.5, inputLength)), s.U.Params.LogSlots())
 
-	// Calculate degree one
-	deg1 := s.U.MultiplyConstNew(input.CopyNew(), 0.197, true, false)
+	for i := range input {
 
-	// Encode deg0 as plaintext
-	var deg0 ckks.Plaintext
+		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-	if _, ok := s.forwardDeg0[inputLength]; ok {
-		deg0 = s.forwardDeg0[inputLength]
-	} else {
-		deg0 = *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.5, inputLength)), s.U.Params.LogSlots())
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+
+			// y := 0.5 + 0.197x - 0.004x^3
+			// Calculate degree three
+			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
+			deg3 := utils.MultiplyPlainNew(inputEach.CopyNew(), deg3Coeff, true, false)
+			utils.Multiply(xSquared, deg3, deg3, true, false)
+
+			// Calculate degree one
+			deg1 := utils.MultiplyPlainNew(inputEach.CopyNew(), deg1Coeff, true, false)
+
+			// Add all degree together
+			result := utils.AddNew(deg3, deg1)
+			utils.AddPlain(result, &deg0, result)
+			c <- result
+
+		}(input[i], s.U.CopyWithClonedEval(), outputChannels[i])
+
 	}
 
-	// Add all degree together
-	result := s.U.AddNew(deg3, deg1)
-	s.U.AddPlain(&result, &deg0, &result)
+	for i := range outputChannels {
+		output[i] = <-outputChannels[i]
+	}
 
-	return result
+	return output
 
 }
 
-func (s Sigmoid) Backward(input ckks.Ciphertext, inputLength int) ckks.Ciphertext {
+func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
 
-	// 0.012x^2 + 0.197
+	outputChannels := make([]chan *ckks.Ciphertext, len(input))
+	output := make([]*ckks.Ciphertext, len(input))
+	
+	deg2Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.012, inputLength))
+	deg0 := *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.197, inputLength)), s.U.Params.LogSlots())
 
-	// Calculate degree three
-	xSquared := s.U.MultiplyNew(*input.CopyNew(), *input.CopyNew(), true, false)
-	deg2 := s.U.MultiplyConstNew(&xSquared, 0.012, true, false)
+	for i := range input {
+		// 0.012x^2 + 0.197
 
-	// Encode deg0 as plaintext
-	var deg0 ckks.Plaintext
+		outputChannels[i] = make(chan *ckks.Ciphertext)
 
-	if _, ok := s.backwardDeg0[inputLength]; ok {
-		deg0 = s.backwardDeg0[inputLength]
-	} else {
-		deg0 = *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.197, inputLength)), s.U.Params.LogSlots())
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+
+			// Calculate degree three
+			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
+			deg2 := utils.MultiplyPlainNew(xSquared, deg2Coeff, true, false)
+
+			// Add all degree together
+			result := utils.AddPlainNew(deg2, &deg0)
+
+			c <- result
+
+		}(input[i], s.U.CopyWithClonedEval(), outputChannels[i])
+
 	}
 
-	// Add all degree together
-	result := s.U.AddPlainNew(deg2, deg0)
+	for i := range outputChannels {
+		output[i] = <-outputChannels[i]
+	}
 
-	return result
+	return output
 
+}
+
+func (s Sigmoid) GetForwardLevelConsumption() int {
+	return 2
+}
+
+func (s Sigmoid) GetBackwardLevelConsumption() int {
+	return 2
+}
+
+func (s Sigmoid) GetType() string {
+	return "sigmoid"
 }

@@ -45,29 +45,29 @@ func EncodeSwitchingKey(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, 
 func DecodeSwitchingKey(swk *rlwe.SwitchingKey, data []byte) (pointer int, err error) {
 
 	decomposition := int(data[0])
+
 	pointer = 1
 
-	swk.Value = make([][2]*ring.Poly, decomposition)
+	swk.Value = make([][2]rlwe.PolyQP, decomposition)
 
 	var inc int
 
 	for j := 0; j < decomposition; j++ {
 
-		swk.Value[j][0] = new(ring.Poly)
+		swk.Value[j][0].Q = new(ring.Poly)
 		if inc, err = swk.Value[j][0].DecodePolyNew(data[pointer:]); err != nil {
-			return pointer, err
+			return
 		}
 		pointer += inc
 
-		swk.Value[j][1] = new(ring.Poly)
+		swk.Value[j][1].P = new(ring.Poly)
 		if inc, err = swk.Value[j][1].DecodePolyNew(data[pointer:]); err != nil {
-			return pointer, err
+			return
 		}
 		pointer += inc
-
 	}
 
-	return pointer, nil
+	return
 }
 
 func MarshalBinary(rtks *rlwe.RotationKeySet) (data []byte, err error) {

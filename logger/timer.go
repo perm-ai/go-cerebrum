@@ -25,3 +25,9 @@ func (t Timer) LogTimeTaken() {
 	fmt.Printf("%s process took %d ms.\n", t.Name, GetTimeMs()-t.Start)
 
 }
+
+func (t Timer) LogTimeTakenSecond() {
+
+	fmt.Printf("%s process took %f s.\n", t.Name, float64(GetTimeMs()-t.Start) / 1000)
+
+}

@@ -57,13 +57,26 @@ func (u Utils) GenerateFilledArraySize(value float64, size int) []float64 {
 
 }
 
-func (u Utils) GenerateRandomNormalArray(length int) []float64 {
+func (u Utils) GenerateRandomNormalArray(length int, stdDev float64) []float64 {
 
 	randomArr := make([]float64, u.Params.Slots())
 	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < length; i++ {
-		randomArr[i] = rand.NormFloat64()
+		randomArr[i] = rand.NormFloat64() * stdDev
+	}
+
+	return randomArr
+
+}
+
+func (u Utils) GenerateRandomNormalArraySeed(length int, stdDev float64, seed int) []float64 {
+
+	randomArr := make([]float64, u.Params.Slots())
+	rand.Seed(int64(seed))
+
+	for i := 0; i < length; i++ {
+		randomArr[i] = rand.NormFloat64() * stdDev
 	}
 
 	return randomArr
