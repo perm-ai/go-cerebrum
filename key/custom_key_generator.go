@@ -56,11 +56,16 @@ func (keygen *CustomKeyGenerator) LoadRotationKeySet (ks []int, includeConjugate
 	return rlks
 }
 
-func (keygen *CustomKeyGenerator) GenRotationKeysForRotations(ks []int, includeConjugate bool, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey)) {
+func (keygen *CustomKeyGenerator) GetGalEl(ks []int, includeConjugate bool) []uint64 {
 	galEls := make([]uint64, len(ks), len(ks)+1)
 	for i, k := range ks {
 		galEls[i] = keygen.params.GaloisElementForColumnRotationBy(k)
 	}
+	return galEls
+}
+
+func (keygen *CustomKeyGenerator) GenRotationKeysForRotations(ks []int, includeConjugate bool, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey)) {
+	galEls := keygen.GetGalEl(ks, includeConjugate)
 	if includeConjugate {
 		galEls = append(galEls, keygen.params.GaloisElementForRowRotation())
 	}
@@ -72,6 +77,18 @@ func (keygen *CustomKeyGenerator) GenRotationKeys(galEls []uint64, sk *rlwe.Secr
 		switchingKey := rlwe.NewSwitchingKey(keygen.params, keygen.params.QCount()-1, keygen.params.PCount()-1)
 		keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galEl), switchingKey)
 		callback(galEl, switchingKey)
+	}
+}
+
+func (keygen *CustomKeyGenerator) GenRotationKeysConcurrent(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey)){
+	for _, galEl := range galEls {
+
+		go func(galElGoRouting uint64){
+			switchingKey := rlwe.NewSwitchingKey(keygen.params, keygen.params.QCount()-1, keygen.params.PCount()-1)
+			keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galElGoRouting), switchingKey)
+			callback(galElGoRouting, switchingKey)
+		}(galEl)
+		
 	}
 }
 

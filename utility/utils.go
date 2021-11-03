@@ -126,6 +126,42 @@ func NewDecryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) U
 
 }
 
+func NewEncryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) Utils{
+
+	log := logger.NewLogger(logEnabled)
+
+	bootstrappingParams := bootstrapping.DefaultParameters[keyChain.ParamsIndex]
+	params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[keyChain.ParamsIndex])
+	encoder := ckks.NewEncoder(params)
+
+	var encryptor ckks.Encryptor
+	if keyChain.SecretKey != nil{
+		encryptor = ckks.NewFastEncryptor(params, keyChain.PublicKey)
+	} else if keyChain.PublicKey != nil {
+		encryptor = ckks.NewFastEncryptor(params, keyChain.PublicKey)
+	} else {
+		panic("Secret or Public key must be provided")
+	}
+	
+
+	return Utils{
+		true,
+		false,
+		bootstrappingParams,
+		params,
+		keyChain,
+		nil,
+		encoder,
+		nil,
+		encryptor,
+		nil,
+		nil,
+		scale,
+		log,
+	}
+
+}
+
 func (u Utils) GenerateRandomFloatArray(length int, lowerBound float64, upperBound float64) []float64 {
 
 	randomArr := make([]float64, u.Params.Slots())
