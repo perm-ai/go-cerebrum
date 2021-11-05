@@ -162,6 +162,47 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 
 }
 
+func LoadKeyPairFromBytes(dirName string, paramsIndex int, sk *[]byte, pk *[]byte) KeyChain {
+
+	toLoad := [5]bool{sk != nil, pk != nil}
+	fileNames := [5]string{"secret_key", "public_key", "relin_keys", "galois_keys", "bootstrap_galois_keys"}
+
+	for i := range toLoad {
+		if toLoad[i] && !fileExist(dirName+"/"+fileNames[i]) {
+			panic("File '" + dirName + "/" + fileNames[i] + "' does not exist")
+		}
+	}
+
+	var skey *rlwe.SecretKey
+	var pkey *rlwe.PublicKey
+	var rlkey *rlwe.RelinearizationKey
+	var galkey *rlwe.RotationKeySet
+	var btpRotKey *rlwe.RotationKeySet
+
+	for i := range toLoad {
+
+		if toLoad[i] {
+
+			var err error
+
+			switch i {
+			case 0:
+				skey = &rlwe.SecretKey{}
+				err = skey.UnmarshalBinary(*sk)
+			case 1:
+				pkey = &rlwe.PublicKey{}
+				err = pkey.UnmarshalBinary(*pk)
+			}
+			check(err)
+
+		}
+
+	}
+
+	return KeyChain{paramsIndex, skey, pkey, rlkey, galkey, btpRotKey}
+
+}
+
 func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool, btpGalK bool) {
 
 	log := logger.NewLogger(true)
