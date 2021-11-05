@@ -135,10 +135,10 @@ func NewEncryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) U
 	encoder := ckks.NewEncoder(params)
 
 	var encryptor ckks.Encryptor
-	if keyChain.SecretKey != nil{
+	if keyChain.PublicKey != nil {
 		encryptor = ckks.NewFastEncryptor(params, keyChain.PublicKey)
-	} else if keyChain.PublicKey != nil {
-		encryptor = ckks.NewFastEncryptor(params, keyChain.PublicKey)
+	} else if keyChain.SecretKey != nil{
+		encryptor = ckks.NewEncryptor(params, keyChain.SecretKey)
 	} else {
 		panic("Secret or Public key must be provided")
 	}
