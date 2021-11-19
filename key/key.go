@@ -124,7 +124,7 @@ func GenerateKeyPair(paramsIndex int) KeyChain {
 func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk bool, btpGalK bool) KeyChain {
 
 	toLoad := [5]bool{sk, pk, rlk, galk, btpGalK}
-	fileNames := [5]string{"secret_key", "public_key", "relin_keys", "galois_keys", "bootstrap_galois_keys"}
+	fileNames := [5]string{"secret_key", "public_key", "relin_key", "galois_keys", "bootstrap_galois_keys"}
 
 	for i := range toLoad {
 		if toLoad[i] && !fileExist(dirName+"/"+fileNames[i]) {
@@ -187,7 +187,7 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 func LoadKeyPairFromBytes(dirName string, paramsIndex int, sk *[]byte, pk *[]byte) KeyChain {
 
 	toLoad := [5]bool{sk != nil, pk != nil}
-	fileNames := [5]string{"secret_key", "public_key", "relin_keys", "galois_keys", "bootstrap_galois_keys"}
+	fileNames := [5]string{"secret_key", "public_key", "relin_key", "galois_keys", "bootstrap_galois_keys"}
 
 	for i := range toLoad {
 		if toLoad[i] && !fileExist(dirName+"/"+fileNames[i]) {
@@ -272,7 +272,7 @@ func (k KeyChain) DumpKeys(dirName string, sk bool, pk bool, rlk bool, galk bool
 				log.Log("Marshalling " + name)
 				byteArr, byteErr = k.PublicKey.MarshalBinary()
 			case 2:
-				name = "relin_keys"
+				name = "relin_key"
 				log.Log("Marshalling " + name)
 				byteArr, byteErr = k.RelinKey.MarshalBinary()
 			case 3:
