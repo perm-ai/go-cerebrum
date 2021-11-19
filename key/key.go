@@ -86,6 +86,28 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 
 }
 
+func GenerateRelinKey(paramsIndex int, sk *rlwe.SecretKey) *rlwe.RelinearizationKey {
+
+	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	keyGenerator := ckks.NewKeyGenerator(Params)
+
+	return keyGenerator.GenRelinearizationKey(sk, 2)
+
+}
+
+func GenerateRotationKeys(paramsIndex int, sk *rlwe.SecretKey, galEl []uint64, concurrent bool, callback func(galEl uint64, swk *rlwe.SwitchingKey)){
+
+	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	keyGenerator := NewKeyGenerator(Params.Parameters)
+
+	if concurrent{
+		keyGenerator.GenRotationKeysConcurrent(galEl, sk, callback)
+	} else {
+		keyGenerator.GenRotationKeys(galEl, sk, callback)
+	}
+
+}
+
 func GenerateKeyPair(paramsIndex int) KeyChain {
 
 	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
