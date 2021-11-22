@@ -64,7 +64,7 @@ func (keygen *CustomKeyGenerator) GetGalEl(ks []int, includeConjugate bool) []ui
 	return galEls
 }
 
-func (keygen *CustomKeyGenerator) GenRotationKeysForRotations(ks []int, includeConjugate bool, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey)) {
+func (keygen *CustomKeyGenerator) GenRotationKeysForRotations(ks []int, includeConjugate bool, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) {
 	galEls := keygen.GetGalEl(ks, includeConjugate)
 	if includeConjugate {
 		galEls = append(galEls, keygen.params.GaloisElementForRowRotation())
@@ -72,24 +72,31 @@ func (keygen *CustomKeyGenerator) GenRotationKeysForRotations(ks []int, includeC
 	keygen.GenRotationKeys(galEls, sk, callback)
 }
 
-func (keygen *CustomKeyGenerator) GenRotationKeys(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey)){
-	for _, galEl := range galEls {
+func (keygen *CustomKeyGenerator) GenRotationKeys(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error {
+	errs := make([]error, len(galEls))
+	for i, galEl := range galEls {
 		switchingKey := rlwe.NewSwitchingKey(keygen.params, keygen.params.QCount()-1, keygen.params.PCount()-1)
 		keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galEl), switchingKey)
-		callback(galEl, switchingKey)
+		errs[i] = callback(galEl, switchingKey)
 	}
+	return errs
 }
 
-func (keygen *CustomKeyGenerator) GenRotationKeysConcurrent(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey)){
-	for _, galEl := range galEls {
+func (keygen *CustomKeyGenerator) GenRotationKeysConcurrent(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error {
 
-		go func(galElGoRouting uint64){
+	errs := make([]error, len(galEls))
+
+	for i, galEl := range galEls {
+
+		go func(galElGoRoutine uint64, index int){
 			switchingKey := rlwe.NewSwitchingKey(keygen.params, keygen.params.QCount()-1, keygen.params.PCount()-1)
-			keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galElGoRouting), switchingKey)
-			callback(galElGoRouting, switchingKey)
-		}(galEl)
+			keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galElGoRoutine), switchingKey)
+			errs[i] = callback(galElGoRoutine, switchingKey)
+		}(galEl, i)
 		
 	}
+
+	return errs
 }
 
 
