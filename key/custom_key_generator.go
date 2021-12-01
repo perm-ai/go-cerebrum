@@ -3,6 +3,7 @@ package key
 import (
 	"math"
 	"math/big"
+	"sync"
 
 	"github.com/ldsec/lattigo/v2/ring"
 	"github.com/ldsec/lattigo/v2/rlwe"
@@ -74,27 +75,36 @@ func (keygen *CustomKeyGenerator) GenRotationKeysForRotations(ks []int, includeC
 
 func (keygen *CustomKeyGenerator) GenRotationKeys(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error {
 	errs := make([]error, len(galEls))
+	rotationKeySet := rlwe.NewRotationKeySet(keygen.params, galEls)
 	for i, galEl := range galEls {
-		switchingKey := rlwe.NewSwitchingKey(keygen.params, keygen.params.QCount()-1, keygen.params.PCount()-1)
-		keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galEl), switchingKey)
-		errs[i] = callback(galEl, switchingKey)
+		keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galEl), rotationKeySet.Keys[galEl])
+		errs[i] = callback(galEl, rotationKeySet.Keys[galEl])
 	}
 	return errs
 }
 
 func (keygen *CustomKeyGenerator) GenRotationKeysConcurrent(galEls []uint64, sk *rlwe.SecretKey, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error {
 
+	var wg sync.WaitGroup
 	errs := make([]error, len(galEls))
 
 	for i, galEl := range galEls {
 
+		wg.Add(1)
+
+		rotationKeySet := rlwe.NewRotationKeySet(keygen.params, galEls)
 		go func(galElGoRoutine uint64, index int){
-			switchingKey := rlwe.NewSwitchingKey(keygen.params, keygen.params.QCount()-1, keygen.params.PCount()-1)
-			keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galElGoRoutine), switchingKey)
-			errs[i] = callback(galElGoRoutine, switchingKey)
+			
+			defer wg.Done()
+
+			keygen.genrotKey(sk.Value, keygen.params.InverseGaloisElement(galElGoRoutine), rotationKeySet.Keys[galElGoRoutine])
+			errs[index] = callback(galElGoRoutine, rotationKeySet.Keys[galElGoRoutine])
+
 		}(galEl, i)
 		
 	}
+
+	wg.Wait()
 
 	return errs
 }
