@@ -98,7 +98,7 @@ func GenerateRelinKey(paramsIndex int, sk *rlwe.SecretKey) *rlwe.Relinearization
 func GenerateRotationKeys(paramsIndex int, sk *rlwe.SecretKey, galEl []uint64, concurrent bool, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error{
 
 	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
-	keyGenerator := NewKeyGenerator(Params.Parameters)
+	keyGenerator := NewKeyGenerator(Params, ckks.NewKeyGenerator(Params))
 
 	if concurrent{
 		return keyGenerator.GenRotationKeysConcurrent(galEl, sk, callback)
