@@ -1,9 +1,13 @@
 package key
 
 import (
+	"io/ioutil"
 	"math"
 	"os"
+	"path"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
@@ -121,10 +125,10 @@ func GenerateKeyPair(paramsIndex int) KeyChain {
 
 }
 
-func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk bool, btpGalK bool) KeyChain {
+func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, rotk bool) KeyChain {
 
-	toLoad := [5]bool{sk, pk, rlk, galk, btpGalK}
-	fileNames := [5]string{"secret_key", "public_key", "relin_key", "galois_keys", "bootstrap_galois_keys"}
+	toLoad := [5]bool{sk, pk, rlk, rotk}
+	fileNames := [5]string{"secret_key", "public_key", "relin_key", "rotation_key_"}
 
 	for i := range toLoad {
 		if toLoad[i] && !fileExist(dirName+"/"+fileNames[i]) {
@@ -135,8 +139,7 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 	var skey *rlwe.SecretKey
 	var pkey *rlwe.PublicKey
 	var rlkey *rlwe.RelinearizationKey
-	var galkey *rlwe.RotationKeySet
-	var btpRotKey *rlwe.RotationKeySet
+	var rotKeys *rlwe.RotationKeySet
 
 	for i := range toLoad {
 
@@ -162,25 +165,44 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, galk 
 			}
 			check(err)
 
-		} else if toLoad[i] && i >= 3 {
+		} else if toLoad[i] && i == 3 {
 
-			filekey, err := os.Open(dirName + "/" + fileNames[i])
+			files, err := ioutil.ReadDir(dirName)
 			check(err)
 
-			switch i {
-			case 3:
-				galkey = &rlwe.RotationKeySet{}
-				err = UnmarshalBinaryBatch(galkey, filekey)
-			case 4:
-				btpRotKey = &rlwe.RotationKeySet{}
-				err = UnmarshalBinaryBatch(btpRotKey, filekey)
+			galEls := []uint64{}
+			rotKeysMap := make(map[uint64]*rlwe.SwitchingKey)
+
+			for i := range files{
+
+				if strings.Contains(files[i].Name(), fileNames[3]){
+
+					keyNameSep := strings.Split(files[i].Name(), "_")
+					galEl, err := strconv.Atoi(keyNameSep[len(keyNameSep) - 1])
+					check(err)
+					rotK, err := os.ReadFile(path.Join(dirName, files[i].Name()))
+					check(err)
+
+					swk := &rlwe.SwitchingKey{}
+					swk.UnmarshalBinary(rotK)
+					rotKeysMap[uint64(galEl)] = swk
+					galEls = append(galEls, uint64(galEl))
+
+				}
+				
 			}
+
+			Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+			rotKeys := rlwe.NewRotationKeySet(Params.Parameters, galEls)
+			
+			rotKeys.Keys = rotKeysMap
+			
 			check(err)
 		}
 
 	}
 
-	return KeyChain{paramsIndex, skey, pkey, rlkey, galkey, btpRotKey}
+	return KeyChain{paramsIndex, skey, pkey, rlkey, rotKeys, rotKeys}
 
 }
 

@@ -20,7 +20,7 @@ func Decrypt(keyPath string, data string) {
 	}
 
 	log.Log("Loading Keys")
-	keys := key.LoadKeys(keyPath, 0, true, true, false, false, false)
+	keys := key.LoadKeys(keyPath, 0, true, true, false, false)
 
 	log.Log("Generating Utils")
 	utils := utility.NewDecryptionUtils(keys, math.Pow(2, 35), true)

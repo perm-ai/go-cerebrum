@@ -606,7 +606,7 @@ func TestKeyDumpAndLoad(t *testing.T) {
 	keyChain.DumpKeys(filename, true, true, true, true, true)
 
 	log.Log("Loading")
-	loadedKeys := key.LoadKeys(filename, 0, true, true, true, true, true)
+	loadedKeys := key.LoadKeys(filename, 0, true, true, true, true)
 
 	log.Log("Generating new utils")
 	newUtils := NewUtils(loadedKeys, math.Pow(2, 35), 0, true)
@@ -654,7 +654,7 @@ func TestKeyPairDumpAndLoad(t *testing.T) {
 	keyChain.DumpKeys(filename, true, true, false, false, false)
 
 	log.Log("Loading")
-	loadedKeys := key.LoadKeys(filename, 0, true, true, false, false, false)
+	loadedKeys := key.LoadKeys(filename, 0, true, true, false, false)
 	loadedKeys = key.GenerateKeysFromKeyPair(0, loadedKeys.SecretKey, loadedKeys.PublicKey, false, true)
 
 	log.Log("Generating new utils")
