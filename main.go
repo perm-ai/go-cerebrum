@@ -37,7 +37,7 @@ func main() {
 
 	// key.LoadKeys("/Users/phu/Desktop/Perm/Banpu Coal Data", 0, true, true, true, true)
 
-	jsonFile, err := os.Open("/importer/Coal_Train_encrypted.json")
+	jsonFile, err := os.Open("/importer/test-data/Coal_Train_encrypted.json")
 
 	if err != nil {
 		fmt.Println(err)
