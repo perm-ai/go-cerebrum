@@ -37,7 +37,7 @@ func main() {
 
 	// key.LoadKeys("/Users/phu/Desktop/Perm/Banpu Coal Data", 0, true, true, true, true)
 
-	jsonFile, err := os.Open("/importer/test-data/Coal_Train_encrypted.json")
+	jsonFile, err := os.Open("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/Coal_Train_encrypted.json")
 
 	if err != nil {
 		fmt.Println(err)
@@ -72,7 +72,7 @@ func main() {
 
 	y  =*ct[0].CopyNew()
 
-	keyPair := key.LoadKeys("/keychain", 0, true, true, false, false)
+	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
 	utils := utility.NewUtils(keychain, math.Pow(2, 40), 100, true)
