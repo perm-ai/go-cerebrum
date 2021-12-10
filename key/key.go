@@ -46,7 +46,7 @@ func GenerateKeys(paramsIndex int, btspEnabled bool, logEnabled bool) KeyChain {
 
 	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
 	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
-	
+
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
@@ -99,12 +99,12 @@ func GenerateRelinKey(paramsIndex int, sk *rlwe.SecretKey) *rlwe.Relinearization
 
 }
 
-func GenerateRotationKeys(paramsIndex int, sk *rlwe.SecretKey, galEl []uint64, concurrent bool, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error{
+func GenerateRotationKeys(paramsIndex int, sk *rlwe.SecretKey, galEl []uint64, concurrent bool, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error {
 
 	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
 	keyGenerator := NewKeyGenerator(Params, ckks.NewKeyGenerator(Params))
 
-	if concurrent{
+	if concurrent {
 		return keyGenerator.GenRotationKeysConcurrent(galEl, sk, callback)
 	} else {
 		return keyGenerator.GenRotationKeys(galEl, sk, callback)
@@ -128,7 +128,7 @@ func GenerateKeyPair(paramsIndex int) KeyChain {
 func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, rotk bool) KeyChain {
 
 	toLoad := [5]bool{sk, pk, rlk, rotk}
-	fileNames := [5]string{"secret_key", "public_key", "relin_key", "rotation_key_"}
+	fileNames := [5]string{"secret_key", "public_key", "relin_key"}
 
 	for i := range toLoad {
 		if toLoad[i] && !fileExist(dirName+"/"+fileNames[i]) {
@@ -173,12 +173,12 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, rotk 
 			galEls := []uint64{}
 			rotKeysMap := make(map[uint64]*rlwe.SwitchingKey)
 
-			for i := range files{
+			for i := range files {
 
-				if strings.Contains(files[i].Name(), fileNames[3]){
+				if strings.Contains(files[i].Name(), "rotation_key_") {
 
 					keyNameSep := strings.Split(files[i].Name(), "_")
-					galEl, err := strconv.Atoi(keyNameSep[len(keyNameSep) - 1])
+					galEl, err := strconv.Atoi(keyNameSep[len(keyNameSep)-1])
 					check(err)
 					rotK, err := os.ReadFile(path.Join(dirName, files[i].Name()))
 					check(err)
@@ -189,14 +189,14 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, rotk 
 					galEls = append(galEls, uint64(galEl))
 
 				}
-				
+
 			}
 
 			Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
 			rotKeys := rlwe.NewRotationKeySet(Params.Parameters, galEls)
-			
+
 			rotKeys.Keys = rotKeysMap
-			
+
 			check(err)
 		}
 
