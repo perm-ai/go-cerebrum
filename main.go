@@ -88,6 +88,6 @@ func main() {
 	}
 	// b := []float64
 	b := utils.Decrypt(&y)
-	fmt.Printf("The weights is %f", m[0])
+	fmt.Printf("The weights is %f and %f", m[0][0], m[1][0])
 	fmt.Printf("The bias is %f", b[0])
 }
