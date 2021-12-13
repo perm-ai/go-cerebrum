@@ -14,6 +14,7 @@ import (
 	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
 	"github.com/ldsec/lattigo/v2/rlwe"
 	"github.com/perm-ai/go-cerebrum/key"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
 
@@ -163,12 +164,14 @@ func DownloadFromS3(url string) ([]byte, error) {
 
 }
 
-func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse) (key.KeyChain, error) {
+func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse, logEnabled bool) (key.KeyChain, error) {
 
+	log := logger.NewLogger(logEnabled)
 	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
 
 	// Load pk
 	pkByte, err := DownloadFromS3(keyResponse.Pk)
+	log.Log("Downloading PK")
 
 	if err != nil {
 		return key.KeyChain{}, err
@@ -176,6 +179,7 @@ func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse) (key.Ke
 
 	pk := rlwe.PublicKey{}
 	err = pk.UnmarshalBinary(pkByte)
+	log.Log("Downloaded PK")
 
 	if err != nil {
 		return key.KeyChain{}, err
@@ -183,6 +187,7 @@ func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse) (key.Ke
 
 	// Load rlk
 	rlkByte, err := DownloadFromS3(keyResponse.Rlk)
+	log.Log("Downloading RLK")
 
 	if err != nil {
 		return key.KeyChain{}, err
@@ -190,6 +195,7 @@ func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse) (key.Ke
 
 	rlk := rlwe.RelinearizationKey{}
 	err = rlk.UnmarshalBinary(rlkByte)
+	log.Log("Downloaded RLK")
 
 	if err != nil {
 		return key.KeyChain{}, err
@@ -212,6 +218,7 @@ func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse) (key.Ke
 		galEls[i] = uint64(galEl)
 
 		// Download key
+		log.Log(fmt.Sprintf("Downloading ROTK GalEl: %d (%d/%d)", galEl, i+1, len(galEls)))
 		rotkByte, err := DownloadFromS3(keyResponse.Rotk[i])
 		if err != nil {
 			return key.KeyChain{}, err
@@ -222,6 +229,7 @@ func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse) (key.Ke
 		if err != nil {
 			return key.KeyChain{}, err
 		}
+		log.Log(fmt.Sprintf("Downloaded ROTK GalEl: %d (%d/%d)", galEl, i+1, len(galEls)))
 
 	}
 
