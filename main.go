@@ -79,10 +79,10 @@ func main() {
 
 	model := regression.NewLinearRegression(utils, 2)
 
-	model.Train(x, &y, 0.01, trainingData.Encrypted[0].Length, 20)
+	model.Train(x, &y, 0.01, 172, 20)
 
 	m := make([][]float64, len(x))
-	
+	// fmt.Printf("Training Data: %f, y.length %f", trainingData.Encrypted[0].Length, )
 	for i := 0; i < len(x); i++ {
 		m[i] = utils.Decrypt(x[i])
 	}
