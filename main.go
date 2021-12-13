@@ -75,14 +75,14 @@ func main() {
 	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
-	utils := utility.NewUtils(keychain, math.Pow(2, 40), 100, true)
+	utils := utility.NewUtils(keychain, math.Pow(2, 35), 100, true)
 
 	model := regression.NewLinearRegression(utils, 2)
 
 	model.Train(x, &y, 0.01, 172, 20)
 
 	m := make([][]float64, len(x))
-	// fmt.Printf("Training Data: %f, y.length %f", trainingData.Encrypted[0].Length, )
+	fmt.Printf("Training Data: %d,", trainingData.Encrypted[0].Length)
 	for i := 0; i < len(x); i++ {
 		m[i] = utils.Decrypt(x[i])
 	}
@@ -90,4 +90,6 @@ func main() {
 	b := utils.Decrypt(&y)
 	fmt.Printf("The weights is %f and %f", m[0][0], m[1][0])
 	fmt.Printf("The bias is %f", b[0])
+
+	
 }
