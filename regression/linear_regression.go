@@ -93,14 +93,6 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	l.utils.Sub(l.Bias, gradient.DB, l.Bias)
 
-	if l.Bias.Scale > math.Pow(2, 40){
-		fmt.Printf("Before bias rescale: %f\n", l.Bias.Scale)
-		l.utils.Evaluator.ScaleUp(l.Bias, math.Pow(2, 80)/l.Bias.Scale, l.Bias)
-		fmt.Printf("During bias rescale: %f\n", l.Bias.Scale)
-		l.utils.Evaluator.Rescale(l.Bias, l.utils.Scale, l.Bias)
-		fmt.Printf("After bias rescale: %f\n", l.Bias.Scale)
-	}
-
 }
 
 // pack data in array of ciphertexts
@@ -137,6 +129,11 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 			for i := range x {
 				model.utils.BootstrapInPlace(model.Weight[i])
 			}
+
+			if model.Bias.Scale < math.Pow(2,40){
+				model.utils.Evaluator.ScaleUp(model.Bias, math.Pow(2, 60)/model.Bias.Scale, model.Bias)
+			}
+
 			model.utils.BootstrapInPlace(model.Bias)
 			fmt.Printf("Current weights after bootstrapping is %f, %f \n", model.utils.Decrypt(model.Weight[0])[0], model.utils.Decrypt(model.Weight[1])[0])
         	fmt.Printf("Current bias after bootstrapping is %f \n", model.utils.Decrypt(model.Bias)[0])

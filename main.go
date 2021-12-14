@@ -75,7 +75,7 @@ func main() {
 	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
-	utils := utility.NewUtils(keychain, math.Pow(2, 35), 100, true)
+	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
 
 	model := regression.NewLinearRegression(utils, 2)
 
