@@ -130,9 +130,11 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 				model.utils.BootstrapInPlace(model.Weight[i])
 			}
 
-			if model.Bias.Scale < math.Pow(2,40){
+			if model.Bias.Scale < math.Pow(2,50){
 				model.utils.Evaluator.ScaleUp(model.Bias, math.Pow(2, 60)/model.Bias.Scale, model.Bias)
 			}
+
+			fmt.Printf("Current bias pre-btp scale %f \n", model.Bias.Scale)
 
 			model.utils.BootstrapInPlace(model.Bias)
 			fmt.Printf("Current weights after bootstrapping is %f, %f \n", model.utils.Decrypt(model.Weight[0])[0], model.utils.Decrypt(model.Weight[1])[0])
