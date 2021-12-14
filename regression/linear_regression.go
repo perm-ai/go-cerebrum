@@ -112,6 +112,15 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 		log.Log(fmt.Sprintf("Updating gradient %d/%d(current lvl: %d)\n", i+1, epoch, grad.DM[0].Level()))
 		model.UpdateGradient(grad)
 
+		fmt.Printf("Current weights is %f, %f \n", model.utils.Decrypt(model.Weight[0])[0], model.utils.Decrypt(model.Weight[1])[0])
+        fmt.Printf("Current bias is %f \n", model.utils.Decrypt(model.Bias)[0])
+        
+        fmt.Printf("Current weights level %d \n", model.Weight[0].Level())
+        fmt.Printf("Current bias level %d \n", model.Bias.Level())
+
+        fmt.Printf("Current weights scale %f \n", model.Weight[0].Scale)
+        fmt.Printf("Current bias scale %f \n", model.Bias.Scale)
+
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
 			if model.Bias.Level() != 1 {
