@@ -122,6 +122,8 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
         fmt.Printf("Current bias scale %f \n", model.Bias.Scale)
 
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
+			fmt.Printf("Current weights before bootstrapping is %f, %f \n", model.utils.Decrypt(model.Weight[0])[0], model.utils.Decrypt(model.Weight[1])[0])
+        	fmt.Printf("Current bias before bootstrapping is %f \n", model.utils.Decrypt(model.Bias)[0])
 			fmt.Println("Bootstrapping gradient")
 			if model.Bias.Level() != 1 {
 				model.utils.Evaluator.DropLevel(model.Bias, model.Bias.Level()-1)
@@ -130,7 +132,8 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 				model.utils.BootstrapInPlace(model.Weight[i])
 			}
 			model.utils.BootstrapInPlace(model.Bias)
-
+			fmt.Printf("Current weights after bootstrapping is %f, %f \n", model.utils.Decrypt(model.Weight[0])[0], model.utils.Decrypt(model.Weight[1])[0])
+        	fmt.Printf("Current bias after bootstrapping is %f \n", model.utils.Decrypt(model.Bias)[0])
 		}
 
 	}
