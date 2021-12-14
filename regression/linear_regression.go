@@ -2,6 +2,7 @@ package regression
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -113,15 +114,17 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 		model.UpdateGradient(grad)
 
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
-			fmt.Println("Bootstrapping gradient")
-			if model.Bias.Level() != 1 {
-				model.utils.Evaluator.DropLevel(model.Bias, model.Bias.Level()-1)
-			}
+
 			for i := range x {
 				model.utils.BootstrapInPlace(model.Weight[i])
 			}
-			model.utils.BootstrapInPlace(model.Bias)
 
+			if model.Bias.Scale < math.Pow(2,50){
+				model.utils.Evaluator.ScaleUp(model.Bias, math.Pow(2, 60)/model.Bias.Scale, model.Bias)
+			}
+
+			model.utils.BootstrapInPlace(model.Bias)
+			
 		}
 
 	}
