@@ -94,8 +94,11 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 	l.utils.Sub(l.Bias, gradient.DB, l.Bias)
 
 	if l.Bias.Scale > math.Pow(2, 40){
+		fmt.Printf("Before bias rescale: %f\n", l.Bias.Scale)
 		l.utils.Evaluator.ScaleUp(l.Bias, math.Pow(2, 80)/l.Bias.Scale, l.Bias)
+		fmt.Printf("During bias rescale: %f\n", l.Bias.Scale)
 		l.utils.Evaluator.Rescale(l.Bias, l.utils.Scale, l.Bias)
+		fmt.Printf("After bias rescale: %f\n", l.Bias.Scale)
 	}
 
 }
