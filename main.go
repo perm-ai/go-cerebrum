@@ -70,7 +70,7 @@ func main() {
 
 	y := ckks.Ciphertext{}
 
-	y  =*ct[0].CopyNew()
+	y = *ct[0].CopyNew()
 
 	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
@@ -81,15 +81,7 @@ func main() {
 
 	model.Train(x, &y, 0.01, 172, 20)
 
-	m := make([][]float64, len(x))
-	fmt.Printf("Training Data: %d,", trainingData.Encrypted[0].Length)
-	for i := 0; i < len(x); i++ {
-		m[i] = utils.Decrypt(x[i])
-	}
-	// b := []float64
-	b := utils.Decrypt(&y)
-	fmt.Printf("The weights is %f and %f", m[0][0], m[1][0])
-	fmt.Printf("The bias is %f", b[0])
+	fmt.Printf("Final weights is %f, %f \n", utils.Decrypt(model.Weight[0])[0], utils.Decrypt(model.Weight[1])[0])
+	fmt.Printf("Final bias is %f \n", utils.Decrypt(model.Bias)[0])
 
-	
 }
