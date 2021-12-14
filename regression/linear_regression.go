@@ -2,6 +2,7 @@ package regression
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -91,6 +92,11 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 	}
 
 	l.utils.Sub(l.Bias, gradient.DB, l.Bias)
+
+	if l.Bias.Scale > math.Pow(2, 40){
+		l.utils.Evaluator.ScaleUp(l.Bias, math.Pow(2, 80)/l.Bias.Scale, l.Bias)
+		l.utils.Evaluator.Rescale(l.Bias, l.utils.Scale, l.Bias)
+	}
 
 }
 
