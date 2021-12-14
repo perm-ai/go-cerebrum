@@ -15,8 +15,8 @@ type LinearRegression struct {
 }
 
 type LinearRegressionGradient struct {
-	DM []ckks.Ciphertext
-	DB ckks.Ciphertext
+	DM []*ckks.Ciphertext
+	DB *ckks.Ciphertext
 }
 
 // need to pass in number of independent features
@@ -34,8 +34,8 @@ func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 }
 
 func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
-
-	result := l.utils.InterDotProduct(input, l.Weight, true, false, nil)
+	
+	result := l.utils.InterDotProduct(input, l.Weight, true, true, nil)
 
 	l.utils.Add(result, l.Bias, result)
 
@@ -51,29 +51,46 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 
 	err := l.utils.SubNew(y, output)
 
-	dM := make([]ckks.Ciphertext, len(input))
+	dM := make([]*ckks.Ciphertext, len(input))
 	multiplier := l.utils.EncodePlaintextFromArray(l.utils.GenerateFilledArraySize((-2.0/float64(size))*learningRate, size))
 
+	// for i := range input {
+	// 	dM[i] = l.utils.MultiplyNew(*input[i], *err.CopyNew(), true, false)
+	// 	l.utils.SumElementsInPlace(&dM[i])
+	// 	l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
+	// }
+
+	channels := make([]chan *ckks.Ciphertext, len(input))
+
 	for i := range input {
-		dM[i] = *l.utils.MultiplyNew(input[i], err.CopyNew(), true, false)
-		l.utils.SumElementsInPlace(&dM[i])
-		l.utils.MultiplyPlain(&dM[i], multiplier, &dM[i], true, false)
+		channels[i] = make(chan *ckks.Ciphertext)
+		go func(index int, utils utility.Utils, channel chan *ckks.Ciphertext) {
+			product := utils.MultiplyNew(input[index], err.CopyNew(), true, false)
+			utils.SumElementsInPlace(product)
+			result := utils.MultiplyPlainNew(product, multiplier, true, false)
+
+			channel <- result
+		}(i, l.utils.CopyWithClonedEval(), channels[i])
+	}
+
+	for c := range channels {
+		dM[c] = <-channels[c]
 	}
 
 	dB := l.utils.SumElementsNew(*err)
 	l.utils.MultiplyPlain(dB, multiplier, dB, true, false)
 
-	return LinearRegressionGradient{dM, *dB}
+	return LinearRegressionGradient{dM, dB}
 
 }
 
 func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 
 	for i := range gradient.DM {
-		l.utils.Sub(l.Weight[i], &gradient.DM[i], l.Weight[i])
+		l.utils.Sub(l.Weight[i], gradient.DM[i], l.Weight[i])
 	}
 
-	l.utils.Sub(l.Bias, &gradient.DB, l.Bias)
+	l.utils.Sub(l.Bias, gradient.DB, l.Bias)
 
 }
 
