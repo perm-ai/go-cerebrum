@@ -103,10 +103,6 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 		fmt.Printf("Current weights level %d \n", model.Weight[0].Level())
 		fmt.Printf("Current bias level %d \n", model.Bias.Level())
 
-		fmt.Printf("Current weights scale %f \n", model.Weight[0].Scale)
-		fmt.Printf("Current bias scale %f \n", model.Bias.Scale)
-
-
 
 		if model.Weight[0].Level() < 4 || model.Bias.Level() < 4 {
 			fmt.Println("Bootstrapping gradient")
