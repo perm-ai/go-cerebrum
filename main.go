@@ -37,10 +37,8 @@ func main() {
 
 	// key.LoadKeys("/Users/phu/Desktop/Perm/Banpu Coal Data", 0, true, true, true, true)
 
-	//AWS
 	jsonFile, err := os.Open("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/Coal_Train_encrypted.json")
-	//LOCAL
-	// jsonFile, err := os.Open("/Users/phu/Desktop/Perm/Banpu Coal Data/Coal_Train_encrypted.json")
+
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -72,19 +70,12 @@ func main() {
 
 	y := ckks.Ciphertext{}
 
-	y = *ct[0].CopyNew()
-	//AWS
+	y  =*ct[0].CopyNew()
+
 	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
-
-	//LOCAL
-	// keyPair := key.LoadKeys("/Users/phu/Desktop/Perm/Banpu Coal Data", 0, true, true, false, false)
-
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 100, true)
-
-	// fmt.Printf("Test x value %f", utils.Decrypt(x[0])[1])
-	// fmt.Printf("Test y value %f", utils.Decrypt(&y)[1])
 
 	model := regression.NewLinearRegression(utils, 2)
 
@@ -100,4 +91,5 @@ func main() {
 	fmt.Printf("The weights is %f and %f", m[0][0], m[1][0])
 	fmt.Printf("The bias is %f", b[0])
 
+	
 }
