@@ -142,3 +142,65 @@ func LoadJsonData(filePath string) (EncryptedData, error) {
 	return data, nil
 
 }
+
+func SaveToJson(data EncryptedData, filePath string) error {
+
+	// Generate encrypted data struct to store unmarshaled result
+	rawData := EncryptedDataRaw{Name: data.Name, Encrypted: make([]ColumnRaw, len(data.Encrypted))}
+
+	for i := range rawData.Encrypted{
+
+		rawData.Encrypted[i] = ColumnRaw{
+			ColumnName: rawData.Encrypted[i].ColumnName,
+			Type: rawData.Encrypted[i].Type,
+			Length: rawData.Encrypted[i].Length,
+			Data: "",
+			Label: make([]LabelRaw, len(data.Encrypted[i].Label)),
+		}
+
+		if data.Encrypted[i].Data != nil {
+
+			byteCt, err := data.Encrypted[i].Data.MarshalBinary()
+
+			if err != nil {
+				return err
+			}
+
+			rawData.Encrypted[i].Data = base64.StdEncoding.EncodeToString(byteCt)
+
+		}
+
+		if len(data.Encrypted[i].Label) != 0 {
+
+			for j := range data.Encrypted[i].Label{
+
+				rawData.Encrypted[i].Label[j] = LabelRaw{
+					Category: rawData.Encrypted[i].Label[j].Category,
+					Index: rawData.Encrypted[i].Label[j].Index,
+					Data: "",
+				}
+
+				byteCt, err := data.Encrypted[i].Label[j].Data.MarshalBinary()
+
+				if err != nil {
+					return err
+				}
+				
+				rawData.Encrypted[i].Label[j].Data = base64.StdEncoding.EncodeToString(byteCt)
+			}
+
+		}
+
+	}
+
+	jsonData, err := json.Marshal(rawData)
+
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filePath, jsonData, 0777)
+
+	return err
+
+}
