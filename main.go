@@ -79,7 +79,7 @@ func main() {
 
 	model := regression.NewLinearRegression(utils, 2)
 
-	model.Train(x, &y, 0.01, 172, 20)
+	model.Train(x, &y, 0.1, 172, 20)
 
 	fmt.Printf("Final weights is %f, %f \n", utils.Decrypt(model.Weight[0])[0], utils.Decrypt(model.Weight[1])[0])
 	fmt.Printf("Final bias is %f \n", utils.Decrypt(model.Bias)[0])
