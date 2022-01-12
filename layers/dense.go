@@ -212,7 +212,6 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		gradients.BiasGradient = gradient
 	}
 
-
 	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input, true)
 	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
 
@@ -615,6 +614,10 @@ func (d *Dense) SetBootstrapActivation(set bool, direction string) {
 
 func (d *Dense) SetWeightLevel(lvl int) {
 	d.weightLevel = lvl
+}
+
+func (d *Dense) GetWeightLevel() int{
+	return d.weightLevel
 }
 
 type denseWeight struct {
