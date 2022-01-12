@@ -20,12 +20,18 @@ func (m MSE) Forward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength i
 		error_squared[i] = m.U.MultiplyNew(error[i], error[i], true, false)
 	}
 
-	sum := make([]*ckks.Ciphertext, len(pred))
+	// sum := make([]*ckks.Ciphertext, len(pred))
 	for i := range pred{
-		sum[i] = m.U.SumElementsInPlace(error_squared[i])
+		m.U.SumElementsInPlace(error_squared[i])
+	}
+
+	mean := m.U.EncodePlaintextFromArray(m.U.GenerateFilledArray(float64(1/predLength)))
+
+	for i := range pred{
+		result[i] = m.U.MultiplyPlainNew(error_squared[i], mean, true, false)
 	}
 	
-	return 
+	return result
 }
 
 func (m MSE) Backward() {
