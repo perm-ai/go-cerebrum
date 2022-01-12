@@ -143,7 +143,9 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 		timer.LogTimeTakenSecond()
 
 		if d.btspActivation[0] {
+			timer = logger.StartTimer(fmt.Sprintf("Forward (%d) activation %s bootstrapping", d.InputUnit, (*d.Activation).GetType()))
 			d.utils.Bootstrap1dInPlace(activatedOutput, true)
+			timer.LogTimeTakenSecond()
 		}
 
 	}
@@ -162,18 +164,22 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 	fmt.Printf("Backward gradient wrt output of layer %d: %d\n", d.InputUnit, gradient[0].Level())
 
+	backwardTimer := logger.StartTimer(fmt.Sprintf("Backward (%d)", d.InputUnit))
+
 	// Calculate gradients for last layer
 	if d.Activation != nil {
-
-		timer := logger.StartTimer(fmt.Sprintf("Backward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 
 		if (*d.Activation).GetType() != "softmax" {
 
 			gradients.BiasGradient = make([]*ckks.Ciphertext, len(gradient))
 			fmt.Printf("Backward (%d) output level: %d\n", d.InputUnit, output[0].Level())
+
+			activationTimer := logger.StartTimer(fmt.Sprintf("Backward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
 			activationGradient := (*d.Activation).Backward(output, d.batchSize)
+			activationTimer.LogTimeTakenSecond()
 			fmt.Printf("Backward (%d) activation level: %d\n", d.InputUnit, activationGradient[0].Level())
 
+			backwardTimer = logger.StartTimer(fmt.Sprintf("Backward (%d)", d.InputUnit))
 			hasBootstrapped := false
 
 			if activationGradient[0].Level() == 1 && d.btspActivation[1] {
@@ -208,8 +214,6 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 			gradients.BiasGradient = gradient
 		}
 
-		timer.LogTimeTakenSecond()
-
 	} else {
 		gradients.BiasGradient = gradient
 	}
@@ -238,14 +242,19 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		}
 
 		inputWg.Wait()
+		backwardTimer.LogTimeTakenSecond()
 
 		if d.btspOutput[1] {
+			btpTimer := logger.StartTimer(fmt.Sprintf("Backward (%d) input gradient bootstrap", d.InputUnit))
 			d.utils.Bootstrap1dInPlace(gradients.InputGradient, true)
+			btpTimer.LogTimeTakenSecond()
 		}
 
 		timer.LogTimeTakenSecond()
 		fmt.Printf("Backward (%d) input gradient: %f\n", d.InputUnit, d.utils.Decrypt(gradients.InputGradient[4])[0:5])
 
+	} else {
+		backwardTimer.LogTimeTakenSecond()
 	}
 
 	fmt.Printf("Backward (%d) weight level: %d \tbias level: %d\n", d.InputUnit, gradients.WeightGradient[0][0].Level(), gradients.BiasGradient[0].Level())

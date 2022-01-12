@@ -2,9 +2,11 @@ package utility
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/perm-ai/go-cerebrum/logger"
 )
 
 func TestConcurrentSumElement(t *testing.T) {
@@ -82,5 +84,95 @@ func TestConcurrentBootstrap(t *testing.T) {
 		}
 
 	}
+
+}
+
+func TestConcurrentBenchmark(t *testing.T){
+
+	testSizes := []int{50,100,150,200}
+
+	for _, total := range testSizes{
+		plain := make([][]float64, total)
+		cts := make([]*ckks.Ciphertext, total)
+
+		for i := range cts {
+			plain[i] = utils.GenerateRandomArray(-10, 10, 1000)
+			cts[i] = utils.EncryptToLevel(plain[i], 2)
+		}
+
+		fmt.Printf("Addition %d\n", total)
+		var wg sync.WaitGroup
+
+		timer := logger.StartTimer(fmt.Sprintf("Addition %d", total))
+		for i := range cts{
+
+			wg.Add(1)
+			go func(index int, u Utils){
+				defer wg.Done()
+				u.Add(cts[index], cts[index], cts[index])
+			}(i, utils.CopyWithClonedEval())
+
+		}
+
+		wg.Wait()
+		
+		timer.LogTimeTakenSecond()
+	}
+
+	for _, total := range testSizes{
+		plain := make([][]float64, total)
+		cts := make([]*ckks.Ciphertext, total)
+
+		for i := range cts {
+			plain[i] = utils.GenerateRandomArray(-10, 10, 1000)
+			cts[i] = utils.EncryptToLevel(plain[i], 2)
+		}
+
+		fmt.Printf("Multiplication %d\n", total)
+		var wg sync.WaitGroup
+
+		timer := logger.StartTimer(fmt.Sprintf("Multiplication %d", total))
+		for i := range cts{
+
+			wg.Add(1)
+			go func(index int, u Utils){
+				defer wg.Done()
+				u.Multiply(cts[index], cts[index], cts[index], true, false)
+			}(i, utils.CopyWithClonedEval())
+
+		}
+
+		wg.Wait()
+		
+		timer.LogTimeTakenSecond()
+	}
+
+	for _, total := range testSizes{
+		plain := make([][]float64, total)
+		cts := make([]*ckks.Ciphertext, total)
+
+		for i := range cts {
+			plain[i] = utils.GenerateRandomArray(-10, 10, 1000)
+			cts[i] = utils.EncryptToLevel(plain[i], 2)
+		}
+
+		fmt.Printf("Bootstrapping %d\n", total)
+		timer := logger.StartTimer(fmt.Sprintf("Bootstrap %d", total))
+		utils.Bootstrap1dInPlace(cts, true)
+		timer.LogTimeTakenSecond()
+
+		for i := range cts {
+
+			if !ValidateResult(utils.Decrypt(cts[i]), plain[i], false, 1, log) {
+				t.Error(fmt.Sprintf("Incorrect bootstrapping [%d]", i))
+			}
+
+			if cts[i].Level() != 9 {
+				t.Error(fmt.Sprintf("Incorrect level [%d]", i))
+			}
+
+		}
+	}
+	
 
 }
