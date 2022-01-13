@@ -34,6 +34,13 @@ func (m MSE) Forward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength i
 	return result
 }
 
-func (m MSE) Backward() {
+func (m MSE) Backward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext {
+	result := make([]*ckks.Ciphertext, len(pred))
 
+	for i := range pred{
+		result[i] = m.U.SubNew(pred[i], y[i])
+	}
+
+
+	return result
 }
