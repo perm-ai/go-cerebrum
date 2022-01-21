@@ -617,6 +617,10 @@ func (d *Dense) SetWeightLevel(lvl int) {
 	d.weightLevel = lvl
 }
 
+func (d *Dense) GetWeightLevel() int{
+	return d.weightLevel
+}
+
 type denseWeight struct {
 	Weight [][]float64
 	Bias   []float64
