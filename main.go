@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/perm-ai/go-cerebrum/activations"x 
+	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/layers"
 	"github.com/perm-ai/go-cerebrum/losses"
