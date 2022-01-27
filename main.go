@@ -19,6 +19,8 @@ import (
 
 func main() {
 
+	fmt.Println("Starting Neural Network Banpu Training")
+
 	BATCH_SIZE := 40
 	LEARNING_RATE := 0.3
 	EPOCH := 100
