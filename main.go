@@ -26,7 +26,7 @@ func main() {
 	LEARNING_RATE := 0.3
 	EPOCH := 100
 
-	importedData, err := management.LoadJsonData("/usr/local/Desktop/Perm/coal_neural_network.json'")
+	importedData, err := management.LoadJsonData("/usr/local/Desktop/Perm/coal_neural_network.json")
 	if err != nil {
 		log.Fatal(err)
 	}
