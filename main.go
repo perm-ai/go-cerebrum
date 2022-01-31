@@ -57,7 +57,12 @@ func main() {
 	dense1 := layers.NewDense(utils, 9, 50, &relu, true, batchSize, 0.3, 9)
 
 	fmt.Println("Dense 2 generating")
-	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, 0.3, dense1.GetWeightLevel())
+	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, 0.3, 2)
+
+	dense1.SetBootstrapOutput(true, "forward")
+	dense2.SetBootstrapOutput(true, "forward")
+	dense2.SetBootstrapOutput(true, "backward")
+	dense2.SetBootstrapActivation(true, "forward")
 
 	model := models.NewModel(utils, []layers.Layer1D{&dense1, &dense2}, []layers.Layer2D{}, losses.MSE{}, true)
 
