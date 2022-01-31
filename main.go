@@ -25,7 +25,7 @@ func main() {
 	LEARNING_RATE := 0.3
 	EPOCH := 100
 
-	importedData, _ := management.LoadJsonData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/mnist_handwritten_train.json")
+	importedData, _ := management.LoadJsonData("/usr/local/Desktop/Perm/coal_neural_network.json'")
 
 	xCipherTexts := make(map[string]*ckks.Ciphertext)
 	yCipherTexts := make([]*ckks.Ciphertext, 1)
@@ -40,7 +40,7 @@ func main() {
 
 	order := []string{"TM_AR", "TS_AR", "M_AD", "ASH_AD", "ASH_AR", "Sulfate_SO3", "Silica_SiO2", "Calcium_CaO", "Iron_Fe2O3"}
 
-	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
+	keyPair := key.LoadKeys("/usr/local/Desktop/Perm/New Key Pair", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
@@ -54,17 +54,17 @@ func main() {
 
 	// func layers.NewDense(inputUnit int, outputUnit int, activation *util.Activation, useBias bool, batchSize int) layers.Dense
 	// func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int, lr float64, weightLevel int) Dense
-	dense1 := layers.NewDense(utils, 9, 50, &relu, true, batchSize, 0.3, 9)
+	dense1 := layers.NewDense(utils, 9, 50, &relu, true, batchSize, 0.3, 5)
 
 	fmt.Println("Dense 2 generating")
-	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, 0.3, 2)
+	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, 0.3, 3)
 
 	dense1.SetBootstrapOutput(true, "forward")
 	dense2.SetBootstrapOutput(true, "forward")
-	dense2.SetBootstrapOutput(true, "backward")
-	dense2.SetBootstrapActivation(true, "forward")
+	// dense2.SetBootstrapOutput(true, "backward")
+	// dense2.SetBootstrapActivation(true, "forward")
 
-	model := models.NewModel(utils, []layers.Layer1D{&dense1, &dense2}, []layers.Layer2D{}, losses.MSE{}, true)
+	model := models.NewModel(utils, []layers.Layer1D{&dense1, &dense2}, []layers.Layer2D{}, losses.MSE{}, false)
 
 	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts)
 
