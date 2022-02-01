@@ -71,7 +71,7 @@ func main() {
 		&dense1, &dense2,
 		}, []layers.Layer2D{}, losses.MSE{U: utils}, false)
 
-	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts)
+	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts, utils, 9)
 
 	timer := logger.StartTimer("Neural Network Training")
 
