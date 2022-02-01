@@ -43,7 +43,7 @@ func main() {
 
 	order := []string{"TM_AR", "TS_AR", "M_AD", "ASH_AD", "ASH_AR", "Sulfate_SO3", "Silica_SiO2", "Calcium_CaO", "Iron_Fe2O3"}
 
-	keyPair := key.LoadKeys("/usr/local/Desktop/Perm/New Key Pair", 0, true, true, false, false)
+	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
@@ -80,4 +80,6 @@ func main() {
 	os.Mkdir("test_model_banpu_1", 0777)
 
 	model.ExportModel1D("test_model_banpu_1")
+	
+
 }
