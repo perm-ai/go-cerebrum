@@ -22,9 +22,9 @@ func main() {
 
 	fmt.Println("Starting Neural Network Banpu Training")
 
-	BATCH_SIZE := 40
-	LEARNING_RATE := 0.3
-	EPOCH := 100
+	// BATCH_SIZE := 40
+	// LEARNING_RATE := 0.3
+	// EPOCH := 100
 
 	importedData, err := management.LoadJsonData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/coal_neural_network.json")
 	if err != nil {

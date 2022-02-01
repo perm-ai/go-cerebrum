@@ -41,12 +41,15 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 	// Determine the standard deviation of initial random weight distribution
 	weightStdDev := 0.0
 
-	if (*activation).GetType() == "relu" {
-		weightStdDev = math.Sqrt(1.0 / float64(inputUnit))
-	} else {
-		weightStdDev = math.Sqrt(1.0 / float64(inputUnit+outputUnit))
+	
+	if activation != nil {
+		if (*activation).GetType() == "relu" {
+			weightStdDev = math.Sqrt(1.0 / float64(inputUnit))
+		} else {
+			weightStdDev = math.Sqrt(1.0 / float64(inputUnit+outputUnit))
+		}
 	}
-
+	
 	counter := logger.NewOperationsCounter("Initializing weight", inputUnit*outputUnit+outputUnit)
 
 	var wg sync.WaitGroup
