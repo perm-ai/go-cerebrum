@@ -49,30 +49,33 @@ func main() {
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
 
 	batchSize := 40
-
+	learningRate := 0.3
+	epoch := 100
 	var relu activations.Activation
 	relu = activations.Relu{}
 
 	fmt.Println("Dense 1 generating")
 
-	dense1 := layers.NewDense(utils, 9, 50, &relu, true, batchSize, 0.3, 5)
+	dense1 := layers.NewDense(utils, 9, 50, &relu, true, batchSize, learningRate, 5)
 
 	fmt.Println("Dense 2 generating")
 
-	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, 0.3, 3)
+	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, learningRate, 3)
 
 	dense1.SetBootstrapOutput(true, "forward")
 	dense1.SetBootstrapOutput(true, "backward")
 	// dense2.SetBootstrapOutput(true, "backward")
 	// dense2.SetBootstrapActivation(true, "forward")
 
-	model := models.NewModel(utils, []layers.Layer1D{&dense1, &dense2}, []layers.Layer2D{}, losses.MSE{U: utils}, false)
+	model := models.NewModel(utils, []layers.Layer1D{
+		&dense1, &dense2,
+		}, []layers.Layer2D{}, losses.MSE{U: utils}, false)
 
 	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts)
 
 	timer := logger.StartTimer("Neural Network Training")
 
-	model.Train1D(loader, LEARNING_RATE, BATCH_SIZE, EPOCH)
+	model.Train1D(loader, learningRate, batchSize, epoch)
 
 	timer.LogTimeTakenSecond()
 
