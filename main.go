@@ -55,19 +55,18 @@ func main() {
 
 	fmt.Println("Dense 1 generating")
 
-	// func layers.NewDense(inputUnit int, outputUnit int, activation *util.Activation, useBias bool, batchSize int) layers.Dense
-	// func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int, lr float64, weightLevel int) Dense
 	dense1 := layers.NewDense(utils, 9, 50, &relu, true, batchSize, 0.3, 5)
 
 	fmt.Println("Dense 2 generating")
+
 	dense2 := layers.NewDense(utils, dense1.GetOutputSize(), 1, nil, true, batchSize, 0.3, 3)
 
 	dense1.SetBootstrapOutput(true, "forward")
-	dense2.SetBootstrapOutput(true, "forward")
+	dense1.SetBootstrapOutput(true, "backward")
 	// dense2.SetBootstrapOutput(true, "backward")
 	// dense2.SetBootstrapActivation(true, "forward")
 
-	model := models.NewModel(utils, []layers.Layer1D{&dense1, &dense2}, []layers.Layer2D{}, losses.MSE{}, false)
+	model := models.NewModel(utils, []layers.Layer1D{&dense1, &dense2}, []layers.Layer2D{}, losses.MSE{U: utils}, false)
 
 	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts)
 
