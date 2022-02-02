@@ -57,10 +57,10 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 
 		xWg.Add(1)
 
-		go func (index int, utils utility.Utils){
+		go func (x *ckks.Ciphertext, index int, utils utility.Utils){
 			defer xWg.Done()
-			batchedX[index] = utils.MultiplyPlainNew(s.X[index].CopyNew(), filterPlain, true, false)
-		}(xi, s.u.CopyWithClonedEval())
+			batchedX[index] = utils.MultiplyPlainNew(x, filterPlain, true, false)
+		}(s.X[xi].CopyNew(), xi, s.u.CopyWithClonedEval())
 
 	}
 
@@ -68,10 +68,10 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 
 		yWg.Add(1)
 
-		go func (index int, utils utility.Utils){
+		go func (y *ckks.Ciphertext, index int, utils utility.Utils){
 			defer yWg.Done()
-			batchedY[index] = utils.MultiplyPlainNew(s.Y[index].CopyNew(), filterPlain, true, false)
-		}(yi, s.u.CopyWithClonedEval())
+			batchedY[index] = utils.MultiplyPlainNew(y, filterPlain, true, false)
+		}(s.Y[yi].CopyNew(), yi, s.u.CopyWithClonedEval())
 
 	}
 
