@@ -26,7 +26,7 @@ func main() {
 	// LEARNING_RATE := 0.3
 	// EPOCH := 100
 
-	importedData, err := management.LoadJsonData("/Users/Fong/Downloads/HE_key/production_test/testCoal2.json")
+	importedData, err := management.LoadJsonData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func main() {
 
 	order := []string{"TM (AR)", "TS (AR)", "M (AD)", "ASH (AD)", "ASH (AR)", "Sulfate (SO3)", "Silica (SiO2)", "Calcium (CaO)", "Iron (Fe2O3)"}
 
-	keyPair := key.LoadKeys("/Users/Fong/Downloads/HE_key/production_test", 0, true, true, false, false)
+	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
