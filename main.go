@@ -53,8 +53,9 @@ func main() {
 	batchSize := 40
 	learningRate := 0.3
 	epoch := 100
+
 	var relu activations.Activation
-	relu = activations.Relu{}
+	relu = activations.Relu{U: utils}
 
 	fmt.Println("Dense 1 generating")
 
