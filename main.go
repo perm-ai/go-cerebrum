@@ -26,7 +26,7 @@ func main() {
 	// LEARNING_RATE := 0.3
 	// EPOCH := 100
 
-	importedData, err := management.LoadJsonData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data")
+	importedData, err := management.LoadJsonData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/coal_neural_network.json")
 	if err != nil {
 		log.Fatal(err)
 	}
