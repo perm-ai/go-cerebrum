@@ -1,6 +1,8 @@
 package activations
 
 import (
+	"sync"
+
 	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -60,17 +62,20 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 	// (-1/30)x^3 + (10/24)x + 0.5
 
 	output := make([]*ckks.Ciphertext, len(input))
-	outputChannels := make([]chan *ckks.Ciphertext, len(input))
 
 	deg3coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((-4.0 / 120.0), inputLength))
 	deg1coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((10.0 / 24.0), inputLength))
 	deg0coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((0.5), inputLength))
 
+	var wg sync.WaitGroup
+
 	for i := range input {
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		wg.Add(1)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(inputEach *ckks.Ciphertext, utils utility.Utils, index int) {
+
+			defer wg.Done()
 
 			//calculate deg3
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
@@ -83,12 +88,14 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 			//add everything together
 
 			result1 := utils.AddNew(deg3, deg1)
-			result2 := utils.AddPlainNew(result1, deg0coeff)
-			c <- result2
+			output[index] = utils.AddPlainNew(result1, deg0coeff)
 
-		}(input[i], r.U.CopyWithClonedEval(), outputChannels[i])
+		}(input[i], r.U.CopyWithClonedEval(), i)
 
 	}
+
+	wg.Wait()
+
 	return output
 }
 
