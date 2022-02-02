@@ -9,7 +9,7 @@ import (
 
 type StandardLoader struct{
 
-	u		*utility.Utils
+	u		utility.Utils
 	X 		[]*ckks.Ciphertext
 	Y		[]*ckks.Ciphertext
 	Length	int
@@ -26,7 +26,7 @@ func NewStandardLoader(dataX map[string]*ckks.Ciphertext, order []string, dataY 
 
 	}
 
-	return StandardLoader{X: x, Y: dataY, Length: length, u: &utils}
+	return StandardLoader{X: x, Y: dataY, Length: length, u: utils}
 
 }
 
@@ -60,7 +60,7 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 		go func (index int, utils utility.Utils){
 			defer xWg.Done()
 			batchedX[index] = utils.MultiplyPlainNew(s.X[index], filterPlain, true, false)
-		}(xi, (*s.u).CopyWithClonedEval())
+		}(xi, s.u.CopyWithClonedEval())
 
 	}
 
@@ -71,7 +71,7 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 		go func (index int, utils utility.Utils){
 			defer yWg.Done()
 			batchedY[index] = utils.MultiplyPlainNew(s.Y[index], filterPlain, true, false)
-		}(yi, (*s.u).CopyWithClonedEval())
+		}(yi, s.u.CopyWithClonedEval())
 
 	}
 
