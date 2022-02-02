@@ -7,20 +7,18 @@ import (
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
-type StandardLoader struct{
-
-	u		utility.Utils
-	X 		[]*ckks.Ciphertext
-	Y		[]*ckks.Ciphertext
-	Length	int
-
+type StandardLoader struct {
+	u      utility.Utils
+	X      []*ckks.Ciphertext
+	Y      []*ckks.Ciphertext
+	Length int
 }
 
 func NewStandardLoader(dataX map[string]*ckks.Ciphertext, order []string, dataY []*ckks.Ciphertext, utils utility.Utils, length int) StandardLoader {
 
 	x := make([]*ckks.Ciphertext, len(order))
 
-	for i := range order{
+	for i := range order {
 
 		x[i] = dataX[order[i]]
 
@@ -34,14 +32,14 @@ func (s StandardLoader) GetLength() int {
 	return s.Length
 }
 
-func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext){
+func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
 
 	filter := make([]float64, s.Length)
 	batchedX := make([]*ckks.Ciphertext, len(s.X))
 	batchedY := make([]*ckks.Ciphertext, len(s.Y))
 
-	for i := range filter{
-		if i >= start && i < start+batchSize{
+	for i := range filter {
+		if i >= start && i < start+batchSize {
 			filter[i] = 1
 		} else {
 			filter[i] = 0
@@ -53,25 +51,25 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 	var xWg sync.WaitGroup
 	var yWg sync.WaitGroup
 
-	for xi := range batchedX{
+	for xi := range batchedX {
 
 		xWg.Add(1)
 
-		go func (index int, utils utility.Utils){
+		go func(x *ckks.Ciphertext, index int, utils utility.Utils) {
 			defer xWg.Done()
-			batchedX[index] = utils.MultiplyPlainNew(s.X[index].CopyNew(), filterPlain, true, false)
-		}(xi, s.u.CopyWithClonedEval())
+			batchedX[index] = utils.MultiplyPlainNew(x, filterPlain, true, false)
+		}(s.X[xi].CopyNew(), xi, s.u.CopyWithClonedEval())
 
 	}
 
-	for yi := range batchedX{
+	for yi := range batchedY {
 
 		yWg.Add(1)
 
-		go func (index int, utils utility.Utils){
+		go func(y *ckks.Ciphertext, index int, utils utility.Utils) {
 			defer yWg.Done()
-			batchedY[index] = utils.MultiplyPlainNew(s.Y[index].CopyNew(), filterPlain, true, false)
-		}(yi, s.u.CopyWithClonedEval())
+			batchedY[index] = utils.MultiplyPlainNew(y, filterPlain, true, false)
+		}(s.Y[yi].CopyNew(), yi, s.u.CopyWithClonedEval())
 
 	}
 
@@ -82,7 +80,7 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 
 }
 
-func (s StandardLoader) Load2D(start int, batchSize int) ([][][]*ckks.Ciphertext, []*ckks.Ciphertext){
+func (s StandardLoader) Load2D(start int, batchSize int) ([][][]*ckks.Ciphertext, []*ckks.Ciphertext) {
 
 	// TODO: implement later
 	return [][][]*ckks.Ciphertext{}, []*ckks.Ciphertext{}
