@@ -26,7 +26,7 @@ func main() {
 	// LEARNING_RATE := 0.3
 	// EPOCH := 100
 
-	importedData, err := management.LoadJsonData("/usr/local/go/src/github.com/perm-ai/go-cerebrum/importer/test-data/coal_neural_network.json")
+	importedData, err := management.LoadJsonData("/Users/Fong/Downloads/HE_key/production_test/testCoal2.json")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,19 +34,21 @@ func main() {
 	yCipherTexts := make([]*ckks.Ciphertext, 1)
 
 	for i := range importedData.Encrypted {
-		if importedData.Encrypted[i].ColumnName != "price" {
+		if importedData.Encrypted[i].ColumnName != "Price" {
 			xCipherTexts[importedData.Encrypted[i].ColumnName] = importedData.Encrypted[i].Data
 		} else {
 			yCipherTexts[0] = importedData.Encrypted[i].Data
 		}
 	}
 
-	order := []string{"TM_AR", "TS_AR", "M_AD", "ASH_AD", "ASH_AR", "Sulfate_SO3", "Silica_SiO2", "Calcium_CaO", "Iron_Fe2O3"}
+	order := []string{"TM (AR)", "TS (AR)", "M (AD)", "ASH (AD)", "ASH (AR)", "Sulfate (SO3)", "Silica (SiO2)", "Calcium (CaO)", "Iron (Fe2O3)"}
 
-	keyPair := key.LoadKeys("/usr/local/go/src/github.com/perm-ai/go-cerebrum/keychain", 0, true, true, false, false)
+	keyPair := key.LoadKeys("/Users/Fong/Downloads/HE_key/production_test", 0, true, true, false, false)
 	keychain := key.GenerateKeysFromKeyPair(0, keyPair.SecretKey, keyPair.PublicKey, true, true)
 
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
+
+	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts, utils, 72)
 
 	batchSize := 40
 	learningRate := 0.3
@@ -70,8 +72,6 @@ func main() {
 	model := models.NewModel(utils, []layers.Layer1D{
 		&dense1, &dense2,
 		}, []layers.Layer2D{}, losses.MSE{U: utils}, false)
-
-	loader := dataset.NewStandardLoader(xCipherTexts, order, yCipherTexts, utils, 72)
 
 	timer := logger.StartTimer("Neural Network Training")
 
