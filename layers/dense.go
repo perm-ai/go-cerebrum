@@ -412,7 +412,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 						// Drop level to minimum requirement + 1 for faster evaluation
 						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+1 {
-							weightUtils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level()-(d.weightLevel))
+							weightUtils.Evaluator.DropLevel(gradient.WeightGradient[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex].Level()-(d.weightLevel+1))
 						}
 
 						// Perform Ciphertext inner sum and average
