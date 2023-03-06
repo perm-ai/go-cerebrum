@@ -128,14 +128,14 @@ func (u Utils) SwitchToSameModCoeff(a *rlwe.Ciphertext, b *rlwe.Ciphertext) (*rl
 
 func (u Utils) MultiplyConst(a *rlwe.Ciphertext, b float64, destination *rlwe.Ciphertext, rescale bool, bootstrap bool) {
 
-	originalScale := a.Scale
+	originalScale := a.Scale.Float64()
 	u.Evaluator.MultByConst(a, b, destination)
 
 	if bootstrap {
 		u.BootstrapIfNecessary(destination)
 	}
 
-	if rescale && destination.Scale != originalScale {
+	if rescale && destination.Scale.Float64() != originalScale {
 		u.Evaluator.Rescale(destination, rlwe.NewScale(u.Scale), destination)
 	}
 

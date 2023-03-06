@@ -257,7 +257,7 @@ func TestMultiplication(t *testing.T) {
 			t.Error("Data wasn't correctly multiplied (MultiplyNew)")
 		}
 
-		newCiphertext1 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
+		newCiphertext1 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel())
 		utils.Multiply(&ct1, &ct2, newCiphertext1, false, true)
 		mulD := utils.Decrypt(newCiphertext1)
 
@@ -268,15 +268,15 @@ func TestMultiplication(t *testing.T) {
 		mulNewRes := utils.MultiplyNew(&ct1, &ct2, true, true)
 		mulNewResD := utils.Decrypt(mulNewRes)
 
-		if !ValidateResult(mulNewResD, testCases[i].mulExpected, false, 1, log) && mulNewRes.Scale != ct1.Scale*ct2.Scale {
+		if !ValidateResult(mulNewResD, testCases[i].mulExpected, false, 1, log) && mulNewRes.Scale.Float64() != ct1.Scale.Float64()*ct2.Scale.Float64() {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescaleNew)")
 		}
 
-		newCiphertext2 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel(), math.Pow(2, 40))
+		newCiphertext2 := ckks.NewCiphertext(utils.Params, 1, utils.Params.MaxLevel())
 		utils.Multiply(&ct1, &ct2, newCiphertext2, true, true)
 		mulResD := utils.Decrypt(newCiphertext2)
 
-		if !ValidateResult(mulResD, testCases[i].mulExpected, false, 1, log) && newCiphertext2.Scale != ct1.Scale*ct2.Scale {
+		if !ValidateResult(mulResD, testCases[i].mulExpected, false, 1, log) && newCiphertext2.Scale.Float64() != ct1.Scale.Float64()*ct2.Scale.Float64() {
 			t.Error("Data wasn't correctly multiplied (MultiplyRescale)")
 		}
 
@@ -483,7 +483,7 @@ func TestConcurrentBootstrapping(t *testing.T) {
 	utils.Evaluator.DropLevel(ct3, ct3.Level()-9)
 	preBootstrap := ct1.Level()
 
-	data := []*ckks.Ciphertext{ct1, ct2}
+	data := []*rlwe.Ciphertext{ct1, ct2}
 
 	timer := logger.StartTimer("TestConcurrentBootstrapping")
 
@@ -516,7 +516,7 @@ func TestTranspose(t *testing.T) {
 	//  [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],		 [02, 12, 22], ...
 	//  [21, 22, 23, 24, 25, 26, 27, 28, 29, 30]]		 [10, 20, 30]]
 
-	testCase := make([]ckks.Ciphertext, 3)
+	testCase := make([]rlwe.Ciphertext, 3)
 
 	// Generate test case
 	for i := range testCase {
@@ -693,8 +693,8 @@ func TestKeyPairDumpAndLoad(t *testing.T) {
 
 func TestInterDotProduct(t *testing.T) {
 
-	as := make([]*ckks.Ciphertext, 784)
-	bs := make([]*ckks.Ciphertext, 784)
+	as := make([]*rlwe.Ciphertext, 784)
+	bs := make([]*rlwe.Ciphertext, 784)
 	a := utils.EncryptToPointer(utils.GenerateFilledArray(0.2))
 	b := utils.EncryptToPointer(utils.GenerateFilledArray(0.8))
 
@@ -739,8 +739,8 @@ func TestInterOuterProduct(t *testing.T) {
 	// A = E(3, 4)			[ E(6, 9, 15, 18),
 	// B = E(2, 3, 5, 6)	  E(8, 12, 20, 24)]
 
-	testCaseA := []*ckks.Ciphertext{utils.EncryptToPointer(utils.GenerateFilledArray(3)), utils.EncryptToPointer(utils.GenerateFilledArray(4))}
-	testCaseB := []*ckks.Ciphertext{utils.EncryptToPointer(utils.GenerateFilledArray(2)), utils.EncryptToPointer(utils.GenerateFilledArray(3)), utils.EncryptToPointer(utils.GenerateFilledArray(5)), utils.EncryptToPointer(utils.GenerateFilledArray(6))}
+	testCaseA := []*rlwe.Ciphertext{utils.EncryptToPointer(utils.GenerateFilledArray(3)), utils.EncryptToPointer(utils.GenerateFilledArray(4))}
+	testCaseB := []*rlwe.Ciphertext{utils.EncryptToPointer(utils.GenerateFilledArray(2)), utils.EncryptToPointer(utils.GenerateFilledArray(3)), utils.EncryptToPointer(utils.GenerateFilledArray(5)), utils.EncryptToPointer(utils.GenerateFilledArray(6))}
 
 	outerProduct := utils.InterOuter(testCaseA, testCaseB, true)
 	expectedResults := [][]float64{
