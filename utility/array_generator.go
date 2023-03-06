@@ -5,8 +5,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+
+
 )
 
 func (u Utils) Get2PowRotationEvaluator() ckks.Evaluator {

@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
@@ -18,8 +19,8 @@ var utils = NewUtils(keyChain, math.Pow(2, 40), 100, true)
 var log = logger.NewLogger(true)
 
 type TestCase struct {
-	data1       ckks.Ciphertext
-	data2       ckks.Ciphertext
+	data1       rlwe.Ciphertext
+	data2       rlwe.Ciphertext
 	rawData1    []float64
 	rawData2    []float64
 	addExpected []float64

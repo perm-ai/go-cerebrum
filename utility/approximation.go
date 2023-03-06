@@ -3,10 +3,11 @@ package utility
 import (
 	"math"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
-func (u Utils) ExpNew(ciphertext *ckks.Ciphertext, size int) *ckks.Ciphertext {
+func (u Utils) ExpNew(ciphertext *rlwe.Ciphertext, size int) *rlwe.Ciphertext {
 
 	// 1 + x + x^2/2 + x^3/6 + x^4/24 + x^5/120 + x^6/720 + x^7/5040
 	coeffs := []float64{
@@ -26,7 +27,7 @@ func (u Utils) ExpNew(ciphertext *ckks.Ciphertext, size int) *ckks.Ciphertext {
 }
 
 // This function is used to calculate 1 / (n * stretchScale)
-func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float64, size int) *ckks.Ciphertext {
+func (u Utils) InverseApproxNew(ciphertext *rlwe.Ciphertext, stretchScale float64, size int) *rlwe.Ciphertext {
 
 	// Degree 7 approximation of inverse function
 
@@ -50,7 +51,7 @@ func (u Utils) InverseApproxNew(ciphertext *ckks.Ciphertext, stretchScale float6
 
 }
 
-func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64, size int) *ckks.Ciphertext {
+func (u Utils) InverseNew(ct *rlwe.Ciphertext, horizontalStretchScale float64, size int) *rlwe.Ciphertext {
 
 	// Calculate approximate inverse of a ciphertext
 
@@ -70,7 +71,7 @@ func (u Utils) InverseNew(ct *ckks.Ciphertext, horizontalStretchScale float64, s
 
 // Polynomial degree 3 approximation function of square root. Bound between [0, bound]. Set scaleBoundBack to true to get sqrt(ct) when bound > 1.75.
 // Please note that as bound increase the accuracy of approximation will decrease
-func (u Utils) SqrtApprox(ct *ckks.Ciphertext, degree int, bound float64, scaleBoundBack bool) *ckks.Ciphertext {
+func (u Utils) SqrtApprox(ct *rlwe.Ciphertext, degree int, bound float64, scaleBoundBack bool) *rlwe.Ciphertext {
 
 	if degree != 3 && degree != 7 {
 		panic("Only degree 3 or 7 is available.")
@@ -115,9 +116,9 @@ func (u Utils) SqrtApprox(ct *ckks.Ciphertext, degree int, bound float64, scaleB
 	poly := ckks.NewPoly(coeffs[degree])
 
 	var err error
-	var result *ckks.Ciphertext
+	var result *rlwe.Ciphertext
 
-	if result, err = u.Evaluator.EvaluatePoly(ct, poly, math.Pow(2, 35)); err != nil {
+	if result, err = u.Evaluator.EvaluatePoly(ct, poly, rlwe.NewScale(math.Pow(2, 35))); err != nil {
 		panic(err)
 	}
 

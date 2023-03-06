@@ -108,10 +108,13 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 func NewDecryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) Utils {
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := bootstrapping.DefaultParameters[keyChain.ParamsIndex]
-	params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[keyChain.ParamsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[keyChain.ParamsIndex]
+	ckksParams := paramSet.SchemeParams
+
+	bootstrappingParams := paramSet.BootstrappingParams
+	params, _ := ckks.NewParametersFromLiteral(ckksParams)
 	encoder := ckks.NewEncoder(params)
-	encryptor := ckks.NewFastEncryptor(params, keyChain.PublicKey)
+	encryptor := ckks.NewEncryptor(params, keyChain.PublicKey)
 	decryptor := ckks.NewDecryptor(params, keyChain.SecretKey)
 
 	return Utils{
@@ -136,13 +139,16 @@ func NewEncryptionUtils(keyChain key.KeyChain, scale float64, logEnabled bool) U
 
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := bootstrapping.DefaultParameters[keyChain.ParamsIndex]
-	params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[keyChain.ParamsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[keyChain.ParamsIndex]
+	ckksParams := paramSet.SchemeParams
+
+	bootstrappingParams := paramSet.BootstrappingParams
+	params, _ := ckks.NewParametersFromLiteral(ckksParams)
 	encoder := ckks.NewEncoder(params)
 
-	var encryptor ckks.Encryptor
+	var encryptor rlwe.Encryptor
 	if keyChain.PublicKey != nil {
-		encryptor = ckks.NewFastEncryptor(params, keyChain.PublicKey)
+		encryptor = ckks.NewEncryptor(params, keyChain.PublicKey)
 	} else if keyChain.SecretKey != nil{
 		encryptor = ckks.NewEncryptor(params, keyChain.SecretKey)
 	} else {
@@ -200,32 +206,31 @@ func (u Utils) GenerateRandomArray(lowerBound float64, upperBound float64, lengt
 }
 
 // Encode into complex value
-func (u Utils) Encode(value []float64) ckks.Plaintext {
+func (u Utils) Encode(value []float64) rlwe.Plaintext {
 
 	// Encode value
 	// plaintext := ckks.NewPlaintext(&u.Params, u.Params.MaxLevel(), u.Params.Scale())
-	plaintext := u.Encoder.EncodeNew(u.Float64ToComplex128(value), u.Params.LogSlots())
+	plaintext := u.Encoder.EncodeNew(u.Float64ToComplex128(value), u.Params.MaxLevel(), u.Params.DefaultScale(), u.Params.LogSlots())
 
 	return *plaintext
 
 }
 
 // Encode into complex value with non-default scale
-func (u Utils) EncodeToScale(value []float64, scale float64) ckks.Plaintext {
+func (u Utils) EncodeToScale(value []float64, scale float64) rlwe.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
-	u.Encoder.Encode(plaintext, u.Float64ToComplex128(value), u.Params.LogSlots())
+	plaintext := u.Encoder.EncodeNew(u.Float64ToComplex128(value), u.Params.MaxLevel(), rlwe.NewScale(scale), u.Params.LogSlots())
 
 	return *plaintext
 
 }
 
 // Encode into float coefficient
-func (u Utils) EncodeCoeffs(value []float64) ckks.Plaintext {
+func (u Utils) EncodeCoeffs(value []float64) rlwe.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), u.Params.Scale())
+	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel())
 	u.Encoder.EncodeCoeffs(value, plaintext)
 
 	return *plaintext
@@ -233,36 +238,34 @@ func (u Utils) EncodeCoeffs(value []float64) ckks.Plaintext {
 }
 
 // Encode float array into NTT Plaintext
-func (u Utils) EncodePlaintextFromArray(arr []float64) *ckks.Plaintext {
-	return u.Encoder.EncodeNTTNew(u.Float64ToComplex128(arr), u.Params.LogSlots())
+func (u Utils) EncodePlaintextFromArray(arr []float64) *rlwe.Plaintext {
+	return u.Encoder.EncodeNew(u.Float64ToComplex128(arr), u.Params.MaxLevel(), u.Params.DefaultScale(), u.Params.LogSlots())
 }
 
 // Encode float array into NTT Plaintext
-func (u Utils) EncodePlaintextFromArrayScale(arr []float64, scale float64) *ckks.Plaintext {
-	pt := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
-	u.Encoder.EncodeNTT(pt, u.Float64ToComplex128(arr), u.Params.LogSlots())
+func (u Utils) EncodePlaintextFromArrayScale(arr []float64, scale float64) *rlwe.Plaintext {
+	pt := u.Encoder.EncodeNew(u.Float64ToComplex128(arr), u.Params.MaxLevel(), rlwe.NewScale(scale), u.Params.LogSlots())
 	return pt
 }
 
 // Decode complex plaintext and take real part returning float array
-func (u Utils) Decode(value *ckks.Plaintext) []float64 {
+func (u Utils) Decode(value *rlwe.Plaintext) []float64 {
 
 	return u.Complex128ToFloat64(u.Encoder.Decode(value, u.Params.LogSlots()))
 
 }
 
 // Encode into float coefficient with non default scale
-func (u Utils) EncodeCoeffsToScale(value []float64, scale float64) ckks.Plaintext {
+func (u Utils) EncodeCoeffsToScale(value []float64, scale float64) rlwe.Plaintext {
 
 	// Encode value
-	plaintext := ckks.NewPlaintext(u.Params, u.Params.MaxLevel(), scale)
-	u.Encoder.EncodeCoeffs(value, plaintext)
+	plaintext := u.Encoder.EncodeCoeffsNew(value, u.Params.MaxLevel(), rlwe.NewScale(scale))
 
 	return *plaintext
 
 }
 
-func (u Utils) Encrypt(value []float64) ckks.Ciphertext {
+func (u Utils) Encrypt(value []float64) rlwe.Ciphertext {
 
 	// Encode value
 	plaintext := u.EncodeToScale(value, u.Scale)
@@ -274,7 +277,7 @@ func (u Utils) Encrypt(value []float64) ckks.Ciphertext {
 
 }
 
-func (u Utils) EncryptToPointer(value []float64) *ckks.Ciphertext {
+func (u Utils) EncryptToPointer(value []float64) *rlwe.Ciphertext {
 
 	// Encode value
 	plaintext := u.EncodeToScale(value, u.Scale)
@@ -286,7 +289,7 @@ func (u Utils) EncryptToPointer(value []float64) *ckks.Ciphertext {
 
 }
 
-func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
+func (u Utils) EncryptToScale(value []float64, scale float64) rlwe.Ciphertext {
 
 	// Encode value
 	plaintext := u.EncodeToScale(value, scale)
@@ -298,33 +301,33 @@ func (u Utils) EncryptToScale(value []float64, scale float64) ckks.Ciphertext {
 
 }
 
-func (u Utils) EncryptToLevel(value []float64, level int) *ckks.Ciphertext {
+func (u Utils) EncryptToLevel(value []float64, level int) *rlwe.Ciphertext {
 
 	// Encode value
 	plaintext := u.EncodeToScale(value, u.Scale)
 
 	// Encrypt value
-	ciphertext := ckks.NewCiphertext(u.Params, 1, level, u.Scale)
+	ciphertext := ckks.NewCiphertext(u.Params, 1, level)
 	u.Encryptor.Encrypt(&plaintext, ciphertext)
 
 	return ciphertext
 
 }
 
-func (u Utils) EncryptToLevelScale(value []float64, level int, scale float64) *ckks.Ciphertext {
+func (u Utils) EncryptToLevelScale(value []float64, level int, scale float64) *rlwe.Ciphertext {
 
 	// Encode value
 	plaintext := u.EncodeToScale(value, scale)
 
 	// Encrypt value
-	ciphertext := ckks.NewCiphertext(u.Params, 1, level, scale)
+	ciphertext := ckks.NewCiphertext(u.Params, 1, level)
 	u.Encryptor.Encrypt(&plaintext, ciphertext)
 
 	return ciphertext
 
 }
 
-func (u Utils) Decrypt(ciphertext *ckks.Ciphertext) []float64 {
+func (u Utils) Decrypt(ciphertext *rlwe.Ciphertext) []float64 {
 
 	if u.Decryptor == nil {
 		panic("Unable to decrypt due to lack of decryptor")

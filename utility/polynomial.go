@@ -1,13 +1,13 @@
 package utility
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 type Coefficient struct {
 	Degree  int
 	Value   float64
-	Encoded map[int]*ckks.Plaintext
+	Encoded map[int]*rlwe.Plaintext
 }
 
 type Polynomial struct {
@@ -23,7 +23,7 @@ func NewPolynomial(coeff []float64, utils Utils) Polynomial {
 
 	for i := range coeff {
 
-		encoded := make(map[int]*ckks.Plaintext)
+		encoded := make(map[int]*rlwe.Plaintext)
 
 		if i != 0 {
 			pt := utils.EncodePlaintextFromArray(utils.GenerateFilledArray(coeff[i]))
@@ -38,9 +38,9 @@ func NewPolynomial(coeff []float64, utils Utils) Polynomial {
 
 }
 
-func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphertext {
+func (poly Polynomial) EvaluateDegree7(x *rlwe.Ciphertext, size int) *rlwe.Ciphertext {
 
-	channels := make([]chan *ckks.Ciphertext, 8)
+	channels := make([]chan *rlwe.Ciphertext, 8)
 	slots := poly.u.Params.Slots()
 
 	x2 := poly.u.MultiplyNew(x.CopyNew(), x.CopyNew(), true, false)
@@ -48,8 +48,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 7
 	if poly.Coeff[7].Value != 0 {
-		channels[7] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[7] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c7x1 := u.MultiplyPlainNew(x.CopyNew(), poly.Coeff[7].Encoded[slots], true, false)
 			c7x3 := u.MultiplyNew(c7x1, x2.CopyNew(), true, false)
@@ -61,8 +61,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 6
 	if poly.Coeff[6].Value != 0 {
-		channels[6] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[6] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c6x2 := u.MultiplyPlainNew(x2.CopyNew(), poly.Coeff[6].Encoded[slots], true, false)
 			c6x6 := u.MultiplyNew(c6x2, x4.CopyNew(), true, false)
@@ -73,8 +73,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 5
 	if poly.Coeff[5].Value != 0 {
-		channels[5] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[5] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c5x1 := u.MultiplyPlainNew(x.CopyNew(), poly.Coeff[5].Encoded[slots], true, false)
 			c5x5 := u.MultiplyNew(c5x1, x4.CopyNew(), true, false)
@@ -85,8 +85,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 4
 	if poly.Coeff[4].Value != 0 {
-		channels[4] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[4] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c4x2 := u.MultiplyPlainNew(x2.CopyNew(), poly.Coeff[4].Encoded[slots], true, false)
 			c4x4 := u.MultiplyNew(c4x2, x2.CopyNew(), true, false)
@@ -97,8 +97,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 3
 	if poly.Coeff[3].Value != 0 {
-		channels[3] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[3] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c3x1 := u.MultiplyPlainNew(x.CopyNew(), poly.Coeff[3].Encoded[slots], true, false)
 			c3x3 := u.MultiplyNew(c3x1, x2.CopyNew(), true, false)
@@ -109,8 +109,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 2
 	if poly.Coeff[2].Value != 0 {
-		channels[2] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[2] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c2x2 := u.MultiplyPlainNew(x2.CopyNew(), poly.Coeff[2].Encoded[slots], true, false)
 			c <- c2x2
@@ -120,8 +120,8 @@ func (poly Polynomial) EvaluateDegree7(x *ckks.Ciphertext, size int) *ckks.Ciphe
 
 	// Calc degree 1
 	if poly.Coeff[1].Value != 0 {
-		channels[1] = make(chan *ckks.Ciphertext)
-		go func(u Utils, c chan *ckks.Ciphertext) {
+		channels[1] = make(chan *rlwe.Ciphertext)
+		go func(u Utils, c chan *rlwe.Ciphertext) {
 
 			c1x1 := u.MultiplyPlainNew(x.CopyNew(), poly.Coeff[1].Encoded[slots], true, false)
 			c <- c1x1
