@@ -1,10 +1,11 @@
 package utility
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
 )
 
-func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphertext {
+func (u Utils) Transpose(ciphertexts []rlwe.Ciphertext, column int) []rlwe.Ciphertext {
 
 	// This function will swap the row and column of each number in a ciphertext array where an element
 	// of a row is in the same ciphertext and the next column is another ciphertext
@@ -12,7 +13,7 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 	//   E(x21, x22, x23, ..., x2n), ]		  E(x12, x22), ..., E(x1n, x2n) ]
 
 	row := len(ciphertexts)
-	rotated := make([]ckks.Ciphertext, row)
+	rotated := make([]rlwe.Ciphertext, row)
 
 	// Rotate each ciphertext back by row spot (row 0 rotate 0, row 1 rotate -1)
 	// Eg. (N = 8, n = 4)
@@ -28,11 +29,11 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 		}
 	}
 
-	transposed := make([]ckks.Ciphertext, column)
+	transposed := make([]rlwe.Ciphertext, column)
 
 	for c := 0; c < column; c++ {
 
-		newRow := ckks.NewCiphertext(u.Params, 1, ciphertexts[0].Level(), ciphertexts[0].Scale)
+		newRow := u.EncryptToLevelScale(u.GenerateFilledArray(0), 1, ciphertexts[0].Scale.Float64())
 
 		// Zero out non-target slot and add
 		// [ E(x11,  0 ,  0 ,  0 ),
@@ -61,16 +62,16 @@ func (u Utils) Transpose(ciphertexts []ckks.Ciphertext, column int) []ckks.Ciphe
 
 }
 
-func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize int, filterBy float64) []*ckks.Ciphertext {
+func (u Utils) Outer(a *rlwe.Ciphertext, b *rlwe.Ciphertext, aSize int, bSize int, filterBy float64) []*rlwe.Ciphertext {
 
 	// Need to cover rotation in range [0, aSize)
 	pow2rotationEvaluator := u.Get2PowRotationEvaluator()
 
-	outerProduct := make([]*ckks.Ciphertext, aSize)
+	outerProduct := make([]*rlwe.Ciphertext, aSize)
 
 	for i := 0; i < aSize; i++ {
 
-		var filtered *ckks.Ciphertext
+		var filtered *rlwe.Ciphertext
 
 		if(filterBy == 0 || filterBy == 1){
 
@@ -81,7 +82,7 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 			// Generate filter with given filter scale
 			filterCmplx := make([]complex128, u.Params.Slots())
 			filterCmplx[i] = complex(filterBy, 0)
-			filter := u.Encoder.EncodeNTTNew(filterCmplx, u.Params.LogSlots())
+			filter := u.Encoder.EncodeNew(filterCmplx, u.Params.MaxLevel(), u.Params.DefaultScale(), u.Params.LogSlots())
 
 			filtered = u.MultiplyPlainNew(a, filter, true, false)
 			
@@ -115,9 +116,9 @@ func (u Utils) Outer(a *ckks.Ciphertext, b *ckks.Ciphertext, aSize int, bSize in
 
 }
 
-func (u Utils) PackVector(ciphertexts []ckks.Ciphertext) ckks.Ciphertext {
+func (u Utils) PackVector(ciphertexts []rlwe.Ciphertext) rlwe.Ciphertext {
 
-	result := ckks.NewCiphertext(u.Params, 1, u.Params.MaxLevel(), u.Params.Scale())
+	result := ckks.NewCiphertext(u.Params, 1, u.Params.MaxLevel())
 
 	for i := range ciphertexts{
 

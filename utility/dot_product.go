@@ -1,10 +1,11 @@
 package utility
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
 )
 
-func (u Utils) rotateAndAdd(ct *ckks.Ciphertext, size float64, evaluator *ckks.Evaluator) *ckks.Ciphertext {
+func (u Utils) rotateAndAdd(ct *rlwe.Ciphertext, size float64, evaluator *ckks.Evaluator) *rlwe.Ciphertext {
 
 	midpoint := size / 2
 
@@ -19,14 +20,14 @@ func (u Utils) rotateAndAdd(ct *ckks.Ciphertext, size float64, evaluator *ckks.E
 
 }
 
-func (u Utils) SumElementsInPlace(ct *ckks.Ciphertext) {
+func (u Utils) SumElementsInPlace(ct *rlwe.Ciphertext) {
 
 	rotationEvaluator := u.Get2PowRotationEvaluator()
 	u.rotateAndAdd(ct, float64(u.Params.Slots()), &rotationEvaluator)
 
 }
 
-func (u Utils) SumElementsNew(ct ckks.Ciphertext) *ckks.Ciphertext {
+func (u Utils) SumElementsNew(ct rlwe.Ciphertext) *rlwe.Ciphertext {
 
 	rotationEvaluator := u.Get2PowRotationEvaluator()
 	newCt := ct.CopyNew()
@@ -34,14 +35,14 @@ func (u Utils) SumElementsNew(ct ckks.Ciphertext) *ckks.Ciphertext {
 
 }
 
-func (u Utils) DotProduct(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext, bootstrap bool) {
+func (u Utils) DotProduct(a *rlwe.Ciphertext, b *rlwe.Ciphertext, destination *rlwe.Ciphertext, bootstrap bool) {
 
 	u.Multiply(a, b, destination, true, bootstrap)
 	u.SumElementsInPlace(destination)
 
 }
 
-func (u Utils) DotProductNew(a *ckks.Ciphertext, b *ckks.Ciphertext, bootstrap bool) *ckks.Ciphertext {
+func (u Utils) DotProductNew(a *rlwe.Ciphertext, b *rlwe.Ciphertext, bootstrap bool) *rlwe.Ciphertext {
 
 	result := u.MultiplyNew(a, b, true, bootstrap)
 	u.SumElementsInPlace(result)

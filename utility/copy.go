@@ -1,6 +1,6 @@
 package utility
 
-import "github.com/ldsec/lattigo/v2/ckks"
+import 	"github.com/tuneinsight/lattigo/v4/ckks"
 
 func (u Utils) CopyWithNewScale(scale float64) Utils {
 
@@ -45,7 +45,7 @@ func (u Utils) CopyWithClonedEval() Utils {
 func (u Utils) CopyWithClonedEncryptor() Utils {
 
 	encoder := ckks.NewEncoder(u.Params)
-	encryptor := ckks.NewFastEncryptor(u.Params, u.KeyChain.PublicKey)
+	encryptor := ckks.NewEncryptor(u.Params, u.KeyChain.PublicKey)
 
 	return Utils{
 		hasSecretKey:        u.hasSecretKey,

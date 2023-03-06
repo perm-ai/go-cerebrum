@@ -1,13 +1,14 @@
 package utility
 
-import "github.com/ldsec/lattigo/v2/ckks"
+import (
+	"github.com/tuneinsight/lattigo/v4/rlwe"
+)
 
 // Approximate square root function. Recommended D value is 6 which works with numbers between [0, 2].
-func (u Utils) Sqrt(x *ckks.Ciphertext, d int, size int) *ckks.Ciphertext {
+func (u Utils) Sqrt(x *rlwe.Ciphertext, d int, size int) *rlwe.Ciphertext {
 
-	ones := ckks.NewPlaintext(u.Params, x.Level(), x.Scale)
-	u.Encoder.EncodeNTT(ones, u.Float64ToComplex128(u.GenerateFilledArraySize(1, size)), u.Params.LogSlots())
-	threes := u.Encoder.EncodeNTTNew(u.Float64ToComplex128(u.GenerateFilledArraySize(3, size)), u.Params.LogSlots())
+	ones := u.Encoder.EncodeNew(u.Float64ToComplex128(u.GenerateFilledArraySize(1, size)), x.Level(), rlwe.NewScale(x.Scale), u.Params.LogSlots())
+	threes := u.Encoder.EncodeNew(u.Float64ToComplex128(u.GenerateFilledArraySize(3, size)), u.Params.MaxLevel(), u.Params.DefaultScale(), u.Params.LogSlots())
 
 	a := x.CopyNew()
 	b := u.SubPlainNew(x, ones)

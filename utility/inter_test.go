@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
@@ -20,7 +20,7 @@ func TestInter(t *testing.T) {
 	a3ct := utils.Encrypt(a3)
 	a4ct := utils.Encrypt(a4)
 
-	a := make([]*ckks.Ciphertext, 4)
+	a := make([]*rlwe.Ciphertext, 4)
 	*a[0] = a1ct
 	*a[1] = a2ct
 	*a[2] = a3ct
@@ -36,7 +36,7 @@ func TestInter(t *testing.T) {
 	b3ct := utils.Encrypt(b3)
 	b4ct := utils.Encrypt(b4)
 
-	b := make([]*ckks.Ciphertext, 4)
+	b := make([]*rlwe.Ciphertext, 4)
 	*b[0] = b1ct
 	*b[1] = b2ct
 	*b[2] = b3ct
