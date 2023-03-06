@@ -1,7 +1,8 @@
 package utility
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	// "github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/ckks"
 )
 
 func (utils Utils) Add(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext) {

@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
-	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/ckks/bootstrapping"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
@@ -44,14 +44,16 @@ func GenerateKeys(paramsIndex int, btspEnabled bool, logEnabled bool) KeyChain {
 
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
-	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+	ckksParams := paramSet.SchemeParams
+
+	Params, _ := ckks.NewParametersFromLiteral(ckksParams)
 	
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
 	log.Log("Util Initialization: Generating private / public key pair")
-	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
+	secretKey, publicKey := keyGenerator.GenKeyPair()
 
 	return GenerateKeysFromKeyPair(paramsIndex, secretKey, publicKey, btspEnabled, logEnabled)
 
@@ -61,8 +63,9 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
-	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+	bootstrappingParams := paramSet.BootstrappingParams
+	Params, _ := ckks.NewParametersFromLiteral(paramSet.SchemeParams)
 
 	log.Log("Util Initialization: Generating key generator")
 	keyGenerator := ckks.NewKeyGenerator(Params)
@@ -82,7 +85,7 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 	var btpRotationKeys *rlwe.RotationKeySet
 
 	if btspEnabled {
-		rotations := bootstrappingParams.RotationsForBootstrapping(Params.LogN(), Params.LogSlots())
+		rotations := bootstrappingParams.RotationsForBootstrapping(Params)
 		btpRotationKeys = keyGenerator.GenRotationKeysForRotations(rotations, true, sk)
 	}
 
@@ -92,7 +95,8 @@ func GenerateKeysFromKeyPair(paramsIndex int, sk *rlwe.SecretKey, pk *rlwe.Publi
 
 func GenerateRelinKey(paramsIndex int, sk *rlwe.SecretKey) *rlwe.RelinearizationKey {
 
-	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+	Params, _ := ckks.NewParametersFromLiteral(paramSet.SchemeParams)
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
 	return keyGenerator.GenRelinearizationKey(sk, 2)
@@ -101,7 +105,8 @@ func GenerateRelinKey(paramsIndex int, sk *rlwe.SecretKey) *rlwe.Relinearization
 
 func GenerateRotationKeys(paramsIndex int, sk *rlwe.SecretKey, galEl []uint64, concurrent bool, callback func(galEl uint64, swk *rlwe.SwitchingKey) error) []error{
 
-	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+	Params, _ := ckks.NewParametersFromLiteral(paramSet.SchemeParams)
 	keyGenerator := NewKeyGenerator(Params, ckks.NewKeyGenerator(Params))
 
 	if concurrent{
@@ -114,12 +119,12 @@ func GenerateRotationKeys(paramsIndex int, sk *rlwe.SecretKey, galEl []uint64, c
 
 func GenerateKeyPair(paramsIndex int) KeyChain {
 
-	bootstrappingParams := bootstrapping.DefaultParameters[paramsIndex]
-	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+	Params, _ := ckks.NewParametersFromLiteral(paramSet.SchemeParams)
 
 	keyGenerator := ckks.NewKeyGenerator(Params)
 
-	secretKey, publicKey := keyGenerator.GenKeyPairSparse(bootstrappingParams.H)
+	secretKey, publicKey := keyGenerator.GenKeyPair()
 
 	return KeyChain{SecretKey: secretKey, PublicKey: publicKey}
 
@@ -192,7 +197,8 @@ func LoadKeys(dirName string, paramsIndex int, sk bool, pk bool, rlk bool, rotk 
 				
 			}
 
-			Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+			paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+			Params, _ := ckks.NewParametersFromLiteral(paramSet.SchemeParams)
 			rotKeys := rlwe.NewRotationKeySet(Params.Parameters, galEls)
 			
 			rotKeys.Keys = rotKeysMap

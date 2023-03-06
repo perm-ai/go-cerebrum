@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
-	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/ckks/bootstrapping"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
@@ -25,15 +25,16 @@ type Utils struct {
 	Bootstrapper *bootstrapping.Bootstrapper
 	Encoder      ckks.Encoder
 	Evaluator    ckks.Evaluator
-	Encryptor    ckks.Encryptor
-	Decryptor    ckks.Decryptor
+	Encryptor    rlwe.Encryptor
+	Decryptor    rlwe.Decryptor
 
-	Filters []ckks.Plaintext
+	Filters []rlwe.Plaintext
 	Scale   float64
 	log     logger.Logger
 }
 
 func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnabled bool) Utils {
+
 
 	if keyChain.RelinKey == nil || keyChain.GaloisKey == nil {
 		panic("Missing keys must have both relinearlize keys and galois keys in keychain to generate new utils")
@@ -42,27 +43,30 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 	bootstrapEnabled := keyChain.BtspGalKey != nil
 	log := logger.NewLogger(logEnabled)
 
-	bootstrappingParams := bootstrapping.DefaultParameters[keyChain.ParamsIndex]
-	params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[keyChain.ParamsIndex])
+	paramSet := bootstrapping.DefaultParametersSparse[keyChain.ParamsIndex]
+	ckksParams := paramSet.SchemeParams
+
+	bootstrappingParams := paramSet.BootstrappingParams
+	params, _ := ckks.NewParametersFromLiteral(ckksParams)
 
 	log.Log("Util Initialization: Generating encoder, evaluator, encryptor, decryptor")
 	encoder := ckks.NewEncoder(params)
 	evaluator := ckks.NewEvaluator(params, rlwe.EvaluationKey{Rlk: keyChain.RelinKey})
-	encryptor := ckks.NewFastEncryptor(params, keyChain.PublicKey)
+	encryptor := ckks.NewEncryptor(params, keyChain.PublicKey)
 
-	var decryptor ckks.Decryptor
+	var decryptor rlwe.Decryptor
 	decryptor = nil
 
 	if keyChain.SecretKey != nil {
 		decryptor = ckks.NewDecryptor(params, keyChain.SecretKey)
 	}
 
-	filters := make([]ckks.Plaintext, filtersAmount)
+	filters := make([]rlwe.Plaintext, filtersAmount)
 
 	for i := range filters {
 		filter := make([]complex128, filtersAmount)
 		filter[i] = complex(1, 0)
-		filters[i] = *encoder.EncodeNTTAtLvlNew(params.MaxLevel(), filter, params.LogSlots())
+		filters[i] = *encoder.EncodeNew(filter, params.MaxLevel(), params.DefaultScale(), params.LogSlots())
 	}
 
 	var bootstrapper *bootstrapping.Bootstrapper
@@ -70,7 +74,9 @@ func NewUtils(keyChain key.KeyChain, scale float64, filtersAmount int, logEnable
 
 	if bootstrapEnabled {
 
-		bootstrappingKey := rlwe.EvaluationKey{Rlk: keyChain.RelinKey, Rtks: keyChain.BtspGalKey}
+		swkDtS, swkStD := bootstrappingParams.GenEncapsulationSwitchingKeys(params, keyChain.SecretKey)
+		evalKeys := rlwe.EvaluationKey{Rlk: keyChain.RelinKey, Rtks: keyChain.BtspGalKey};
+		bootstrappingKey := bootstrapping.EvaluationKeys{evalKeys, swkDtS, swkStD}
 
 		var err error
 		log.Log("Util Initialization: Generating bootstrapper")
