@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/tuneinsight/lattigo/v4/rlwe"
+	"github.com/tuneinsight/lattigo/v4/rlwe" 
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -13,7 +13,7 @@ import (
 
 var log = logger.NewLogger(true)
 var keyChain = key.GenerateKeys(0, false, true)
-var utils = utility.NewUtils(keyChain, math.Pow(2, 35), 100, true)
+var utils = utility.NewUtils(keyChain, math.Pow(2, 40), 100, true)
 
 func TestSigmoid(t *testing.T) {
 
@@ -112,7 +112,7 @@ func TestSoftmax(t *testing.T) {
 	// Encryption
 	encInput := utils.Encrypt(randomArr)
 	utils.Evaluator.DropLevel(&encInput, encInput.Level()-9)
-	fmt.Printf("Scale: %f\n", encInput.Scale)
+	fmt.Printf("Scale: %f\n", encInput.Scale.Float64())
 	startingLevel := encInput.Level()
 
 	// Softmax initiation
