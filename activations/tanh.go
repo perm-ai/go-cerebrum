@@ -4,7 +4,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -14,20 +14,20 @@ import (
 
 type Tanh struct {
 	U            utility.Utils
-	backwardDeg0 map[int]ckks.Plaintext
+	backwardDeg0 map[int]rlwe.Plaintext
 }
 
 func NewTanh(utils utility.Utils) Tanh {
 
-	return Tanh{utils, make(map[int]ckks.Plaintext)}
+	return Tanh{utils, make(map[int]rlwe.Plaintext)}
 
 }
 
-func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (t Tanh) Forward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
 	// y = (-0.00752x^3) + (0.37x)
 
-	output := make([]*ckks.Ciphertext, len(input))
+	output := make([]*rlwe.Ciphertext, len(input))
 
 	deg3Coeff := t.U.EncodePlaintextFromArray(t.U.GenerateFilledArraySize(-0.00752, inputLength))
 	deg1Coeff := t.U.EncodePlaintextFromArray(t.U.GenerateFilledArraySize(0.37, inputLength))
@@ -63,21 +63,21 @@ func (t Tanh) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 
 }
 
-func (t Tanh) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (t Tanh) Backward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
 	// (-0.02256x^2) + 0.37
 
-	output := make([]*ckks.Ciphertext, len(input))
-	outputChannels := make([]chan *ckks.Ciphertext, len(input))
+	output := make([]*rlwe.Ciphertext, len(input))
+	outputChannels := make([]chan *rlwe.Ciphertext, len(input))
 
 	deg2Coeff := t.U.EncodePlaintextFromArrayScale(t.U.GenerateFilledArraySize(-0.02256, inputLength), math.Pow(2, 30))
-	deg0 := t.U.Encoder.EncodeNTTNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.LogSlots())
+	deg0 := t.U.Encoder.EncodeNew(t.U.Float64ToComplex128(t.U.GenerateFilledArraySize(0.37, inputLength)), t.U.Params.MaxLevel(), t.U.Params.NewScale(t.U.Scale), t.U.Params.LogSlots())
 
 	for i := range input {
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		outputChannels[i] = make(chan *rlwe.Ciphertext)
 
-		go func(index int, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(index int, utils utility.Utils, c chan *rlwe.Ciphertext) {
 
 			// Calculate degree 2
 			result := utils.MultiplyNew(input[index], input[index], true, false)

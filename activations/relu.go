@@ -3,7 +3,7 @@ package activations
 import (
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -11,11 +11,11 @@ type Relu struct {
 	U utility.Utils
 }
 
-func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (r Relu) Forward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
 	// implement relu approximation according to equation (-1/120)x^4 + (5/24)x^2 + (1/2)x + 0.3
-	output := make([]*ckks.Ciphertext, len(input))
-	outputChannels := make([]chan *ckks.Ciphertext, len(input))
+	output := make([]*rlwe.Ciphertext, len(input))
+	outputChannels := make([]chan *rlwe.Ciphertext, len(input))
 
 	deg4coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((-1.0 / 120.0), inputLength))
 	deg2coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((5.0 / 24.0), inputLength))
@@ -24,9 +24,9 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 
 	for i := range input {
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		outputChannels[i] = make(chan *rlwe.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(inputEach *rlwe.Ciphertext, utils utility.Utils, c chan *rlwe.Ciphertext) {
 
 			// calculate degree 4
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
@@ -57,11 +57,11 @@ func (r Relu) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphert
 
 }
 
-func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (r Relu) Backward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
 	// (-1/30)x^3 + (10/24)x + 0.5
 
-	output := make([]*ckks.Ciphertext, len(input))
+	output := make([]*rlwe.Ciphertext, len(input))
 
 	deg3coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((-4.0 / 120.0), inputLength))
 	deg1coeff := r.U.EncodePlaintextFromArray(r.U.GenerateFilledArraySize((10.0 / 24.0), inputLength))
@@ -73,7 +73,7 @@ func (r Relu) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Cipher
 
 		wg.Add(1)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, index int) {
+		go func(inputEach *rlwe.Ciphertext, utils utility.Utils, index int) {
 
 			defer wg.Done()
 

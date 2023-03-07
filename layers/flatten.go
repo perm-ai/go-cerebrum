@@ -1,6 +1,6 @@
 package layers
 
-import "github.com/ldsec/lattigo/v2/ckks"
+import "github.com/tuneinsight/lattigo/v4/rlwe"
 
 
 type Flatten2D struct {
@@ -24,9 +24,9 @@ func NewFlatten(inputSize []int) Flatten2D{
 	return Flatten2D{inputSize, outputSize}
 }
 
-func (f Flatten2D) Forward(input [][][]*ckks.Ciphertext) Output1d {
+func (f Flatten2D) Forward(input [][][]*rlwe.Ciphertext) Output1d {
 
-	output := make([]*ckks.Ciphertext, f.OutputSize)
+	output := make([]*rlwe.Ciphertext, f.OutputSize)
 
 	for r := range input{
 		for c := range input[r]{
@@ -40,14 +40,14 @@ func (f Flatten2D) Forward(input [][][]*ckks.Ciphertext) Output1d {
 
 }
 
-func (f Flatten2D) Backward(output []*ckks.Ciphertext) Gradient2d{
+func (f Flatten2D) Backward(output []*rlwe.Ciphertext) Gradient2d{
 
-	gradient := make([][][]*ckks.Ciphertext, f.InputSize[0])
+	gradient := make([][][]*rlwe.Ciphertext, f.InputSize[0])
 
 	for r := range gradient{
-		gradient[r] = make([][]*ckks.Ciphertext, f.InputSize[1])
+		gradient[r] = make([][]*rlwe.Ciphertext, f.InputSize[1])
 		for c := range gradient[r]{
-			gradient[r][c] = make([]*ckks.Ciphertext, f.InputSize[2])
+			gradient[r][c] = make([]*rlwe.Ciphertext, f.InputSize[2])
 			for d := range gradient[r][c]{
 				gradient[r][c][d] = output[(r * f.InputSize[0]) + (c * f.InputSize[1]) + (d * f.InputSize[2])]
 			}

@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -16,7 +16,7 @@ func TestConv2dForward(t *testing.T) {
 	keychain := key.GenerateKeys(0, false, true)
 	utils := utility.NewUtils(keychain, math.Pow(2, 35), 0, true)
 
-	testInput := [][][]*ckks.Ciphertext{
+	testInput := [][][]*rlwe.Ciphertext{
 		{
 			{
 				utils.EncryptToPointer(utils.GenerateFilledArray(1)),
@@ -154,7 +154,7 @@ func TestConv2dForward(t *testing.T) {
 		},
 	}
 
-	testKernel := [][][]*ckks.Ciphertext{
+	testKernel := [][][]*rlwe.Ciphertext{
 		{
 			{
 				utils.EncryptToPointer(utils.GenerateFilledArray(-1)),

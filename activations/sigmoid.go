@@ -1,7 +1,7 @@
 package activations
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -13,20 +13,20 @@ type Sigmoid struct {
 	U utility.Utils
 }
 
-func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (s Sigmoid) Forward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
-	outputChannels := make([]chan *ckks.Ciphertext, len(input))
-	output := make([]*ckks.Ciphertext, len(input))
+	outputChannels := make([]chan *rlwe.Ciphertext, len(input))
+	output := make([]*rlwe.Ciphertext, len(input))
 
 	deg3Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(-0.004, inputLength))
 	deg1Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.197, inputLength))
-	deg0 := *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.5, inputLength)), s.U.Params.LogSlots())
+	deg0 := *s.U.Encoder.EncodeNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.5, inputLength)), s.U.Params.MaxLevel(), s.U.Params.NewScale(s.U.Scale), s.U.Params.LogSlots())
 
 	for i := range input {
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		outputChannels[i] = make(chan *rlwe.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(inputEach *rlwe.Ciphertext, utils utility.Utils, c chan *rlwe.Ciphertext) {
 
 			// y := 0.5 + 0.197x - 0.004x^3
 			// Calculate degree three
@@ -54,20 +54,20 @@ func (s Sigmoid) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 }
 
-func (s Sigmoid) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (s Sigmoid) Backward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
-	outputChannels := make([]chan *ckks.Ciphertext, len(input))
-	output := make([]*ckks.Ciphertext, len(input))
+	outputChannels := make([]chan *rlwe.Ciphertext, len(input))
+	output := make([]*rlwe.Ciphertext, len(input))
 	
 	deg2Coeff := s.U.EncodePlaintextFromArray(s.U.GenerateFilledArraySize(0.012, inputLength))
-	deg0 := *s.U.Encoder.EncodeNTTNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.197, inputLength)), s.U.Params.LogSlots())
+	deg0 := *s.U.Encoder.EncodeNew(s.U.Float64ToComplex128(s.U.GenerateFilledArraySize(0.197, inputLength)), s.U.Params.MaxLevel(), s.U.Params.NewScale(s.U.Scale), s.U.Params.LogSlots())
 
 	for i := range input {
 		// 0.012x^2 + 0.197
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		outputChannels[i] = make(chan *rlwe.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(inputEach *rlwe.Ciphertext, utils utility.Utils, c chan *rlwe.Ciphertext) {
 
 			// Calculate degree three
 			xSquared := utils.MultiplyNew(inputEach.CopyNew(), inputEach.CopyNew(), true, false)
