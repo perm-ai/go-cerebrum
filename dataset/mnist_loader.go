@@ -3,7 +3,7 @@ package dataset
 import (
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/importer"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
@@ -29,12 +29,12 @@ func (m MnistLoader) GetLength() int {
 	return len(m.RawData)
 }
 
-func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
+func (m MnistLoader) Load1D(start int, batchSize int) ([]*rlwe.Ciphertext, []*rlwe.Ciphertext) {
 
 	var xWg, yWg sync.WaitGroup
 
-	x := make([]*ckks.Ciphertext, 784)
-	y := make([]*ckks.Ciphertext, 10)
+	x := make([]*rlwe.Ciphertext, 784)
+	y := make([]*rlwe.Ciphertext, 10)
 
 	for i := range x {
 
@@ -81,6 +81,6 @@ func (m MnistLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ck
 
 }
 
-func (m MnistLoader) Load2D(start int, batchSize int) ([][][]*ckks.Ciphertext, []*ckks.Ciphertext) {
-	return [][][]*ckks.Ciphertext{}, []*ckks.Ciphertext{}
+func (m MnistLoader) Load2D(start int, batchSize int) ([][][]*rlwe.Ciphertext, []*rlwe.Ciphertext) {
+	return [][][]*rlwe.Ciphertext{}, []*rlwe.Ciphertext{}
 }

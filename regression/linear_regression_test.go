@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/importer"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -33,7 +33,7 @@ func TestLinearRegression(t *testing.T) {
 	// utils.Evaluator.DropLevel(data2, data2.Level()-9)
 	// utils.Evaluator.DropLevel(data3, data3.Level()-9)
 
-	independentVar := []*ckks.Ciphertext{data1, data2}
+	independentVar := []*rlwe.Ciphertext{data1, data2}
 	model.Train(independentVar, data3, 0.1, len(data.Median_income), 20)
 	slope := make([]float64, 2)
 	for i := 0; i < 2; i++ {

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/ldsec/lattigo/v2/ckks/bootstrapping"
-	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/ckks/bootstrapping"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
@@ -167,7 +167,11 @@ func DownloadFromS3(url string) ([]byte, error) {
 func GetKeyChainFromS3(paramsIndex int, keyResponse DownloadKeyResponse, logEnabled bool) (key.KeyChain, error) {
 
 	log := logger.NewLogger(logEnabled)
-	Params, _ := ckks.NewParametersFromLiteral(bootstrapping.DefaultCKKSParameters[paramsIndex])
+
+	paramSet := bootstrapping.DefaultParametersSparse[paramsIndex]
+	ckksParams := paramSet.SchemeParams
+
+	Params, _ := ckks.NewParametersFromLiteral(ckksParams)
 
 	// Load pk
 	pkByte, err := DownloadFromS3(keyResponse.Pk)

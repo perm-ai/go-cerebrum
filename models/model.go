@@ -5,7 +5,7 @@ import (
 	"math"
 	"path"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/dataset"
 	"github.com/perm-ai/go-cerebrum/layers"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -45,7 +45,7 @@ func NewModel(utils utility.Utils, layer1d []layers.Layer1D, layer2d []layers.La
 
 }
 
-func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertext) ([]layers.Output2d, []layers.Output1d) {
+func (m Model) Forward(input2D [][][]*rlwe.Ciphertext, input1D []*rlwe.Ciphertext) ([]layers.Output2d, []layers.Output1d) {
 
 	var output2D []layers.Output2d
 	var output1D []layers.Output1d
@@ -70,7 +70,7 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 			// input of this layer is output[i]
 			// output of this layer i is stored at output[i+1]
 
-			var prevOut [][][]*ckks.Ciphertext
+			var prevOut [][][]*rlwe.Ciphertext
 
 			if prevLayerHasActivation {
 				prevOut = output2D[layer].ActivationOutput
@@ -112,7 +112,7 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 
 		for layer := 0; layer < len(m.Layers1d); layer++ {
 
-			var prevOut []*ckks.Ciphertext
+			var prevOut []*rlwe.Ciphertext
 
 			if prevLayerHasActivation {
 				prevOut = output1D[layer].ActivationOutput
@@ -133,13 +133,13 @@ func (m Model) Forward(input2D [][][]*ckks.Ciphertext, input1D []*ckks.Ciphertex
 
 }
 
-func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, y []*ckks.Ciphertext) ([]layers.Gradient2d, []layers.Gradient1d) {
+func (m Model) Backward(output2D []layers.Output2d, output1D []layers.Output1d, y []*rlwe.Ciphertext) ([]layers.Gradient2d, []layers.Gradient1d) {
 
 	gradient1D := make([]layers.Gradient1d, len(m.Layers1d)+1)
 	gradient2D := make([]layers.Gradient2d, len(m.Layers2d)+1)
 
 	// Calculate loss gradient
-	var finalOutput []*ckks.Ciphertext
+	var finalOutput []*rlwe.Ciphertext
 
 	// Get output of last layer
 	if len(m.Layers1d) != 0 {
@@ -240,7 +240,7 @@ func (m *Model) Train2D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 			x, y := dataLoader.Load2D(i*batchSize, batchSize)
 
-			outputs2D, outputs1D := m.Forward(x, []*ckks.Ciphertext{})
+			outputs2D, outputs1D := m.Forward(x, []*rlwe.Ciphertext{})
 			gradients2D, gradients1D := m.Backward(outputs2D, outputs1D, y)
 			m.UpdateGradient(gradients1D, gradients2D, learningRate)
 
@@ -265,7 +265,7 @@ func (m *Model) Train1D(dataLoader dataset.Loader, learningRate float64, batchSi
 
 			log.Log("Data loaded")
 
-			outputs2D, outputs1D := m.Forward([][][]*ckks.Ciphertext{}, x)
+			outputs2D, outputs1D := m.Forward([][][]*rlwe.Ciphertext{}, x)
 
 			log.Log("Forward complete")
 
@@ -302,7 +302,7 @@ func (m *Model) Train1DFrom(dataLoader dataset.Loader, learningRate float64, bat
 
 			log.Log("Data loaded")
 
-			outputs2D, outputs1D := m.Forward([][][]*ckks.Ciphertext{}, x)
+			outputs2D, outputs1D := m.Forward([][][]*rlwe.Ciphertext{}, x)
 
 			log.Log("Forward complete")
 

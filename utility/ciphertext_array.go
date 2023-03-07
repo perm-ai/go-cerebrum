@@ -1,16 +1,16 @@
 package utility
 
-import "github.com/ldsec/lattigo/v2/ckks"
+import "github.com/tuneinsight/lattigo/v4/rlwe"
 
 
-func Clone3dCiphertext(ct [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
+func Clone3dCiphertext(ct [][][]*rlwe.Ciphertext) [][][]*rlwe.Ciphertext {
 
-	newArray := make([][][]*ckks.Ciphertext, len(ct))
+	newArray := make([][][]*rlwe.Ciphertext, len(ct))
 
 	for r := range ct{
-		newArray[r] = make([][]*ckks.Ciphertext, len(ct[r]))
+		newArray[r] = make([][]*rlwe.Ciphertext, len(ct[r]))
 		for c := range ct[r]{
-			newArray[r][c] = make([]*ckks.Ciphertext, len(ct[r][c]))
+			newArray[r][c] = make([]*rlwe.Ciphertext, len(ct[r][c]))
 			for d := range ct[r][c]{
 				newArray[r][c][d] = ct[r][c][d].CopyNew()
 			}
@@ -21,9 +21,9 @@ func Clone3dCiphertext(ct [][][]*ckks.Ciphertext) [][][]*ckks.Ciphertext {
 
 }
 
-func Clone1dCiphertext(ct []*ckks.Ciphertext) []*ckks.Ciphertext{
+func Clone1dCiphertext(ct []*rlwe.Ciphertext) []*rlwe.Ciphertext{
 
-	newArray := make([]*ckks.Ciphertext, len(ct))
+	newArray := make([]*rlwe.Ciphertext, len(ct))
 
 	for i := range ct{
 		newArray[i] = ct[i].CopyNew()
