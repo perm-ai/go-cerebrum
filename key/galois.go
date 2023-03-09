@@ -11,8 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/ldsec/lattigo/v2/ring"
-	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 func EncodeSwitchingKey(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, error) {
@@ -21,121 +20,134 @@ func EncodeSwitchingKey(swk *rlwe.SwitchingKey, pointer int, data []byte) (int, 
 	var inc int
 
 	data[pointer] = uint8(len(swk.Value))
-
+	pointer++
+	data[pointer] = uint8(len(swk.Value[0]))
 	pointer++
 
-	for j := 0; j < len(swk.Value); j++ {
+	for i := range swk.Value {
+		for _, el := range swk.Value[i] {
 
-		if inc, err = swk.Value[j][0].WriteTo(data[pointer : pointer+swk.Value[j][0].GetDataLen(true)]); err != nil {
-			return pointer, err
+			if inc, err = el.Encode64(data[pointer:]); err != nil {
+				return pointer, err
+			}
+			pointer += inc
 		}
-
-		pointer += inc
-
-		if inc, err = swk.Value[j][1].WriteTo(data[pointer : pointer+swk.Value[j][1].GetDataLen(true)]); err != nil {
-			return pointer, err
-		}
-
-		pointer += inc
 	}
+
+	// for j := 0; j < len(swk.Value); j++ {
+
+	// 	if inc, err = swk.Value[j][0].Decode64(data[pointer : pointer+swk.Value[j][0].MarshalBinarySize()]); err != nil {
+	// 		return pointer, err
+	// 	}
+
+	// 	pointer += inc
+
+	// 	if inc, err = swk.Value[j][1].Decode64(data[pointer : pointer+swk.Value[j][1].MarshalBinarySize()]); err != nil {
+	// 		return pointer, err
+	// 	}
+
+	// 	pointer += inc
+	// }
 
 	return pointer, nil
 }
 
 func DecodeSwitchingKey(swk *rlwe.SwitchingKey, data []byte) (pointer int, err error) {
 
-	decomposition := int(data[0])
+	decompRNS := int(data[0])
+	decompBIT := int(data[1])
 
-	pointer = 1
+	pointer = 2
 
-	swk.Value = make([][2]rlwe.PolyQP, decomposition)
+	swk.Value = make([][]rlwe.CiphertextQP, decompRNS)
 
 	var inc int
 
-	for j := 0; j < decomposition; j++ {
+	for i := range swk.Value {
 
-		swk.Value[j][0].Q = new(ring.Poly)
-		if inc, err = swk.Value[j][0].DecodePolyNew(data[pointer:]); err != nil {
-			return
-		}
-		pointer += inc
+		swk.Value[i] = make([]rlwe.CiphertextQP, decompBIT)
 
-		swk.Value[j][1].P = new(ring.Poly)
-		if inc, err = swk.Value[j][1].DecodePolyNew(data[pointer:]); err != nil {
-			return
+		for j := range swk.Value[i] {
+
+			if inc, err = swk.Value[i][j].Decode64(data[pointer:]); err != nil {
+				return
+			}
+			pointer += inc
 		}
-		pointer += inc
 	}
 
 	return
 }
 
 func MarshalBinary(rtks *rlwe.RotationKeySet) (data []byte, err error) {
-
-	data = make([]byte, rtks.GetDataLen(true))
+	
+	data = make([]byte, rtks.MarshalBinarySize())
 
 	pointer := int(0)
 
+	var inc int
 	for galEL, key := range rtks.Keys {
 
-		binary.BigEndian.PutUint32(data[pointer:pointer+4], uint32(galEL))
-		pointer += 4
+		binary.BigEndian.PutUint64(data[pointer:], galEL)
+		pointer += 8
 
-		if pointer, err = EncodeSwitchingKey(key, pointer, data); err != nil {
+		if inc, err = key.Encode(data[pointer:]); err != nil {
 			return nil, err
 		}
+
+		pointer += inc
 	}
 
 	return data, nil
 }
 
-func UnmarshalBinaryBatch(rtks *rlwe.RotationKeySet, keyFile *os.File) (err error) {
+// func UnmarshalBinaryBatch(rtks *rlwe.RotationKeySet, keyFile *os.File) (err error) {
 
-	rtks.Keys = make(map[uint64]*rlwe.SwitchingKey)
+// 	rtks.Keys = make(map[uint64]*rlwe.SwitchingKey)
 
-	fileInfo, e := keyFile.Stat()
-	check(e)
+// 	fileInfo, e := keyFile.Stat()
+// 	check(e)
 
-	fileLen := fileInfo.Size()
-	keyLen := 0
-	pointer := 0
-	r4 := bufio.NewReaderSize(keyFile, 1073741824)
-	data, err := r4.Peek(1073741824)
-	check(err)
+// 	fileLen := fileInfo.Size()
+// 	keyLen := 0
+// 	pointer := 0
+// 	r4 := bufio.NewReaderSize(keyFile, 1073741824)
+// 	data, err := r4.Peek(1073741824)
+// 	check(err)
 
-	for len(data) > 0 {
+// 	for len(data) > 0 {
 
-		galEl := uint64(binary.BigEndian.Uint32(data))
-		fmt.Println(galEl)
-		data = data[4:]
-		// cut data by 4?
-		swk := new(rlwe.SwitchingKey)
-		var inc int
-		if inc, err = DecodeSwitchingKey(swk, data); err != nil {
-			return err
-		}
+// 		galEl := uint64(binary.BigEndian.Uint32(data))
+// 		fmt.Println(galEl)
+// 		data = data[4:]
+// 		// cut data by 4?
+// 		swk := new(rlwe.SwitchingKey)
+// 		var inc int
+// 		if inc, err = DecodeSwitchingKey(swk, data); err != nil {
+// 			return err
+// 		}
 
-		if keyLen == 0 {
-			keyLen = 4 + inc
-		}
+// 		if keyLen == 0 {
+// 			keyLen = 4 + inc
+// 		}
 
-		data = data[inc:]
-		rtks.Keys[galEl] = swk
-		pointer += 4 + inc
+// 		data = data[inc:]
+// 		rtks.Keys[galEl] = swk
+// 		pointer += 4 + inc
 
-		if len(data) < keyLen {
-			if (int(fileLen) - pointer) < 1073741824 {
+// 		if len(data) < keyLen {
+// 			if (int(fileLen) - pointer) < 1073741824 {
 
-				data = ReadFromDesinatedPointer(pointer, (int(fileLen) - pointer), keyFile)
-				continue
-			}
+// 				data = ReadFromDesinatedPointer(pointer, (int(fileLen) - pointer), keyFile)
+// 				continue
+// 			}
 
-			data = ReadFromDesinatedPointer(pointer, 1073741824, keyFile)
-		}
-	}
+// 			data = ReadFromDesinatedPointer(pointer, 1073741824, keyFile)
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func UnmarshalGaloisFromS3(rtks *rlwe.RotationKeySet, keyS3key string, s3Client *s3.Client, bucketName string) (err error) {
 

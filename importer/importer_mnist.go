@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 
@@ -20,8 +20,8 @@ type MnistData struct {
 }
 
 type EncryptedMnistData struct {
-	Image ckks.Ciphertext
-	Label ckks.Ciphertext
+	Image rlwe.Ciphertext
+	Label rlwe.Ciphertext
 }
 
 func getMnistData(filepath string) []mnistData {
