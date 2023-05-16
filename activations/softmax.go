@@ -3,7 +3,7 @@ package activations
 import (
 	"math"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
@@ -22,7 +22,7 @@ func NewSoftmax(u utility.Utils) Softmax {
 
 }
 
-func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (s Softmax) Forward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
 	// Homomorphic friendly softmax function
 	// e^x / (e^x1 + e^x2 + ... + e^xn)
@@ -32,7 +32,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	sum := s.U.Encrypt(s.U.GenerateFilledArray(0.0))
 
 	//create array that will contain the result, but for the first loop, contain the e^x of each input
-	arrexp := make([]*ckks.Ciphertext, len(input))
+	arrexp := make([]*rlwe.Ciphertext, len(input))
 
 	// Exponentiate input and get sum
 	for i := range input {
@@ -47,15 +47,15 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 	// Calculate inverse of sum of e^input
 	inverseSum := s.U.InverseApproxNew(&sum, stretchScale, inputLength) // Level input - 4
 
-	output := make([]*ckks.Ciphertext, len(arrexp))
-	outputChannels := make([]chan *ckks.Ciphertext, len(arrexp))
+	output := make([]*rlwe.Ciphertext, len(arrexp))
+	outputChannels := make([]chan *rlwe.Ciphertext, len(arrexp))
 
 	//multiply the arrexp with stretchscale and the inverse, which will be the result that the function return
 	for i := range arrexp {
 
-		outputChannels[i] = make(chan *ckks.Ciphertext)
+		outputChannels[i] = make(chan *rlwe.Ciphertext)
 
-		go func(inputEach *ckks.Ciphertext, utils utility.Utils, c chan *ckks.Ciphertext) {
+		go func(inputEach *rlwe.Ciphertext, utils utility.Utils, c chan *rlwe.Ciphertext) {
 
 			result := utils.MultiplyPlainNew(inputEach, plainStretch, true, false) // Level input - 3
 			s.U.Multiply(result, inverseSum, result, false, false)
@@ -73,7 +73,7 @@ func (s Softmax) Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciph
 
 }
 
-func (s Softmax) Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext {
+func (s Softmax) Backward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext {
 
 	// Not implemented, won't be used
 	return input

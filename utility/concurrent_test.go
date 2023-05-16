@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
@@ -64,7 +64,7 @@ func TestConcurrentBootstrap(t *testing.T) {
 
 	total := 10
 	plain := make([][]float64, total)
-	cts := make([]*ckks.Ciphertext, total)
+	cts := make([]*rlwe.Ciphertext, total)
 
 	for i := range cts {
 		plain[i] = utils.GenerateRandomArray(-10, 10, 1000)
@@ -93,7 +93,7 @@ func TestConcurrentBenchmark(t *testing.T){
 
 	for _, total := range testSizes{
 		plain := make([][]float64, total)
-		cts := make([]*ckks.Ciphertext, total)
+		cts := make([]*rlwe.Ciphertext, total)
 
 		for i := range cts {
 			plain[i] = utils.GenerateRandomArray(-10, 10, 1000)
@@ -121,7 +121,7 @@ func TestConcurrentBenchmark(t *testing.T){
 
 	for _, total := range testSizes{
 		plain := make([][]float64, total)
-		cts := make([]*ckks.Ciphertext, total)
+		cts := make([]*rlwe.Ciphertext, total)
 
 		for i := range cts {
 			plain[i] = utils.GenerateRandomArray(-10, 10, 1000)
@@ -149,7 +149,7 @@ func TestConcurrentBenchmark(t *testing.T){
 
 	for _, total := range testSizes{
 		plain := make([][]float64, total)
-		cts := make([]*ckks.Ciphertext, total)
+		cts := make([]*rlwe.Ciphertext, total)
 
 		for i := range cts {
 			plain[i] = utils.GenerateRandomArray(-10, 10, 1000)

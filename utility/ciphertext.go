@@ -3,7 +3,9 @@ package utility
 import (
 	"math"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	// "github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
+
 )
 
 //=================================================
@@ -13,7 +15,7 @@ import (
 
 type CiphertextData struct {
 
-	Ciphertext 		ckks.Ciphertext
+	Ciphertext 		rlwe.Ciphertext
 	Length			int
 	start			int
 	end 			int
@@ -21,7 +23,7 @@ type CiphertextData struct {
 
 }
 
-func NewCiphertextData (ct ckks.Ciphertext, length int) CiphertextData {
+func NewCiphertextData (ct rlwe.Ciphertext, length int) CiphertextData {
 
 	return CiphertextData{Ciphertext: ct, Length: length}
 
@@ -46,7 +48,7 @@ func (c *CiphertextData) setGroupIndex(group int){
 
 type CiphertextGroup struct {
 
-	CiphertextGroups 	[]ckks.Ciphertext
+	CiphertextGroups 	[]rlwe.Ciphertext
 	ciphertexts			[]CiphertextData
 	utils				Utils
 
@@ -54,7 +56,7 @@ type CiphertextGroup struct {
 
 func NewCiphertextGroup(ciphertexts []CiphertextData, utils Utils) CiphertextGroup {
 
-	combinedCiphertext := []ckks.Ciphertext{}
+	combinedCiphertext := []rlwe.Ciphertext{}
 	availableRotations := make([]int, utils.Params.LogSlots() + 1)
 
 	for i := 0; i <= utils.Params.LogSlots(); i++ {
@@ -117,9 +119,9 @@ func (c *CiphertextGroup) Bootstrap(){
 
 }
 
-func (c CiphertextGroup) BreakGroup(rescale bool) []*ckks.Ciphertext {
+func (c CiphertextGroup) BreakGroup(rescale bool) []*rlwe.Ciphertext {
 
-	brokenCiphertexts := make([]*ckks.Ciphertext, len(c.ciphertexts))
+	brokenCiphertexts := make([]*rlwe.Ciphertext, len(c.ciphertexts))
 
 	for i, ciphertext := range c.ciphertexts{
 
@@ -129,7 +131,7 @@ func (c CiphertextGroup) BreakGroup(rescale bool) []*ckks.Ciphertext {
 			filter[f] = 1
 		}
 		
-		encodedFilter := c.utils.Encoder.EncodeNTTNew(c.utils.Float64ToComplex128(filter), c.utils.Params.LogSlots())
+		encodedFilter := c.utils.Encoder.EncodeNew(c.utils.Float64ToComplex128(filter), c.utils.Params.MaxLevel(), c.utils.Params.DefaultScale(), c.utils.Params.LogSlots())
 		brokenCiphertexts[i] = c.utils.MultiplyPlainNew(&c.CiphertextGroups[ciphertext.groupIndex], encodedFilter, rescale, false)
 
 	}

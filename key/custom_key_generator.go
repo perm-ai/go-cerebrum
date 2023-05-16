@@ -3,8 +3,8 @@ package key
 import (
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
-	"github.com/ldsec/lattigo/v2/rlwe"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 type SwitchingKeyLoader func(uint64) *rlwe.SwitchingKey

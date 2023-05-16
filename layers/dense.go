@@ -8,10 +8,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
+	"github.com/tuneinsight/lattigo/v4/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 //=================================================
@@ -22,8 +23,8 @@ type Dense struct {
 	utils          utility.Utils
 	InputUnit      int
 	OutputUnit     int
-	Weights        [][]*ckks.Ciphertext
-	Bias           []*ckks.Ciphertext
+	Weights        [][]*rlwe.Ciphertext
+	Bias           []*rlwe.Ciphertext
 	Activation     *activations.Activation
 	btspOutput     []bool
 	btspActivation []bool
@@ -35,20 +36,20 @@ type Dense struct {
 func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *activations.Activation, useBias bool, batchSize int, lr float64, weightLevel int) Dense {
 
 	// Generate random weights and biases
-	weights := make([][]*ckks.Ciphertext, outputUnit)
-	bias := make([]*ckks.Ciphertext, outputUnit)
+	weights := make([][]*rlwe.Ciphertext, outputUnit)
+	bias := make([]*rlwe.Ciphertext, outputUnit)
 
 	// Determine the standard deviation of initial random weight distribution
 	weightStdDev := 0.0
 
-	if activation != nil{
+	if activation != nil {
 		if (*activation).GetType() == "relu" {
 			weightStdDev = math.Sqrt(1.0 / float64(inputUnit))
 		} else {
 			weightStdDev = math.Sqrt(1.0 / float64(inputUnit+outputUnit))
 		}
 	}
-	
+
 	counter := logger.NewOperationsCounter("Initializing weight", inputUnit*outputUnit+outputUnit)
 
 	var wg sync.WaitGroup
@@ -63,7 +64,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 			defer wg.Done()
 
 			randomWeight := utils.GenerateRandomNormalArraySeed(inputUnit, weightStdDev, inputUnit+nodeIndex)
-			weights[nodeIndex] = make([]*ckks.Ciphertext, inputUnit)
+			weights[nodeIndex] = make([]*rlwe.Ciphertext, inputUnit)
 
 			if useBias {
 				bias[nodeIndex] = u.EncryptToLevelScale(u.GenerateFilledArraySize(0, batchSize), weightLevel, math.Pow(2, 40))
@@ -96,10 +97,10 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 
 }
 
-func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
-
-	output := make([]*ckks.Ciphertext, d.OutputUnit)
-	activatedOutput := make([]*ckks.Ciphertext, d.OutputUnit)
+func (d Dense) Forward(input []*rlwe.Ciphertext) Output1d {
+ 
+	output := make([]*rlwe.Ciphertext, d.OutputUnit)
+	activatedOutput := make([]*rlwe.Ciphertext, d.OutputUnit)
 
 	var wg sync.WaitGroup
 
@@ -157,7 +158,7 @@ func (d Dense) Forward(input []*ckks.Ciphertext) Output1d {
 // output is Z(l) - output of this layer
 // gradient is ∂L/∂A(l) - influence that the activation of this layer has on the next layer
 // hasPrevLayer determine whether this function calculates the gradient ∂L/∂A(l-1)
-func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gradient []*ckks.Ciphertext, hasPrevLayer bool) Gradient1d {
+func (d *Dense) Backward(input []*rlwe.Ciphertext, output []*rlwe.Ciphertext, gradient []*rlwe.Ciphertext, hasPrevLayer bool) Gradient1d {
 
 	gradients := Gradient1d{}
 
@@ -168,7 +169,7 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 
 		if (*d.Activation).GetType() != "softmax" {
 
-			gradients.BiasGradient = make([]*ckks.Ciphertext, len(gradient))
+			gradients.BiasGradient = make([]*rlwe.Ciphertext, len(gradient))
 			// fmt.Printf("Backward (%d) output level: %d\n", d.InputUnit, output[0].Level())
 
 			activationTimer := logger.StartTimer(fmt.Sprintf("Backward (%d) activation %s", d.InputUnit, (*d.Activation).GetType()))
@@ -214,9 +215,8 @@ func (d *Dense) Backward(input []*ckks.Ciphertext, output []*ckks.Ciphertext, gr
 		gradients.BiasGradient = gradient
 	}
 
-
 	gradients.WeightGradient = d.utils.InterOuter(gradients.BiasGradient, input, true)
-	gradients.InputGradient = make([]*ckks.Ciphertext, d.InputUnit)
+	gradients.InputGradient = make([]*rlwe.Ciphertext, d.InputUnit)
 
 	if hasPrevLayer {
 
@@ -300,7 +300,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						encoder := ckks.NewEncoder(biasUtils.Params)
 						plain := make([]complex128, biasUtils.Params.Slots())
 						plain[nodeIndex] = complex(avgScale, 0)
-						avg := encoder.EncodeNTTAtLvlNew(gradient.BiasGradient[nodeIndex].Level(), plain, biasUtils.Params.LogSlots())
+						avg := encoder.EncodeNew(plain, gradient.BiasGradient[nodeIndex].Level(), biasUtils.Params.DefaultScale(), biasUtils.Params.LogSlots())
 
 						// Multiply with averager filter and sum for parallel bootstrapping
 						biasUtils.MultiplyPlain(gradient.BiasGradient[nodeIndex], avg, gradient.BiasGradient[nodeIndex], true, false)
@@ -313,17 +313,17 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel+1 {
 							currentScale := gradient.BiasGradient[nodeIndex].Scale
 							idealScale := math.Pow(2, 40)
-							if currentScale > idealScale {
+							if currentScale.Float64() > idealScale {
 
 								// TODO: cover more cases using while loop
 
-								if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel+2 && currentScale < math.Pow(2, 80) {
-									biasUtils.Evaluator.ScaleUp(gradient.BiasGradient[nodeIndex], (idealScale*math.Pow(2, 40))/currentScale, gradient.BiasGradient[nodeIndex])
-									biasUtils.Evaluator.Rescale(gradient.BiasGradient[nodeIndex], d.utils.Scale, gradient.BiasGradient[nodeIndex])
+								if gradient.BiasGradient[nodeIndex].Level() > d.weightLevel+2 && currentScale.Float64() < math.Pow(2, 80) {
+									biasUtils.Evaluator.ScaleUp(gradient.BiasGradient[nodeIndex], d.utils.Params.NewScale((idealScale*math.Pow(2, 40))/currentScale.Float64()), gradient.BiasGradient[nodeIndex])
+									biasUtils.Evaluator.Rescale(gradient.BiasGradient[nodeIndex], d.utils.Params.NewScale(d.utils.Scale), gradient.BiasGradient[nodeIndex])
 								}
 
-							} else if currentScale < idealScale {
-								scaleUpBy := idealScale / currentScale
+							} else if currentScale.Float64() < idealScale {
+								scaleUpBy := d.utils.Params.NewScale(idealScale / currentScale.Float64())
 								biasUtils.Evaluator.ScaleUp(gradient.BiasGradient[nodeIndex], scaleUpBy, gradient.BiasGradient[nodeIndex])
 							}
 
@@ -336,7 +336,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						biasUtils.SumElementsInPlace(gradient.BiasGradient[nodeIndex])
 
 						averagedLrBias := biasUtils.MultiplyPlainNew(gradient.BiasGradient[nodeIndex], batchAverager, false, false)
-						biasUtils.Evaluator.Rescale(averagedLrBias, biasUtils.Scale/2, averagedLrBias)
+						biasUtils.Evaluator.Rescale(averagedLrBias, d.utils.Params.NewScale(biasUtils.Scale/2), averagedLrBias)
 
 						biasUtils.Sub(d.Bias[nodeIndex], averagedLrBias, d.Bias[nodeIndex])
 						counter.Increment()
@@ -381,7 +381,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						encoder := ckks.NewEncoder(weightUtils.Params)
 						plain := make([]complex128, weightUtils.Params.Slots())
 						plain[ctIndex] = complex(avgScale, 0)
-						avg := encoder.EncodeNTTAtLvlNew(gradient.WeightGradient[nodeIndex][weightIndex].Level(), plain, weightUtils.Params.LogSlots())
+						avg := encoder.EncodeNew(plain, gradient.WeightGradient[nodeIndex][weightIndex].Level(), weightUtils.Params.DefaultScale(), weightUtils.Params.LogSlots())
 
 						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], avg, gradient.WeightGradient[nodeIndex][weightIndex], rescale, false)
 						weightToBootstrap[ct].Add(gradient.WeightGradient[nodeIndex][weightIndex], weightUtils)
@@ -393,17 +393,17 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+1 {
 							currentScale := gradient.WeightGradient[nodeIndex][weightIndex].Scale
 							idealScale := math.Pow(2, 40)
-							if currentScale > idealScale {
+							if currentScale.Float64() > idealScale {
 
 								// TODO: cover more cases using while loop
 
-								if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+2 && currentScale < math.Pow(2, 80) {
-									weightUtils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], (idealScale*math.Pow(2, 40))/currentScale, gradient.WeightGradient[nodeIndex][weightIndex])
-									weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], d.utils.Scale, gradient.WeightGradient[nodeIndex][weightIndex])
+								if gradient.WeightGradient[nodeIndex][weightIndex].Level() > d.weightLevel+2 && currentScale.Float64() < math.Pow(2, 80) {
+									weightUtils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], rlwe.NewScale((idealScale*math.Pow(2, 40))/currentScale.Float64()), gradient.WeightGradient[nodeIndex][weightIndex])
+									weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], rlwe.NewScale(d.utils.Scale), gradient.WeightGradient[nodeIndex][weightIndex])
 								}
 
-							} else if currentScale < idealScale {
-								scaleUpBy := idealScale / currentScale
+							} else if currentScale.Float64() < idealScale {
+								scaleUpBy := rlwe.NewScale(idealScale / currentScale.Float64())
 								weightUtils.Evaluator.ScaleUp(gradient.WeightGradient[nodeIndex][weightIndex], scaleUpBy, gradient.WeightGradient[nodeIndex][weightIndex])
 							}
 
@@ -419,7 +419,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 
 						// Multiply with average scale
 						weightUtils.MultiplyPlain(gradient.WeightGradient[nodeIndex][weightIndex], batchAverager, gradient.WeightGradient[nodeIndex][weightIndex], false, false)
-						weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], weightUtils.Scale/2, gradient.WeightGradient[nodeIndex][weightIndex])
+						weightUtils.Evaluator.Rescale(gradient.WeightGradient[nodeIndex][weightIndex], rlwe.NewScale(weightUtils.Scale/2), gradient.WeightGradient[nodeIndex][weightIndex])
 
 						// Perform SGD
 						weightUtils.Sub(d.Weights[nodeIndex][weightIndex], gradient.WeightGradient[nodeIndex][weightIndex], d.Weights[nodeIndex][weightIndex])
@@ -455,7 +455,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 			biasLen = 1
 		}
 
-		cts := make([]*ckks.Ciphertext, len(weightToBootstrap)+biasLen)
+		cts := make([]*rlwe.Ciphertext, len(weightToBootstrap)+biasLen)
 
 		for i := range weightToBootstrap {
 			cts[i] = weightToBootstrap[i].Ct
@@ -493,7 +493,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						encoder := ckks.NewEncoder(biasUtils.Params)
 						plain := make([]complex128, biasUtils.Params.Slots())
 						plain[nodeIndex] = complex(1, 0)
-						filter := encoder.EncodeNTTAtLvlNew(cts[len(cts)-1].Level(), plain, biasUtils.Params.LogSlots())
+						filter := encoder.EncodeNew(plain, cts[len(cts)-1].Level(), biasUtils.Params.DefaultScale(), biasUtils.Params.LogSlots())
 
 						rescale := true
 						if cts[len(cts)-1].Level() > d.weightLevel+1 {
@@ -528,7 +528,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						rescale := true
 						if cts[ct].Level() > d.weightLevel+1 {
 							weightUtils.Evaluator.DropLevel(cts[ct], cts[ct].Level()-(d.weightLevel+1))
-						} else if cts[ct].Level() == d.weightLevel || cts[ct].Scale > math.Pow(2, 50) {
+						} else if cts[ct].Level() == d.weightLevel || cts[ct].Scale.Float64() > math.Pow(2, 50) {
 							rescale = false
 						}
 
@@ -536,7 +536,7 @@ func (d *Dense) UpdateGradient(gradient Gradient1d, lr float64) {
 						encoder := ckks.NewEncoder(weightUtils.Params)
 						plain := make([]complex128, weightUtils.Params.Slots())
 						plain[ctIndex] = complex(1, 0)
-						filter := encoder.EncodeNTTAtLvlNew(cts[ct].Level(), plain, weightUtils.Params.LogSlots())
+						filter := encoder.EncodeNew(plain, cts[ct].Level(), weightUtils.Params.DefaultScale(), weightUtils.Params.LogSlots())
 
 						// Isolate weight grqadient
 						weightGradient := weightUtils.MultiplyPlainNew(cts[ct], filter, rescale, false)
@@ -619,7 +619,7 @@ func (d *Dense) SetWeightLevel(lvl int) {
 	d.weightLevel = lvl
 }
 
-func (d *Dense) GetWeightLevel() int{
+func (d *Dense) GetWeightLevel() int {
 	return d.weightLevel
 }
 

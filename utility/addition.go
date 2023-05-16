@@ -1,10 +1,12 @@
 package utility
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	// "github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
+
 )
 
-func (utils Utils) Add(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext) {
+func (utils Utils) Add(a *rlwe.Ciphertext, b *rlwe.Ciphertext, destination *rlwe.Ciphertext) {
 
 	// Add two ciphertext together and save result to destination given
 	// utils.EqualizeScale(&a, &b)
@@ -12,7 +14,7 @@ func (utils Utils) Add(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks
 
 }
 
-func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) *ckks.Ciphertext {
+func (utils Utils) AddNew(a *rlwe.Ciphertext, b *rlwe.Ciphertext) *rlwe.Ciphertext {
 
 	// Add two ciphertext together and return result as a new ciphertext
 	utils.EqualizeScale(a, b)
@@ -22,14 +24,14 @@ func (utils Utils) AddNew(a *ckks.Ciphertext, b *ckks.Ciphertext) *ckks.Cipherte
 
 }
 
-func (u Utils) AddPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext) {
+func (u Utils) AddPlain(a *rlwe.Ciphertext, b *rlwe.Plaintext, destination *rlwe.Ciphertext) {
 
 	u.ReEncodeAsNTT(b)
 	u.Evaluator.Add(a, b, destination)
 
 }
 
-func (utils Utils) AddPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext) *ckks.Ciphertext {
+func (utils Utils) AddPlainNew(a *rlwe.Ciphertext, b *rlwe.Plaintext) *rlwe.Ciphertext {
 
 	// Add two ciphertext together and return result as a new ciphertext
 
@@ -39,7 +41,7 @@ func (utils Utils) AddPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext) *ckks.Ciph
 
 }
 
-func (utils Utils) AddConst(a *ckks.Ciphertext, b []float64, destination *ckks.Ciphertext) {
+func (utils Utils) AddConst(a *rlwe.Ciphertext, b []float64, destination *rlwe.Ciphertext) {
 
 	// Add overwrite ciphertext and constant
 
@@ -47,7 +49,7 @@ func (utils Utils) AddConst(a *ckks.Ciphertext, b []float64, destination *ckks.C
 
 }
 
-func (utils Utils) AddConstNew(a *ckks.Ciphertext, b []float64) *ckks.Ciphertext {
+func (utils Utils) AddConstNew(a *rlwe.Ciphertext, b []float64) *rlwe.Ciphertext {
 
 	// Add and create a new ciphertext
 
@@ -55,7 +57,7 @@ func (utils Utils) AddConstNew(a *ckks.Ciphertext, b []float64) *ckks.Ciphertext
 	return ct
 }
 
-func (utils Utils) Sub(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks.Ciphertext) {
+func (utils Utils) Sub(a *rlwe.Ciphertext, b *rlwe.Ciphertext, destination *rlwe.Ciphertext) {
 
 	// Subtract two ciphertext together and save result to destination given
 	utils.EqualizeScale(a, b)
@@ -64,7 +66,7 @@ func (utils Utils) Sub(a *ckks.Ciphertext, b *ckks.Ciphertext, destination *ckks
 }
 
 // Subtract two ciphertext together and return result as a new ciphertext
-func (utils Utils) SubNew(a *ckks.Ciphertext, b *ckks.Ciphertext) *ckks.Ciphertext {
+func (utils Utils) SubNew(a *rlwe.Ciphertext, b *rlwe.Ciphertext) *rlwe.Ciphertext {
 
 	ct := utils.Evaluator.SubNew(a, b)
 
@@ -73,14 +75,14 @@ func (utils Utils) SubNew(a *ckks.Ciphertext, b *ckks.Ciphertext) *ckks.Cipherte
 }
 
 // Subtract ciphertext and plaintext and save result to destination given
-func (utils Utils) SubPlain(a *ckks.Ciphertext, b *ckks.Plaintext, destination *ckks.Ciphertext) {
+func (utils Utils) SubPlain(a *rlwe.Ciphertext, b *rlwe.Plaintext, destination *rlwe.Ciphertext) {
 
 	utils.Evaluator.Sub(a, b, destination)
 
 }
 
 // Subtract ciphertext and plaintext and return result as a new ciphertext
-func (utils Utils) SubPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext) *ckks.Ciphertext {
+func (utils Utils) SubPlainNew(a *rlwe.Ciphertext, b *rlwe.Plaintext) *rlwe.Ciphertext {
 
 	ct := utils.Evaluator.SubNew(a, b)
 
@@ -88,14 +90,14 @@ func (utils Utils) SubPlainNew(a *ckks.Ciphertext, b *ckks.Plaintext) *ckks.Ciph
 
 }
 
-func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext) {
+func (utils Utils) EqualizeScale(a *rlwe.Ciphertext, b *rlwe.Ciphertext) {
 
-	var higherScale *ckks.Ciphertext
-	var lowerScale *ckks.Ciphertext
+	var higherScale *rlwe.Ciphertext
+	var lowerScale *rlwe.Ciphertext
 
-	if a.Scale != b.Scale {
+	if a.Scale.Float64() != b.Scale.Float64() {
 
-		if a.Scale > b.Scale {
+		if a.Scale.Float64() > b.Scale.Float64() {
 			higherScale = a
 			lowerScale = b
 		} else {
@@ -103,9 +105,8 @@ func (utils Utils) EqualizeScale(a *ckks.Ciphertext, b *ckks.Ciphertext) {
 			lowerScale = a
 		}
 
-		if higherScale.Scale / lowerScale.Scale < 4{
-			rescaler := ckks.NewPlaintext(utils.Params, higherScale.Level(), higherScale.Scale/lowerScale.Scale)
-			utils.Encoder.EncodeNTT(rescaler, utils.Float64ToComplex128(utils.GenerateFilledArray(1)), utils.Params.LogSlots())
+		if higherScale.Scale.Float64() / lowerScale.Scale.Float64() < 4{
+			rescaler := utils.Encoder.EncodeNew(utils.Float64ToComplex128(utils.GenerateFilledArray(1)), higherScale.Level(), rlwe.NewScale(higherScale.Scale.Float64()/lowerScale.Scale.Float64()), utils.Params.LogSlots())
 			utils.MultiplyPlain(lowerScale, rescaler, lowerScale, false, false)
 		}
 

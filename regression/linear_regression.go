@@ -4,27 +4,27 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type LinearRegression struct {
 	utils  utility.Utils
-	Weight []*ckks.Ciphertext
-	Bias   *ckks.Ciphertext
+	Weight []*rlwe.Ciphertext
+	Bias   *rlwe.Ciphertext
 }
 
 type LinearRegressionGradient struct {
-	DM []*ckks.Ciphertext
-	DB *ckks.Ciphertext
+	DM []*rlwe.Ciphertext
+	DB *rlwe.Ciphertext
 }
 
 // need to pass in number of independent features
 func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 
 	zeros := u.GenerateFilledArray(0.0)
-	m := make([]*ckks.Ciphertext, numOfFeatures)
+	m := make([]*rlwe.Ciphertext, numOfFeatures)
 	for i := 0; i < numOfFeatures; i++ {
 		m[i] = u.EncryptToPointer(zeros)
 	}
@@ -34,7 +34,7 @@ func NewLinearRegression(u utility.Utils, numOfFeatures int) LinearRegression {
 
 }
 
-func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
+func (l LinearRegression) Forward(input []*rlwe.Ciphertext) *rlwe.Ciphertext {
 	
 	result := l.utils.InterDotProduct(input, l.Weight, true, true, nil)
 
@@ -44,7 +44,7 @@ func (l LinearRegression) Forward(input []*ckks.Ciphertext) *ckks.Ciphertext {
 
 }
 
-func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Ciphertext, y *ckks.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
+func (l LinearRegression) Backward(input []*rlwe.Ciphertext, output *rlwe.Ciphertext, y *rlwe.Ciphertext, size int, learningRate float64) LinearRegressionGradient {
 
 	// Calculate backward gradient using the following equation
 	// dM = (-2/n) * sum(input * (label - prediction)) * learning_rate
@@ -52,7 +52,7 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 
 	err := l.utils.SubNew(y, output)
 
-	dM := make([]*ckks.Ciphertext, len(input))
+	dM := make([]*rlwe.Ciphertext, len(input))
 	multiplier := l.utils.EncodePlaintextFromArray(l.utils.GenerateFilledArraySize((-2.0/float64(size))*learningRate, size))
 
 	// for i := range input {
@@ -61,11 +61,11 @@ func (l LinearRegression) Backward(input []*ckks.Ciphertext, output *ckks.Cipher
 	// 	l.utils.MultiplyPlain(&dM[i], &multiplier, &dM[i], true, false)
 	// }
 
-	channels := make([]chan *ckks.Ciphertext, len(input))
+	channels := make([]chan *rlwe.Ciphertext, len(input))
 
 	for i := range input {
-		channels[i] = make(chan *ckks.Ciphertext)
-		go func(index int, utils utility.Utils, channel chan *ckks.Ciphertext) {
+		channels[i] = make(chan *rlwe.Ciphertext)
+		go func(index int, utils utility.Utils, channel chan *rlwe.Ciphertext) {
 			product := utils.MultiplyNew(input[index], err.CopyNew(), true, false)
 			utils.SumElementsInPlace(product)
 			result := utils.MultiplyPlainNew(product, multiplier, true, false)
@@ -96,7 +96,7 @@ func (l *LinearRegression) UpdateGradient(gradient LinearRegressionGradient) {
 }
 
 // pack data in array of ciphertexts
-func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, learningRate float64, size int, epoch int) {
+func (model *LinearRegression) Train(x []*rlwe.Ciphertext, y *rlwe.Ciphertext, learningRate float64, size int, epoch int) {
 
 	log := logger.NewLogger(true)
 
@@ -119,8 +119,8 @@ func (model *LinearRegression) Train(x []*ckks.Ciphertext, y *ckks.Ciphertext, l
 				model.utils.BootstrapInPlace(model.Weight[i])
 			}
 
-			if model.Bias.Scale < math.Pow(2,50){
-				model.utils.Evaluator.ScaleUp(model.Bias, math.Pow(2, 60)/model.Bias.Scale, model.Bias)
+			if model.Bias.Scale.Float64() < math.Pow(2,50){
+				model.utils.Evaluator.ScaleUp(model.Bias, rlwe.NewScale(math.Pow(2, 60)/model.Bias.Scale.Float64()), model.Bias)
 			}
 
 			model.utils.BootstrapInPlace(model.Bias)

@@ -1,12 +1,12 @@
 package activations
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 type Activation interface {
-	Forward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext
-	Backward(input []*ckks.Ciphertext, inputLength int) []*ckks.Ciphertext
+	Forward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext
+	Backward(input []*rlwe.Ciphertext, inputLength int) []*rlwe.Ciphertext
 	GetForwardLevelConsumption() int
 	GetBackwardLevelConsumption() int
 	GetType() string

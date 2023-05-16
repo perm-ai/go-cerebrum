@@ -3,20 +3,20 @@ package dataset
 import (
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/utility"
 )
 
 type StandardLoader struct {
 	u      utility.Utils
-	X      []*ckks.Ciphertext
-	Y      []*ckks.Ciphertext
+	X      []*rlwe.Ciphertext
+	Y      []*rlwe.Ciphertext
 	Length int
 }
 
-func NewStandardLoader(dataX map[string]*ckks.Ciphertext, order []string, dataY []*ckks.Ciphertext, utils utility.Utils, length int) StandardLoader {
+func NewStandardLoader(dataX map[string]*rlwe.Ciphertext, order []string, dataY []*rlwe.Ciphertext, utils utility.Utils, length int) StandardLoader {
 
-	x := make([]*ckks.Ciphertext, len(order))
+	x := make([]*rlwe.Ciphertext, len(order))
 
 	for i := range order {
 
@@ -32,11 +32,11 @@ func (s StandardLoader) GetLength() int {
 	return s.Length
 }
 
-func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []*ckks.Ciphertext) {
+func (s StandardLoader) Load1D(start int, batchSize int) ([]*rlwe.Ciphertext, []*rlwe.Ciphertext) {
 
 	filter := make([]float64, s.Length)
-	batchedX := make([]*ckks.Ciphertext, len(s.X))
-	batchedY := make([]*ckks.Ciphertext, len(s.Y))
+	batchedX := make([]*rlwe.Ciphertext, len(s.X))
+	batchedY := make([]*rlwe.Ciphertext, len(s.Y))
 
 	for i := range filter {
 		if i >= start && i < start+batchSize {
@@ -55,7 +55,7 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 
 		xWg.Add(1)
 
-		go func(x *ckks.Ciphertext, index int, utils utility.Utils) {
+		go func(x *rlwe.Ciphertext, index int, utils utility.Utils) {
 			defer xWg.Done()
 			batchedX[index] = utils.MultiplyPlainNew(x, filterPlain, true, false)
 		}(s.X[xi].CopyNew(), xi, s.u.CopyWithClonedEval())
@@ -66,7 +66,7 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 
 		yWg.Add(1)
 
-		go func(y *ckks.Ciphertext, index int, utils utility.Utils) {
+		go func(y *rlwe.Ciphertext, index int, utils utility.Utils) {
 			defer yWg.Done()
 			batchedY[index] = utils.MultiplyPlainNew(y, filterPlain, true, false)
 		}(s.Y[yi].CopyNew(), yi, s.u.CopyWithClonedEval())
@@ -80,9 +80,9 @@ func (s StandardLoader) Load1D(start int, batchSize int) ([]*ckks.Ciphertext, []
 
 }
 
-func (s StandardLoader) Load2D(start int, batchSize int) ([][][]*ckks.Ciphertext, []*ckks.Ciphertext) {
+func (s StandardLoader) Load2D(start int, batchSize int) ([][][]*rlwe.Ciphertext, []*rlwe.Ciphertext) {
 
 	// TODO: implement later
-	return [][][]*ckks.Ciphertext{}, []*ckks.Ciphertext{}
+	return [][][]*rlwe.Ciphertext{}, []*rlwe.Ciphertext{}
 
 }

@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 // Raw struct with string encrypted data
@@ -41,14 +41,14 @@ type Column struct {
 	ColumnName string           `json:"columnName"`
 	Type       string           `json:"type"`
 	Length     int              `json:"length"`
-	Data       *ckks.Ciphertext `json:"data"`
+	Data       *rlwe.Ciphertext `json:"data"`
 	Label      []Label          `json:"label"`
 }
 
 type Label struct {
 	Category string           `json:"category"`
 	Index    int              `json:"index"`
-	Data     *ckks.Ciphertext `json:"data"`
+	Data     *rlwe.Ciphertext `json:"data"`
 }
 
 func LoadJsonData(filePath string) (EncryptedData, error) {
@@ -90,7 +90,7 @@ func LoadJsonData(filePath string) (EncryptedData, error) {
 			ColumnName: rawData.Encrypted[i].ColumnName,
 			Type:       rawData.Encrypted[i].Type,
 			Length:     rawData.Encrypted[i].Length,
-			Data:       &ckks.Ciphertext{},
+			Data:       &rlwe.Ciphertext{},
 			Label:      make([]Label, len(rawData.Encrypted[i].Label)),
 		}
 
@@ -117,7 +117,7 @@ func LoadJsonData(filePath string) (EncryptedData, error) {
 				data.Encrypted[i].Label[j] = Label{
 					Category: rawData.Encrypted[i].Label[j].Category,
 					Index:    rawData.Encrypted[i].Label[j].Index,
-					Data:     &ckks.Ciphertext{},
+					Data:     &rlwe.Ciphertext{},
 				}
 
 				byteCt, err := base64.StdEncoding.DecodeString(rawData.Encrypted[i].Label[j].Data)

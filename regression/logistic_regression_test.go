@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/array"
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
@@ -34,7 +34,7 @@ func NewEmptyData(column int, amount int) DataPlain {
 
 func EncryptData(data DataPlain, utils utility.Utils) Data {
 	log := logger.NewLogger(true)
-	EnData := make([]*ckks.Ciphertext, len(data.X))
+	EnData := make([]*rlwe.Ciphertext, len(data.X))
 	for i, p := range data.X {
 		log.Log("Encrypting Column" + fmt.Sprint(i))
 		EnData[i] = utils.EncryptToPointer(p)

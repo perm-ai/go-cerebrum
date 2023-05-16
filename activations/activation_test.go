@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe" 
 	"github.com/perm-ai/go-cerebrum/key"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -13,7 +13,7 @@ import (
 
 var log = logger.NewLogger(true)
 var keyChain = key.GenerateKeys(0, false, true)
-var utils = utility.NewUtils(keyChain, math.Pow(2, 35), 100, true)
+var utils = utility.NewUtils(keyChain, math.Pow(2, 40), 100, true)
 
 func TestSigmoid(t *testing.T) {
 
@@ -33,7 +33,7 @@ func TestSigmoid(t *testing.T) {
 
 	sigmoid := Sigmoid{U: utils}
 
-	fwdResult := sigmoid.Forward([]*ckks.Ciphertext{&encryptedInput}, 100)
+	fwdResult := sigmoid.Forward([]*rlwe.Ciphertext{&encryptedInput}, 100)
 
 	if !utility.ValidateResult(utils.Decrypt(fwdResult[0]), forwardExpected, false, 1, log) {
 		t.Error("Sigmoid forward wasn't evaluated properly")
@@ -41,7 +41,7 @@ func TestSigmoid(t *testing.T) {
 
 	fmt.Println("Starting backward")
 
-	backwardResult := sigmoid.Backward([]*ckks.Ciphertext{&encryptedInput}, 100)
+	backwardResult := sigmoid.Backward([]*rlwe.Ciphertext{&encryptedInput}, 100)
 
 	if !utility.ValidateResult(utils.Decrypt(backwardResult[0]), backwardExpected, false, 1, log) {
 		t.Error("Sigmoid backward wasn't evaluated properly")
@@ -54,7 +54,7 @@ func TestTanh(t *testing.T) {
 	// y = (-0.00752x^3) + (0.37x)
 	// (-0.02256x^2) + 0.37
 
-	testCases := make([]*ckks.Ciphertext, 10)
+	testCases := make([]*rlwe.Ciphertext, 10)
 	forwardExpected := make([][]float64, 10)
 	backwardExpected := make([][]float64, 10)
 
@@ -112,14 +112,14 @@ func TestSoftmax(t *testing.T) {
 	// Encryption
 	encInput := utils.Encrypt(randomArr)
 	utils.Evaluator.DropLevel(&encInput, encInput.Level()-9)
-	fmt.Printf("Scale: %f\n", encInput.Scale)
+	fmt.Printf("Scale: %f\n", encInput.Scale.Float64())
 	startingLevel := encInput.Level()
 
 	// Softmax initiation
 	softmax := NewSoftmax(utils)
 
 	// Calculate softmax forward
-	result := softmax.Forward([]*ckks.Ciphertext{&encInput}, 10)[0]
+	result := softmax.Forward([]*rlwe.Ciphertext{&encInput}, 10)[0]
 	decResult := utils.Decrypt(result)
 
 	fmt.Printf("Used: %d levels (%d - %d)\n", startingLevel-result.Level(), startingLevel, result.Level())

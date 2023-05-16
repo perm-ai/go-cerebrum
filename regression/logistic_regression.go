@@ -3,7 +3,7 @@ package regression
 import (
 	"strconv"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/activations"
 	"github.com/perm-ai/go-cerebrum/logger"
 	"github.com/perm-ai/go-cerebrum/utility"
@@ -11,18 +11,18 @@ import (
 
 type LogisticRegression struct {
 	utils  utility.Utils
-	Weight []*ckks.Ciphertext
-	Bias   *ckks.Ciphertext
+	Weight []*rlwe.Ciphertext
+	Bias   *rlwe.Ciphertext
 }
 
 type LogisticRegressionGradient struct {
-	dw []*ckks.Ciphertext
-	db *ckks.Ciphertext
+	dw []*rlwe.Ciphertext
+	db *rlwe.Ciphertext
 }
 
 type Data struct {
-	x          []*ckks.Ciphertext
-	target     *ckks.Ciphertext
+	x          []*rlwe.Ciphertext
+	target     *rlwe.Ciphertext
 	datalength int
 }
 
@@ -30,7 +30,7 @@ func NewLogisticRegression(u utility.Utils, numOfFeatures int) LogisticRegressio
 
 	value := u.GenerateFilledArray(0.0)
 	b := u.EncryptToPointer(value)
-	w := make([]*ckks.Ciphertext, numOfFeatures)
+	w := make([]*rlwe.Ciphertext, numOfFeatures)
 	for i := 0; i < numOfFeatures; i++ {
 		w[i] = u.EncryptToPointer(value)
 	}
@@ -39,7 +39,7 @@ func NewLogisticRegression(u utility.Utils, numOfFeatures int) LogisticRegressio
 
 }
 
-func (model LogisticRegression) Forward(data Data) *ckks.Ciphertext {
+func (model LogisticRegression) Forward(data Data) *rlwe.Ciphertext {
 
 	//prediction(yhat) = sigmoid(w1*x1+w2*x2+...+b)
 	result := model.utils.EncryptToPointer(model.utils.GenerateFilledArray(0.0))
@@ -54,15 +54,15 @@ func (model LogisticRegression) Forward(data Data) *ckks.Ciphertext {
 	if result.Level() < 6 {
 		model.utils.BootstrapInPlace(result)
 	}
-	Arrresult := make([]*ckks.Ciphertext, 1)
+	Arrresult := make([]*rlwe.Ciphertext, 1)
 	Arrresult[0] = result
 	return sigmoid.Forward(Arrresult, data.datalength)[0]
 
 }
 
-func (model LogisticRegression) Backward(data Data, predict *ckks.Ciphertext, lr float64) LogisticRegressionGradient {
+func (model LogisticRegression) Backward(data Data, predict *rlwe.Ciphertext, lr float64) LogisticRegressionGradient {
 
-	dw := make([]*ckks.Ciphertext, len(model.Weight))
+	dw := make([]*rlwe.Ciphertext, len(model.Weight))
 	err := model.utils.SubNew(predict, data.target)
 	multiplier := model.utils.EncodePlaintextFromArray(model.utils.GenerateFilledArraySize((2.0/float64(data.datalength))*lr, data.datalength))
 
@@ -89,7 +89,7 @@ func (model *LogisticRegression) UpdateGradient(grad LogisticRegressionGradient)
 
 }
 
-func (model *LogisticRegression) Train(x []*ckks.Ciphertext, target *ckks.Ciphertext, datalength int, learningRate float64, epoch int) {
+func (model *LogisticRegression) Train(x []*rlwe.Ciphertext, target *rlwe.Ciphertext, datalength int, learningRate float64, epoch int) {
 	data := Data{x, target, datalength}
 	log := logger.NewLogger(true)
 	log.Log("Starting Logistic Regression Training on encrypted data")

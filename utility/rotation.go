@@ -4,10 +4,10 @@ import (
 	"math"
 	"sort"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
-func (u Utils) Rotate(ct *ckks.Ciphertext, k int) {
+func (u Utils) Rotate(ct *rlwe.Ciphertext, k int) {
 
 	evaluator := u.Get2PowRotationEvaluator()
 
@@ -29,7 +29,7 @@ func (u Utils) Rotate(ct *ckks.Ciphertext, k int) {
 
 }
 
-func (u Utils) RotateNew(ct *ckks.Ciphertext, k int) ckks.Ciphertext {
+func (u Utils) RotateNew(ct *rlwe.Ciphertext, k int) rlwe.Ciphertext {
 
 	newCt := ct.CopyNew()
 	u.Rotate(newCt, k)
@@ -76,13 +76,13 @@ func findStep(target int, stepSum int, steps []int, availableSteps []int) []int 
 }
 
 // This function will rotate and add ciphertext to fill the ciphertext to a certain slot with number at index 1
-func (u Utils) FillCiphertextInPlace(ct *ckks.Ciphertext, slots int) {
+func (u Utils) FillCiphertextInPlace(ct *rlwe.Ciphertext, slots int) {
 
 	evaluator := u.Get2PowRotationEvaluator()
 	current := 0
-	cache := make([]*ckks.Ciphertext, u.Params.LogSlots())
+	cache := make([]*rlwe.Ciphertext, u.Params.LogSlots())
 	cache[0] = ct
-	var result *ckks.Ciphertext
+	var result *rlwe.Ciphertext
 
 	for current != slots {
 		for rot := 0; int(math.Pow(2, float64(rot)))+current <= slots; rot++ {

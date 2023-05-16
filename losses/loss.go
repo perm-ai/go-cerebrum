@@ -1,10 +1,10 @@
 package losses
 
 import (
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 )
 
 type Loss interface {
-	Forward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext
-	Backward(pred []*ckks.Ciphertext, y []*ckks.Ciphertext, predLength int) []*ckks.Ciphertext
+	Forward(pred []*rlwe.Ciphertext, y []*rlwe.Ciphertext, predLength int) []*rlwe.Ciphertext
+	Backward(pred []*rlwe.Ciphertext, y []*rlwe.Ciphertext, predLength int) []*rlwe.Ciphertext
 }

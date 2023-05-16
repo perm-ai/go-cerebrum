@@ -3,18 +3,18 @@ package utility
 import (
 	"sync"
 
-	"github.com/ldsec/lattigo/v2/ckks"
+	"github.com/tuneinsight/lattigo/v4/rlwe"
 	"github.com/perm-ai/go-cerebrum/logger"
 )
 
 // This files houses inter-ciphertext operations
 
 type SafeSum struct{
-	Ct *ckks.Ciphertext
+	Ct *rlwe.Ciphertext
 	mu sync.Mutex
 }
 
-func (s *SafeSum) Add(ct *ckks.Ciphertext, utils Utils){
+func (s *SafeSum) Add(ct *rlwe.Ciphertext, utils Utils){
 	s.mu.Lock()
 	if s.Ct == nil {
 		s.Ct = ct.CopyNew()
@@ -24,7 +24,7 @@ func (s *SafeSum) Add(ct *ckks.Ciphertext, utils Utils){
 	s.mu.Unlock()
 }
 
-func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, rescale bool, concurrent bool, counter *logger.OperationsCounter) *ckks.Ciphertext {
+func (u Utils) InterDotProduct(a []*rlwe.Ciphertext, b []*rlwe.Ciphertext, rescale bool, concurrent bool, counter *logger.OperationsCounter) *rlwe.Ciphertext {
 
 	if len(a) != len(b) {
 		panic("Unequal length")
@@ -70,9 +70,9 @@ func (u Utils) InterDotProduct(a []*ckks.Ciphertext, b []*ckks.Ciphertext, resca
 
 }
 
-func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent bool) [][]*ckks.Ciphertext {
+func (u Utils) InterOuter(a []*rlwe.Ciphertext, b []*rlwe.Ciphertext, concurrent bool) [][]*rlwe.Ciphertext {
 
-	output := make([][]*ckks.Ciphertext, len(a))
+	output := make([][]*rlwe.Ciphertext, len(a))
 
 	if concurrent {
 
@@ -81,7 +81,7 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 		for i := range a {
 
 			rowWg.Add(1)
-			output[i] = make([]*ckks.Ciphertext, len(b))
+			output[i] = make([]*rlwe.Ciphertext, len(b))
 
 			go func(row int) {
 
@@ -112,7 +112,7 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 	} else {
 		for i := range a {
 
-			output[i] = make([]*ckks.Ciphertext, len(b))
+			output[i] = make([]*rlwe.Ciphertext, len(b))
 
 			for j := range b {
 
@@ -127,13 +127,13 @@ func (u Utils) InterOuter(a []*ckks.Ciphertext, b []*ckks.Ciphertext, concurrent
 
 }
 
-func (u Utils) InterTranspose(a [][]*ckks.Ciphertext) [][]*ckks.Ciphertext {
+func (u Utils) InterTranspose(a [][]*rlwe.Ciphertext) [][]*rlwe.Ciphertext {
 
-	transposed := make([][]*ckks.Ciphertext, len(a[0]))
+	transposed := make([][]*rlwe.Ciphertext, len(a[0]))
 
 	for row := range transposed {
 
-		transposed[row] = make([]*ckks.Ciphertext, len(a))
+		transposed[row] = make([]*rlwe.Ciphertext, len(a))
 
 		for col := range transposed[row] {
 			transposed[row][col] = a[col][row]
