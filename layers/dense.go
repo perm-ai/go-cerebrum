@@ -98,7 +98,7 @@ func NewDense(utils utility.Utils, inputUnit int, outputUnit int, activation *ac
 }
 
 func (d Dense) Forward(input []*rlwe.Ciphertext) Output1d {
-
+ 
 	output := make([]*rlwe.Ciphertext, d.OutputUnit)
 	activatedOutput := make([]*rlwe.Ciphertext, d.OutputUnit)
 
