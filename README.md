@@ -19,3 +19,7 @@ This library require Go to run
 ## Usage
 
 Please refer to the example module to see an example of the usage of this library.
+
+## Additional Information
+
+Pleas refer to [`Perm-paper.pdf`](https://github.com/perm-ai/go-cerebrum/blob/main/Perm-paper.pdf) in this repository for additional information
